@@ -99,7 +99,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 - [x] Test debug build: `cd android && ./gradlew assembleDebug`
 - [x] Verify no build errors
-- [-] Test app launches on Android device/emulator
+- [ ] Test app launches on Android device/emulator
 
 ---
 
@@ -131,23 +131,23 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 5.1 Create Environment Files
 
-- [ ] Create `.env.development` file
+- [x] Create `.env.development` file
 - [ ] Create `.env.production` file
-- [ ] Add Firebase config variables to both files
-- [ ] Add `.env*` to `.gitignore`
+- [x] Add Firebase config variables to both files
+- [x] Add `.env*` to `.gitignore`
 
 ### 5.2 Configure react-native-config
 
-- [ ] Set up Android configuration for react-native-config
+- [x] Set up Android configuration for react-native-config
 - [ ] Set up iOS configuration for react-native-config
-- [ ] Test environment variable loading
+- [x] Test environment variable loading
 
 ### 5.3 Create Firebase Config Module
 
-- [ ] Create `src/config/firebase.js`
-- [ ] Initialize Firebase with environment variables
-- [ ] Export Firebase instances (auth, firestore, messaging)
-- [ ] Add environment indicator (dev/prod)
+- [-] Create `src/config/firebase.js`
+- [~] Initialize Firebase with environment variables
+- [~] Export Firebase instances (auth, firestore, messaging)
+- [~] Add environment indicator (dev/prod)
 
 ---
 
