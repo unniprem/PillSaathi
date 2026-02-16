@@ -73,10 +73,10 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 2.5 Install Development Dependencies
 
-- [ ] Install `@babel/preset-flow` (if using Flow types)
-- [ ] Install `eslint-plugin-react-hooks`
-- [ ] Install `eslint-plugin-react-native`
-- [ ] Update ESLint configuration for JavaScript best practices
+- [x] Install `@babel/preset-flow` (if using Flow types)
+- [x] Install `eslint-plugin-react-hooks`
+- [x] Install `eslint-plugin-react-native`
+- [x] Update ESLint configuration for JavaScript best practices
 
 ---
 
@@ -97,9 +97,9 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 3.3 Build Configuration
 
-- [ ] Test debug build: `cd android && ./gradlew assembleDebug`
-- [ ] Verify no build errors
-- [ ] Test app launches on Android device/emulator
+- [x] Test debug build: `cd android && ./gradlew assembleDebug`
+- [x] Verify no build errors
+- [-] Test app launches on Android device/emulator
 
 ---
 
