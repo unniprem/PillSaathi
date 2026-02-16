@@ -33,6 +33,28 @@ jest.mock('react-native-config', () => ({
   ENABLE_PERFORMANCE_MONITORING: 'false',
 }));
 
+// Mock Firebase modules
+jest.mock('@react-native-firebase/auth', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    currentUser: null,
+  })),
+}));
+
+jest.mock('@react-native-firebase/firestore', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    collection: jest.fn(),
+  })),
+}));
+
+jest.mock('@react-native-firebase/messaging', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    requestPermission: jest.fn(),
+  })),
+}));
+
 // Suppress console warnings in tests (optional)
 global.console = {
   ...console,

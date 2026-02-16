@@ -144,10 +144,10 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 5.3 Create Firebase Config Module
 
-- [-] Create `src/config/firebase.js`
-- [~] Initialize Firebase with environment variables
-- [~] Export Firebase instances (auth, firestore, messaging)
-- [~] Add environment indicator (dev/prod)
+- [x] Create `src/config/firebase.js`
+- [x] Initialize Firebase with environment variables
+- [x] Export Firebase instances (auth, firestore, messaging)
+- [ ] Add environment indicator (dev/prod)
 
 ---
 
@@ -155,21 +155,21 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 6.1 Create Directory Structure
 
-- [ ] Create `src/` directory
-- [ ] Create `src/screens/` directory
-- [ ] Create `src/navigation/` directory
-- [ ] Create `src/components/` directory
-- [ ] Create `src/services/` directory
-- [ ] Create `src/utils/` directory
-- [ ] Create `src/types/` directory
-- [ ] Create `src/config/` directory
-- [ ] Create `src/contexts/` directory
+- [x] Create `src/` directory
+- [x] Create `src/screens/` directory
+- [x] Create `src/navigation/` directory
+- [x] Create `src/components/` directory
+- [x] Create `src/services/` directory
+- [x] Create `src/utils/` directory
+- [x] Create `src/types/` directory
+- [x] Create `src/config/` directory
+- [x] Create `src/contexts/` directory
 
 ### 6.2 Move Existing Files
 
-- [ ] Keep `App.js` in root or move to `src/App.js`
-- [ ] Update imports in `index.js`
-- [ ] Verify app still runs
+- [x] Keep `App.js` in root or move to `src/App.js`
+- [x] Update imports in `index.js`
+- [x] Verify app still runs
 
 ---
 
@@ -177,16 +177,16 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 7.1 Create Navigation Types
 
-- [ ] Create `src/types/navigation.js` (or use JSDoc for type hints)
-- [ ] Define navigation param lists with JSDoc comments
-- [ ] Export navigation constants
+- [-] Create `src/types/navigation.js` (or use JSDoc for type hints)
+- [~] Define navigation param lists with JSDoc comments
+- [~] Export navigation constants
 
 ### 7.2 Create Navigation Structure
 
-- [ ] Create `src/navigation/RootNavigator.js`
-- [ ] Create `src/navigation/AuthNavigator.js`
-- [ ] Create `src/navigation/ParentNavigator.js`
-- [ ] Create `src/navigation/CaregiverNavigator.js`
+- [~] Create `src/navigation/RootNavigator.js`
+- [~] Create `src/navigation/AuthNavigator.js`
+- [~] Create `src/navigation/ParentNavigator.js`
+- [~] Create `src/navigation/CaregiverNavigator.js`
 
 ### 7.3 Implement Navigation
 
