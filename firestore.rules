@@ -1,0 +1,59 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isParent(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role == 'parent';
+    }
+
+    function isCaregiver(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role == 'caregiver';
+    }
+
+    function isLinked(parentId) {
+      return exists(/databases/$(database)/documents/relationships/$(parentId + "_" + request.auth.uid));
+    }
+
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId;
+    }
+
+    match /relationships/{relId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+    }
+
+    match /medicines/{medicineId} {
+      allow read: if request.auth.uid == resource.data.parentId || isLinked(resource.data.parentId);
+      allow create: if isCaregiver(request.auth.uid);
+      allow update: if isCaregiver(request.auth.uid);
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if isSignedIn();
+      allow write: if isCaregiver(request.auth.uid);
+    }
+
+    match /doses/{doseId} {
+      allow read: if request.auth.uid == resource.data.parentId || isLinked(resource.data.parentId);
+      allow update: if request.auth.uid == resource.data.parentId;
+      allow create: if isSignedIn();
+    }
+
+    match /inviteCodes/{code} {
+      allow read: if isSignedIn();
+      allow create: if isParent(request.auth.uid);
+    }
+
+    match /deviceTokens/{tokenId} {
+      allow write: if isSignedIn();
+      allow read: if false;
+    }
+  }
+}
