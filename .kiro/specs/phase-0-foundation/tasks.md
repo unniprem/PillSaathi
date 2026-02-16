@@ -8,7 +8,7 @@ Status: Not Started
 
 ## Task Overview
 
-This task list covers Phase 0 implementation for the existing React Native app. Focus is on Firebase integration, TypeScript migration, and navigation setup.
+This task list covers Phase 0 implementation for the existing React Native app. Focus is on Firebase integration, JavaScript development, and navigation setup.
 
 ---
 
@@ -71,12 +71,12 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 - [x] Install `@react-native-async-storage/async-storage`
 - [ ] Run `pod install` for iOS
 
-### 2.5 Install TypeScript Dependencies (if not already)
+### 2.5 Install Development Dependencies
 
-- [ ] Install `typescript`
-- [ ] Install `@types/react`
-- [ ] Install `@types/react-native`
-- [ ] Create `tsconfig.json` if not exists
+- [ ] Install `@babel/preset-flow` (if using Flow types)
+- [ ] Install `eslint-plugin-react-hooks`
+- [ ] Install `eslint-plugin-react-native`
+- [ ] Update ESLint configuration for JavaScript best practices
 
 ---
 
@@ -86,14 +86,14 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 - [x] Copy `google-services.json` to `android/app/`
 - [x] Update `android/build.gradle` - add Google services classpath
-- [-] Update `android/app/build.gradle` - apply Google services plugin
-- [~] Add Firebase dependencies to `android/app/build.gradle`
+- [x] Update `android/app/build.gradle` - apply Google services plugin
+- [x] Add Firebase dependencies to `android/app/build.gradle`
 
 ### 3.2 Notification Configuration
 
-- [ ] Add notification permissions to `AndroidManifest.xml`
-- [ ] Configure notification channels for Notifee
-- [ ] Add foreground service permission (for alarms)
+- [x] Add notification permissions to `AndroidManifest.xml`
+- [x] Configure notification channels for Notifee
+- [x] Add foreground service permission (for alarms)
 
 ### 3.3 Build Configuration
 
@@ -144,7 +144,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 5.3 Create Firebase Config Module
 
-- [ ] Create `src/config/firebase.ts`
+- [ ] Create `src/config/firebase.js`
 - [ ] Initialize Firebase with environment variables
 - [ ] Export Firebase instances (auth, firestore, messaging)
 - [ ] Add environment indicator (dev/prod)
@@ -167,7 +167,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 6.2 Move Existing Files
 
-- [ ] Move `App.js` to `src/App.tsx` (convert to TypeScript)
+- [ ] Keep `App.js` in root or move to `src/App.js`
 - [ ] Update imports in `index.js`
 - [ ] Verify app still runs
 
@@ -177,20 +177,20 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 7.1 Create Navigation Types
 
-- [ ] Create `src/types/navigation.ts`
-- [ ] Define navigation param lists
-- [ ] Export navigation types
+- [ ] Create `src/types/navigation.js` (or use JSDoc for type hints)
+- [ ] Define navigation param lists with JSDoc comments
+- [ ] Export navigation constants
 
 ### 7.2 Create Navigation Structure
 
-- [ ] Create `src/navigation/RootNavigator.tsx`
-- [ ] Create `src/navigation/AuthNavigator.tsx`
-- [ ] Create `src/navigation/ParentNavigator.tsx`
-- [ ] Create `src/navigation/CaregiverNavigator.tsx`
+- [ ] Create `src/navigation/RootNavigator.js`
+- [ ] Create `src/navigation/AuthNavigator.js`
+- [ ] Create `src/navigation/ParentNavigator.js`
+- [ ] Create `src/navigation/CaregiverNavigator.js`
 
 ### 7.3 Implement Navigation
 
-- [ ] Set up NavigationContainer in App.tsx
+- [ ] Set up NavigationContainer in App.js
 - [ ] Implement stack navigation
 - [ ] Add navigation state persistence (optional)
 - [ ] Test navigation between screens
@@ -201,18 +201,18 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 8.1 Create Auth Screens
 
-- [ ] Create `src/screens/SplashScreen.tsx`
-- [ ] Create `src/screens/auth/LoginScreen.tsx` (placeholder)
+- [ ] Create `src/screens/SplashScreen.js`
+- [ ] Create `src/screens/auth/LoginScreen.js` (placeholder)
 - [ ] Add basic UI with "Login" text
 
 ### 8.2 Create Parent Screens
 
-- [ ] Create `src/screens/parent/ParentHomeScreen.tsx` (placeholder)
+- [ ] Create `src/screens/parent/ParentHomeScreen.js` (placeholder)
 - [ ] Add basic UI with "Parent Home" text
 
 ### 8.3 Create Caregiver Screens
 
-- [ ] Create `src/screens/caregiver/CaregiverHomeScreen.tsx` (placeholder)
+- [ ] Create `src/screens/caregiver/CaregiverHomeScreen.js` (placeholder)
 - [ ] Add basic UI with "Caregiver Home" text
 
 ### 8.4 Wire Up Screens
@@ -227,7 +227,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 9.1 Test Firebase Connection
 
-- [ ] Create `src/services/firebase.test.ts`
+- [ ] Create `src/services/firebase.test.js`
 - [ ] Test Firestore connection
 - [ ] Test Auth initialization
 - [ ] Verify no connection errors in logs
@@ -241,7 +241,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 9.3 Create Test Utilities
 
-- [ ] Create `src/utils/firebaseTest.ts`
+- [ ] Create `src/utils/firebaseTest.js`
 - [ ] Add function to test Firestore write
 - [ ] Add function to test Firestore read
 - [ ] Test on both platforms
@@ -259,7 +259,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 10.2 Configure Linting
 
-- [ ] Update `.eslintrc.js` for TypeScript
+- [ ] Update `.eslintrc.js` for JavaScript best practices
 - [ ] Add Firebase-specific lint rules
 - [ ] Run linter and fix issues
 - [ ] Add lint script to package.json
@@ -380,7 +380,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 15.2 Code Quality
 
-- [ ] TypeScript compilation passes
+- [ ] JavaScript code follows best practices
 - [ ] Linting passes with no errors
 - [ ] Code is formatted consistently
 - [ ] No console errors or warnings

@@ -116,4 +116,23 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Firebase dependencies
+    // Import the Firebase BoM (Bill of Materials)
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    
+    // Firebase Analytics (included with firebase-bom)
+    implementation 'com.google.firebase:firebase-analytics'
+    
+    // Firebase Authentication
+    implementation 'com.google.firebase:firebase-auth'
+    
+    // Cloud Firestore
+    implementation 'com.google.firebase:firebase-firestore'
+    
+    // Firebase Cloud Messaging
+    implementation 'com.google.firebase:firebase-messaging'
 }
+
+// Apply Google services plugin (must be at the bottom)
+apply plugin: 'com.google.gms.google-services'
