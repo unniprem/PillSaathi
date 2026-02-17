@@ -24,9 +24,19 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId;
     }
 
+    // Relationships - Pairing & Relationships System
+    // Users can only read relationships they are part of
+    // No direct creates (must use Cloud Function)
+    // Users can delete relationships they are part of
     match /relationships/{relId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow read: if isSignedIn() && 
+        (request.auth.uid == resource.data.parentUid || 
+         request.auth.uid == resource.data.caregiverUid);
+      allow create: if false;
+      allow delete: if isSignedIn() && 
+        (request.auth.uid == resource.data.parentUid || 
+         request.auth.uid == resource.data.caregiverUid);
+      allow update: if false;
     }
 
     match /medicines/{medicineId} {
@@ -46,9 +56,18 @@ service cloud.firestore {
       allow create: if isSignedIn();
     }
 
+    // Invite Codes - Pairing & Relationships System
+    // Parents can only read their own codes
+    // Parents can create codes for themselves
+    // No direct updates or deletes (handled by Cloud Functions)
     match /inviteCodes/{code} {
-      allow read: if isSignedIn();
-      allow create: if isParent(request.auth.uid);
+      allow read: if isSignedIn() && request.auth.uid == resource.data.parentUid;
+      allow create: if isSignedIn() && 
+        request.auth.uid == request.resource.data.parentUid &&
+        request.resource.data.keys().hasAll(['code', 'parentUid', 'createdAt', 'expiresAt']) &&
+        request.resource.data.code is string &&
+        request.resource.data.code.size() == 8;
+      allow update, delete: if false;
     }
 
     match /deviceTokens/{tokenId} {

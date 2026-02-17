@@ -8,7 +8,7 @@ The plan builds incrementally, with each task producing working, testable code. 
 
 ## Tasks
 
-- [ ] 1. Set up Firestore collections and security rules
+- [x] 1. Set up Firestore collections and security rules
 
   - Create Firestore collections: `inviteCodes` and `relationships`
   - Define composite indexes for efficient queries
