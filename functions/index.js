@@ -179,3 +179,99 @@ exports.redeemInviteCode = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+/**
+ * removeRelationship - Callable Cloud Function
+ *
+ * Removes a relationship between a parent and caregiver.
+ * This function validates authentication, verifies the requesting user is part of the relationship,
+ * and deletes the relationship document.
+ *
+ * Requirements: 6.2, 7.4
+ *
+ * @param {Object} data - Request data
+ * @param {string} data.relationshipId - Relationship document ID to remove
+ * @param {Object} context - Function context with authentication info
+ * @returns {Promise<{success: boolean, message?: string}>}
+ * @throws {functions.https.HttpsError} For authentication, validation, or permission errors
+ *
+ * @example
+ * // Client-side usage:
+ * const removeRelationship = firebase.functions().httpsCallable('removeRelationship');
+ * const result = await removeRelationship({ relationshipId: 'rel123' });
+ */
+exports.removeRelationship = functions.https.onCall(async (data, context) => {
+  // ============================================================================
+  // SUBTASK 6.1: Validate authentication and input
+  // Requirements: 7.4 - Authentication and authorization
+  // ============================================================================
+
+  // Validate authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated to remove relationships',
+    );
+  }
+
+  // Validate input (relationshipId)
+  const { relationshipId } = data;
+
+  if (!relationshipId || typeof relationshipId !== 'string') {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'relationshipId is required and must be a string',
+    );
+  }
+
+  try {
+    // Fetch relationship document
+    const relationshipDoc = await admin
+      .firestore()
+      .collection('relationships')
+      .doc(relationshipId)
+      .get();
+
+    // Check if relationship exists
+    if (!relationshipDoc.exists) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'Relationship not found',
+      );
+    }
+
+    const relationshipData = relationshipDoc.data();
+    const { parentUid, caregiverUid } = relationshipData;
+
+    // Verify requesting user is parent or caregiver in the relationship
+    // Requirement 6.2: Only participants can remove the relationship
+    if (context.auth.uid !== parentUid && context.auth.uid !== caregiverUid) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'You do not have permission to remove this relationship',
+      );
+    }
+
+    // Delete relationship document
+    await relationshipDoc.ref.delete();
+
+    return {
+      success: true,
+      message: 'Relationship removed successfully',
+    };
+  } catch (error) {
+    // Re-throw HttpsError instances
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+
+    // Log unexpected errors
+    console.error('Error removing relationship:', error);
+
+    // Throw generic error for unexpected issues
+    throw new functions.https.HttpsError(
+      'internal',
+      'An error occurred while removing the relationship. Please try again',
+    );
+  }
+});

@@ -5,12 +5,15 @@
  * Requirements: 3.1, 3.5, 6.2, 9.1
  */
 
-import CloudFunctionsService from './CloudFunctionsService';
+import { CloudFunctionsService } from './CloudFunctionsService';
 
-// Mock Firebase functions
+// Mock Firebase functions module
+const mockGetFunctions = jest.fn();
+const mockHttpsCallable = jest.fn();
+
 jest.mock('@react-native-firebase/functions', () => ({
-  getFunctions: jest.fn(),
-  httpsCallable: jest.fn(),
+  getFunctions: mockGetFunctions,
+  httpsCallable: mockHttpsCallable,
 }));
 
 jest.mock('@react-native-firebase/app', () => ({
@@ -30,12 +33,8 @@ describe('CloudFunctionsService', () => {
     mockCallable = jest.fn();
     mockFunctions = {};
 
-    const {
-      getFunctions,
-      httpsCallable,
-    } = require('@react-native-firebase/functions');
-    getFunctions.mockReturnValue(mockFunctions);
-    httpsCallable.mockReturnValue(mockCallable);
+    mockGetFunctions.mockReturnValue(mockFunctions);
+    mockHttpsCallable.mockReturnValue(mockCallable);
 
     // Create service instance
     service = new CloudFunctionsService(mockFunctions);

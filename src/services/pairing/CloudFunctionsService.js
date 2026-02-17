@@ -5,9 +5,11 @@
  * Handles function invocation, error mapping, and response processing.
  *
  * Requirements: 3.1, 3.5, 6.2
+ *
+ * NOTE: This service requires @react-native-firebase/functions package.
+ * Install it with: npm install @react-native-firebase/functions
  */
 
-import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import { getApp } from '@react-native-firebase/app';
 
 /**
@@ -16,7 +18,21 @@ import { getApp } from '@react-native-firebase/app';
  */
 class CloudFunctionsService {
   constructor(functionsInstance = null) {
-    this.functions = functionsInstance || getFunctions(getApp());
+    if (functionsInstance) {
+      this.functions = functionsInstance;
+      return;
+    }
+
+    // Try to load functions module
+    try {
+      const functionsModule = require('@react-native-firebase/functions');
+      const getFunctions = functionsModule.getFunctions;
+      this.functions = getFunctions(getApp());
+    } catch (error) {
+      throw new Error(
+        'Firebase Functions package not installed. Install with: npm install @react-native-firebase/functions',
+      );
+    }
   }
 
   /**
@@ -47,6 +63,8 @@ class CloudFunctionsService {
    */
   async redeemInviteCode(code, caregiverUid) {
     try {
+      const functionsModule = require('@react-native-firebase/functions');
+      const httpsCallable = functionsModule.httpsCallable;
       const redeemFunction = httpsCallable(this.functions, 'redeemInviteCode');
       const result = await redeemFunction({ code, caregiverUid });
 
@@ -82,6 +100,8 @@ class CloudFunctionsService {
    */
   async removeRelationship(relationshipId) {
     try {
+      const functionsModule = require('@react-native-firebase/functions');
+      const httpsCallable = functionsModule.httpsCallable;
       const removeFunction = httpsCallable(
         this.functions,
         'removeRelationship',
@@ -175,5 +195,16 @@ class CloudFunctionsService {
   }
 }
 
-// Export singleton instance
-export default new CloudFunctionsService();
+// Export class for testing and custom instantiation
+export { CloudFunctionsService };
+
+// Export singleton instance (will throw if functions package not installed)
+let defaultInstance;
+try {
+  defaultInstance = new CloudFunctionsService();
+} catch (error) {
+  console.warn('CloudFunctionsService: ', error.message);
+  defaultInstance = null;
+}
+
+export default defaultInstance;

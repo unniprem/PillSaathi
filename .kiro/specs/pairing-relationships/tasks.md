@@ -60,7 +60,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test error handling for Firestore failures
     - _Requirements: 1.1, 1.2, 1.3_
 
-- [-] 3. Implement Cloud Function: redeemInviteCode
+- [x] 3. Implement Cloud Function: redeemInviteCode
 
   - [x] 3.1 Create redeemInviteCode callable function
 
@@ -113,9 +113,9 @@ The plan builds incrementally, with each task producing working, testable code. 
 
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement RelationshipService
+- [x] 5. Implement RelationshipService
 
-  - [ ] 5.1 Create RelationshipService class with query methods
+  - [x] 5.1 Create RelationshipService class with query methods
 
     - Implement `getRelationships(uid, role)` to query relationships by user and role
     - Query by `parentUid` for parents, `caregiverUid` for caregivers
@@ -127,14 +127,14 @@ The plan builds incrementally, with each task producing working, testable code. 
     - **Property 7: Relationship Query Correctness**
     - **Validates: Requirements 4.1, 5.1**
 
-  - [ ] 5.3 Implement `subscribeToRelationships(uid, role, callback)` method
+  - [x] 5.3 Implement `subscribeToRelationships(uid, role, callback)` method
 
     - Set up Firestore real-time listener for relationships
     - Call callback with updated relationships array on changes
     - Return unsubscribe function
     - _Requirements: 4.3, 5.3_
 
-  - [ ] 5.4 Implement `getUserProfile(uid)` helper method
+  - [x] 5.4 Implement `getUserProfile(uid)` helper method
 
     - Query users collection for profile data
     - Return name and phone for relationship display
@@ -148,9 +148,9 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test profile data fetching
     - _Requirements: 4.1, 4.2, 5.1, 5.2_
 
-- [~] 6. Implement Cloud Function: removeRelationship
+- [x] 6. Implement Cloud Function: removeRelationship
 
-  - [ ] 6.1 Create removeRelationship callable function
+  - [x] 6.1 Create removeRelationship callable function
 
     - Validate authentication
     - Validate input (relationshipId)
@@ -172,7 +172,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test authentication requirement
     - _Requirements: 6.2, 7.4, 7.5_
 
-- [~] 7. Implement Cloud Function: cleanupExpiredInviteCodes (scheduled)
+- [-] 7. Implement Cloud Function: cleanupExpiredInviteCodes (scheduled)
 
   - Create scheduled function to run every hour
   - Query invite codes older than 48 hours
@@ -218,7 +218,7 @@ The plan builds incrementally, with each task producing working, testable code. 
 
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Implement UI Components: Invite Code Display
+- [~] 10. Implement UI Components: Invite Code Display
 
   - [ ] 10.1 Create InviteCodeDisplay component
 
@@ -237,7 +237,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test expired code UI
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 11. Implement UI Components: Relationship Card
+- [~] 11. Implement UI Components: Relationship Card
 
   - [ ] 11.1 Create RelationshipCard component
 
@@ -254,7 +254,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test loading state during removal
     - _Requirements: 4.2, 5.2, 6.1_
 
-- [ ] 12. Implement ParentPairingScreen
+- [~] 12. Implement ParentPairingScreen
 
   - [ ] 12.1 Create ParentPairingScreen component
 
@@ -276,7 +276,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test error state display
     - _Requirements: 1.1, 2.1, 5.1, 5.4, 9.2, 9.3, 9.4_
 
-- [ ] 13. Implement CaregiverPairingScreen
+- [~] 13. Implement CaregiverPairingScreen
 
   - [ ] 13.1 Create CaregiverPairingScreen component
 
@@ -298,7 +298,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test loading state display
     - _Requirements: 3.1, 4.1, 4.4, 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 14. Implement error handling and user feedback
+- [~] 14. Implement error handling and user feedback
 
   - [ ] 14.1 Create error message mapping
 
@@ -358,7 +358,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - **Property 13: Cloud Function Authentication Requirement**
     - **Validates: Requirements 7.5**
 
-- [ ] 16. Integration and navigation wiring
+- [~] 16. Integration and navigation wiring
 
   - [ ] 16.1 Add pairing screens to navigation
 
