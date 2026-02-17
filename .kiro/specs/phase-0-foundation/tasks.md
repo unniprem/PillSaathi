@@ -284,8 +284,8 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 ### 11.2 Create Setup Guide
 
 - [x] Document Android setup steps
-- [ ] Document iOS setup steps
-- [ ] Document common issues and solutions
+- [x] Document iOS setup steps
+- [x] Document common issues and solutions
 
 ### 11.3 Code Documentation
 

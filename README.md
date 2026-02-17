@@ -1428,6 +1428,8 @@ If you're still experiencing issues:
 
    - [Firebase Setup Guide](FIREBASE-SETUP-GUIDE.md)
    - [Android Setup Guide](docs/ANDROID-SETUP-GUIDE.md)
+   - [iOS Setup Guide](docs/IOS-SETUP-GUIDE.md)
+   - [Common Issues and Solutions](docs/COMMON-ISSUES-AND-SOLUTIONS.md)
    - [Debugging Guide](docs/DEBUGGING-SETUP.md)
 
 3. **Search for similar issues**:
