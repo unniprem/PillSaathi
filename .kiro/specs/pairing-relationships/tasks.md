@@ -16,9 +16,9 @@ The plan builds incrementally, with each task producing working, testable code. 
   - Implement security rules for relationships (read: only participants, no direct creates, delete: only participants)
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 2. Implement InviteCodeService
+- [x] 2. Implement InviteCodeService
 
-  - [ ] 2.1 Create InviteCodeService class with code generation logic
+  - [x] 2.1 Create InviteCodeService class with code generation logic
 
     - Implement `generateRandomCode(length)` to create 8-character alphanumeric codes
     - Implement `calculateExpiration(hours)` to compute expiration timestamp (24 hours)
@@ -30,7 +30,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - **Property 1: Invite Code Generation Completeness**
     - **Validates: Requirements 1.1, 1.2, 1.3**
 
-  - [ ] 2.3 Implement `generateInviteCode(parentUid)` method
+  - [x] 2.3 Implement `generateInviteCode(parentUid)` method
 
     - Query Firestore for active unexpired codes for the parent
     - If active code exists, return it (idempotence)
@@ -42,7 +42,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - **Property 2: Invite Code Generation Idempotence**
     - **Validates: Requirements 1.5**
 
-  - [ ] 2.5 Implement `getActiveInviteCode(parentUid)` method
+  - [x] 2.5 Implement `getActiveInviteCode(parentUid)` method
 
     - Query Firestore for active unexpired codes
     - Return code object or null
