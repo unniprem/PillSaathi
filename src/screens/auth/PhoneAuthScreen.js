@@ -230,6 +230,7 @@ const PhoneAuthScreen = ({ navigation }) => {
                 accessibilityRole="none"
                 returnKeyType="done"
                 onSubmitEditing={handleSendOTP}
+                importantForAccessibility="yes"
               />
             </View>
 
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#DDDDDD',
     borderRadius: 8,
     backgroundColor: '#F9F9F9',
@@ -331,6 +332,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#DDDDDD',
     minHeight: 52, // Ensures 44pt+ touch target
+    minWidth: 80, // Ensures 44pt+ touch target width
   },
   countryCodeText: {
     fontSize: 16,
@@ -349,6 +351,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
     minHeight: 52, // Ensures 44pt+ touch target
+    outlineStyle: 'none', // Remove default outline
   },
   phoneInputDisabled: {
     opacity: 0.6,
@@ -385,7 +388,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    transition: 'all 0.3s ease',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   sendButtonDisabled: {
     backgroundColor: '#CCCCCC',

@@ -10,14 +10,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  ActivityIndicator,
-  StyleSheet,
-  Modal,
-  Platform,
-} from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Modal } from 'react-native';
 
 /**
  * LoadingOverlay Component
@@ -45,10 +38,26 @@ const LoadingOverlay = ({ visible, message = 'Loading...' }) => {
       accessibilityLabel="Loading"
       accessibilityRole="progressbar"
     >
-      <View style={styles.overlay}>
+      <View
+        style={styles.overlay}
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={message}
+      >
         <View style={styles.container}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          {message && <Text style={styles.message}>{message}</Text>}
+          <ActivityIndicator
+            size="large"
+            color="#007AFF"
+            accessibilityLabel="Loading indicator"
+          />
+          {message && (
+            <Text
+              style={styles.message}
+              accessibilityRole="text"
+              accessibilityLiveRegion="polite"
+            >
+              {message}
+            </Text>
+          )}
         </View>
       </View>
     </Modal>

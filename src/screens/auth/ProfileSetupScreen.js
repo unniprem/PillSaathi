@@ -169,6 +169,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
               onSubmitEditing={handleSave}
               autoCapitalize="words"
               autoCorrect={false}
+              importantForAccessibility="yes"
             />
 
             {/* Error Message */}
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   nameInput: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#DDDDDD',
     borderRadius: 8,
     backgroundColor: '#F9F9F9',
@@ -258,6 +259,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
     minHeight: 52, // Ensures 44pt+ touch target
+    outlineStyle: 'none', // Remove default outline
   },
   nameInputDisabled: {
     opacity: 0.6,
@@ -288,7 +290,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    transition: 'all 0.3s ease',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   saveButtonDisabled: {
     backgroundColor: '#CCCCCC',

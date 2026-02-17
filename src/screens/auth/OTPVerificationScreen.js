@@ -346,6 +346,7 @@ const OTPVerificationScreen = ({ navigation, route }) => {
                   onSubmitEditing={
                     index === 5 && isOtpComplete ? handleVerifyOTP : undefined
                   }
+                  importantForAccessibility="yes"
                 />
               ))}
             </View>
@@ -498,6 +499,7 @@ const styles = StyleSheet.create({
     color: '#333333',
     textAlign: 'center',
     minHeight: 56, // Ensures 44pt+ touch target
+    outlineStyle: 'none', // Remove default outline
   },
   otpInputFilled: {
     borderColor: '#007AFF',
@@ -541,7 +543,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    transition: 'all 0.3s ease',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   verifyButtonDisabled: {
     backgroundColor: '#CCCCCC',

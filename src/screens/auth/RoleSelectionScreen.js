@@ -357,6 +357,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     minHeight: 44,
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   retryButtonText: {
     fontSize: 14,
@@ -376,7 +378,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    transition: 'all 0.3s ease',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   continueButtonDisabled: {
     backgroundColor: '#CCCCCC',
