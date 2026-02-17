@@ -20,15 +20,14 @@ const NAVIGATION_STATE_KEY = '@navigation_state';
 export async function getSavedNavigationState() {
   try {
     const stateString = await AsyncStorage.getItem(NAVIGATION_STATE_KEY);
-    if (stateString) {
-      const state = JSON.parse(stateString);
-       
-      console.log('📱 Saved Navigation State:', JSON.stringify(state, null, 2));
-      return state;
+    if (!stateString) {
+      console.log('📱 No saved navigation state found');
+      return null;
     }
-     
-    console.log('📱 No saved navigation state found');
-    return null;
+
+    const state = JSON.parse(stateString);
+    console.log('📱 Saved Navigation State:', JSON.stringify(state, null, 2));
+    return state;
   } catch (error) {
     console.error('❌ Error reading navigation state:', error);
     return null;
@@ -43,7 +42,7 @@ export async function getSavedNavigationState() {
 export async function clearNavigationState() {
   try {
     await AsyncStorage.removeItem(NAVIGATION_STATE_KEY);
-     
+
     console.log('✅ Navigation state cleared');
     return true;
   } catch (error) {
@@ -59,24 +58,20 @@ export async function clearNavigationState() {
  * @returns {Promise<void>}
  */
 export async function testNavigationPersistence() {
-   
   console.log('\n🧪 Testing Navigation State Persistence...\n');
 
   const state = await getSavedNavigationState();
 
   if (state) {
-     
     console.log('✅ Navigation state persistence is working!');
-     
+
     console.log('Current route:', state.routes?.[state.index]?.name);
   } else {
-     
     console.log(
       'ℹ️  No navigation state saved yet (this is normal on first launch)',
     );
   }
 
-   
   console.log(
     '\n💡 Navigate to different screens and restart the app to test persistence\n',
   );

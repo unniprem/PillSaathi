@@ -334,7 +334,7 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 - [x] Add `.env*` files
 - [x] Add Firebase config files (if sensitive)
 - [x] Add build artifacts
-- [-] Verify no secrets in repo
+- [x] Verify no secrets in repo
 
 ### 13.2 Commit Changes
 
@@ -380,16 +380,16 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 15.2 Code Quality
 
-- [~] JavaScript code follows best practices
+- [x] JavaScript code follows best practices
 - [ ] Linting passes with no errors
-- [~] Code is formatted consistently
+- [x] Code is formatted consistently
 - [ ] No console errors or warnings
 
 ### 15.3 Documentation
 
-- [ ] README is up to date
-- [ ] Setup guide is complete
-- [ ] Code is documented
+- [~] README is up to date
+- [-] Setup guide is complete
+- [~] Code is documented
 - [ ] Troubleshooting guide exists
 
 ### 15.4 Testing

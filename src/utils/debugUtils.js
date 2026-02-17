@@ -6,8 +6,6 @@
  * it doesn't run in production.
  */
 
- 
-
 /**
  * Enhanced console.log that only runs in development
  * @param {string} tag - Tag to identify the log source
@@ -15,6 +13,10 @@
  */
 export const debugLog = (tag, data) => {
   if (__DEV__) {
+    if (typeof tag !== 'string') {
+      console.warn('[debugLog] Tag must be a string');
+      return;
+    }
     console.log(`[${tag}]`, data);
   }
 };
@@ -75,6 +77,11 @@ export const debugError = (context, error) => {
  */
 export const debugTimer = label => {
   if (__DEV__) {
+    if (typeof label !== 'string') {
+      console.warn('[debugTimer] Label must be a string');
+      return () => {};
+    }
+
     const start = Date.now();
     console.log(`[Timer] ${label} - Start`);
 
@@ -106,7 +113,19 @@ export const debugComponent = (componentName, lifecycle, props = {}) => {
  */
 export const debugPretty = (label, obj) => {
   if (__DEV__) {
-    console.log(`[${label}]`, JSON.stringify(obj, null, 2));
+    if (typeof label !== 'string') {
+      console.warn('[debugPretty] Label must be a string');
+      return;
+    }
+    if (obj === null || obj === undefined) {
+      console.log(`[${label}]`, obj);
+      return;
+    }
+    try {
+      console.log(`[${label}]`, JSON.stringify(obj, null, 2));
+    } catch (error) {
+      console.log(`[${label}]`, obj);
+    }
   }
 };
 
@@ -129,6 +148,14 @@ export const debugIf = (condition, tag, data) => {
  */
 export const debugTable = (label, data) => {
   if (__DEV__) {
+    if (typeof label !== 'string') {
+      console.warn('[debugTable] Label must be a string');
+      return;
+    }
+    if (!Array.isArray(data)) {
+      console.warn('[debugTable] Data must be an array');
+      return;
+    }
     console.log(`[${label}]`);
     console.table(data);
   }

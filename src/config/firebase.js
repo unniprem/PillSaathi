@@ -38,9 +38,10 @@ export const isProduction = () => {
 /**
  * Get Firebase project configuration
  * @returns {Object} Firebase configuration object
+ * @throws {Error} If required configuration is missing
  */
 export const getFirebaseConfig = () => {
-  return {
+  const config = {
     projectId: Config.FIREBASE_PROJECT_ID,
     storageBucket: Config.FIREBASE_STORAGE_BUCKET,
     messagingSenderId: Config.FIREBASE_MESSAGING_SENDER_ID,
@@ -48,6 +49,18 @@ export const getFirebaseConfig = () => {
     apiKey: Config.FIREBASE_ANDROID_API_KEY,
     authDomain: Config.FIREBASE_AUTH_DOMAIN,
   };
+
+  // Validate required fields
+  const requiredFields = ['projectId', 'apiKey', 'appId'];
+  const missingFields = requiredFields.filter(field => !config[field]);
+
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Missing required Firebase configuration: ${missingFields.join(', ')}`,
+    );
+  }
+
+  return config;
 };
 
 /**
@@ -134,9 +147,20 @@ export const disableFirebaseDebugLogging = () => {
 /**
  * Initialize Firebase services
  * Call this early in your app lifecycle
+ * @returns {boolean} True if initialization succeeded, false otherwise
  */
 export const initializeFirebase = () => {
   try {
+    // Validate configuration before initializing
+    const config = getFirebaseConfig();
+
+    if (!config.projectId || !config.apiKey || !config.appId) {
+      console.error(
+        '❌ Firebase initialization failed: Missing required configuration',
+      );
+      return false;
+    }
+
     // Firebase is automatically initialized by @react-native-firebase/app
     // based on google-services.json (Android) and GoogleService-Info.plist (iOS)
 

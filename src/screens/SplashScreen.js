@@ -23,7 +23,12 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
  * Displays app branding and loading indicator.
  * No user interaction is required on this screen.
  *
+ * @component
  * @returns {React.ReactElement} Splash screen component
+ *
+ * @example
+ * // Used by RootNavigator during initial loading
+ * <Stack.Screen name="Splash" component={SplashScreen} />
  */
 function SplashScreen() {
   return (

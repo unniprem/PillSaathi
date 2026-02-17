@@ -41,7 +41,7 @@ export const testEnvLoading = () => {
     const value = Config[varName];
     results.variables[varName] = value;
 
-    if (!value || value === '') {
+    if (!value || value === '' || value === 'undefined') {
       results.success = false;
       results.errors.push(`Critical variable ${varName} is missing or empty`);
     }
@@ -52,7 +52,7 @@ export const testEnvLoading = () => {
     const value = Config[varName];
     results.variables[varName] = value;
 
-    if (!value || value === '') {
+    if (!value || value === '' || value === 'undefined') {
       results.warnings.push(`Optional variable ${varName} is missing or empty`);
     }
   });
@@ -114,7 +114,7 @@ export const getEnvTestReport = () => {
  */
 export const logEnvTest = () => {
   const report = getEnvTestReport();
-   
+
   console.log(report);
 
   const results = testEnvLoading();

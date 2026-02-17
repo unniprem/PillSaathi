@@ -23,36 +23,50 @@ import RootNavigator from './src/navigation/RootNavigator';
  * - Environment variable testing
  * - Root navigation structure
  *
+ * @component
  * @returns {React.ReactElement} App component
+ *
+ * @example
+ * // App is the root component, imported in index.js
+ * import App from './App';
+ * AppRegistry.registerComponent(appName, () => App);
  */
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
   // Initialize Firebase and test environment variable loading on app start
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('\n🔧 Testing environment variable loading...\n');
-    const success = logEnvTest();
-    if (success) {
-      // eslint-disable-next-line no-console
-      console.log('\n✅ Environment variables loaded successfully!\n');
-    } else {
-      console.error('\n❌ Environment variable loading failed!\n');
-    }
+    const initializeApp = async () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.log('\n🔧 Testing environment variable loading...\n');
+        const success = logEnvTest();
+        if (success) {
+          // eslint-disable-next-line no-console
+          console.log('\n✅ Environment variables loaded successfully!\n');
+        } else {
+          console.error('\n❌ Environment variable loading failed!\n');
+        }
 
-    // Initialize Firebase with environment variables
-    // eslint-disable-next-line no-console
-    console.log('\n🔥 Initializing Firebase...\n');
-    const firebaseInitialized = initializeFirebase();
-    if (firebaseInitialized) {
-      // eslint-disable-next-line no-console
-      console.log('\n✅ Firebase initialized successfully!\n');
-    } else {
-      console.error('\n❌ Firebase initialization failed!\n');
-    }
+        // Initialize Firebase with environment variables
+        // eslint-disable-next-line no-console
+        console.log('\n🔥 Initializing Firebase...\n');
+        const firebaseInitialized = initializeFirebase();
+        if (firebaseInitialized) {
+          // eslint-disable-next-line no-console
+          console.log('\n✅ Firebase initialized successfully!\n');
+        } else {
+          console.error('\n❌ Firebase initialization failed!\n');
+        }
 
-    // Test navigation state persistence
-    testNavigationPersistence();
+        // Test navigation state persistence
+        await testNavigationPersistence();
+      } catch (error) {
+        console.error('\n❌ App initialization error:', error);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   return (

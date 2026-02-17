@@ -1,4 +1,3 @@
- 
 /* eslint-disable prefer-template */
 /**
  * Firebase Test Utilities
@@ -31,8 +30,14 @@ import firebase from '../config/firebase';
  * @param {boolean} options.cleanup - Whether to delete test document after write (default: true)
  * @param {boolean} options.verbose - Whether to log detailed output (default: true)
  * @returns {Promise<Object>} Test result object
+ * @throws {Error} If options parameter is invalid
  */
 export const testFirestoreWrite = async (options = {}) => {
+  // Validate options
+  if (options !== null && typeof options !== 'object') {
+    throw new Error('Options must be an object');
+  }
+
   const { cleanup = true, verbose = true } = options;
 
   const result = {
@@ -128,8 +133,14 @@ export const testFirestoreWrite = async (options = {}) => {
  * @param {Object} options - Test options
  * @param {boolean} options.verbose - Whether to log detailed output (default: true)
  * @returns {Promise<Object>} Test result object
+ * @throws {Error} If options parameter is invalid
  */
 export const testFirestoreRead = async (options = {}) => {
+  // Validate options
+  if (options !== null && typeof options !== 'object') {
+    throw new Error('Options must be an object');
+  }
+
   const { verbose = true } = options;
 
   const result = {
@@ -284,8 +295,14 @@ export const runFirestoreTests = async (options = {}) => {
  * @param {Object} options - Test options
  * @param {boolean} options.verbose - Whether to log detailed output (default: true)
  * @returns {Promise<Object>} Test result object
+ * @throws {Error} If options parameter is invalid
  */
 export const testFirestoreQuery = async (options = {}) => {
+  // Validate options
+  if (options !== null && typeof options !== 'object') {
+    throw new Error('Options must be an object');
+  }
+
   const { verbose = true } = options;
 
   const result = {
