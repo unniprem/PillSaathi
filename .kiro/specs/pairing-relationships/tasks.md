@@ -60,16 +60,16 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test error handling for Firestore failures
     - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 3. Implement Cloud Function: redeemInviteCode
+- [-] 3. Implement Cloud Function: redeemInviteCode
 
-  - [ ] 3.1 Create redeemInviteCode callable function
+  - [x] 3.1 Create redeemInviteCode callable function
 
     - Validate authentication (reject if not authenticated)
     - Validate input parameters (code, caregiverUid)
     - Validate requesting user matches caregiverUid
     - _Requirements: 7.5_
 
-  - [ ] 3.2 Implement invite code validation logic
+  - [x] 3.2 Implement invite code validation logic
 
     - Validate code format (8 characters, alphanumeric)
     - Query Firestore for code
@@ -82,7 +82,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - **Property 4: Invite Code Format Validation**
     - **Validates: Requirements 3.1**
 
-  - [ ] 3.4 Implement relationship creation logic
+  - [x] 3.4 Implement relationship creation logic
 
     - Check for existing relationship (idempotence)
     - If exists, return success without creating duplicate
@@ -148,7 +148,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test profile data fetching
     - _Requirements: 4.1, 4.2, 5.1, 5.2_
 
-- [ ] 6. Implement Cloud Function: removeRelationship
+- [~] 6. Implement Cloud Function: removeRelationship
 
   - [ ] 6.1 Create removeRelationship callable function
 
@@ -172,7 +172,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test authentication requirement
     - _Requirements: 6.2, 7.4, 7.5_
 
-- [ ] 7. Implement Cloud Function: cleanupExpiredInviteCodes (scheduled)
+- [~] 7. Implement Cloud Function: cleanupExpiredInviteCodes (scheduled)
 
   - Create scheduled function to run every hour
   - Query invite codes older than 48 hours
@@ -180,7 +180,7 @@ The plan builds incrementally, with each task producing working, testable code. 
   - Log cleanup results
   - _Requirements: 8.2_
 
-- [ ] 8. Implement PairingContext
+- [~] 8. Implement PairingContext
 
   - [ ] 8.1 Create PairingContext with state management
 
