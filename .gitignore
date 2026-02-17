@@ -76,3 +76,38 @@ yarn-error.log
 
 # Environment variables
 .env*
+
+# Firebase configuration files (contain sensitive API keys)
+android/app/google-services.json
+ios/PillSaathi/GoogleService-Info.plist
+
+# Build artifacts
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/app/.cxx/
+android/.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# iOS
+ios/build/
+ios/Pods/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/DerivedData/
+
+# React Native
+*.jsbundle.map
+*.bundle.map
+
+# Metro bundler
+.metro/
+
+# Logs
+*.log
+logs/

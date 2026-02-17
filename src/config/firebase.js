@@ -111,6 +111,27 @@ export const logFirebaseInfo = () => {
 };
 
 /**
+ * Enable Firebase debug logging
+ * Only works in development mode
+ */
+export const enableFirebaseDebugLogging = () => {
+  if (__DEV__ && Config.ENABLE_DEBUG_LOGS === 'true') {
+    // Note: React Native Firebase doesn't support setLogLevel
+    // Debug logging is controlled via native configuration
+    console.warn('🐛 Firebase debug logging enabled (via native config)');
+  }
+};
+
+/**
+ * Disable Firebase debug logging
+ */
+export const disableFirebaseDebugLogging = () => {
+  if (__DEV__) {
+    console.warn('🔇 Firebase debug logging disabled');
+  }
+};
+
+/**
  * Initialize Firebase services
  * Call this early in your app lifecycle
  */
@@ -124,6 +145,11 @@ export const initializeFirebase = () => {
       persistence: true, // Enable offline persistence
       cacheSizeBytes: firestore.CACHE_SIZE_UNLIMITED,
     });
+
+    // Enable debug logging if configured
+    if (Config.ENABLE_DEBUG_LOGS === 'true') {
+      enableFirebaseDebugLogging();
+    }
 
     // Log initialization info
     logFirebaseInfo();
@@ -148,4 +174,6 @@ export default {
   getFirebaseConfig,
   initializeFirebase,
   logFirebaseInfo,
+  enableFirebaseDebugLogging,
+  disableFirebaseDebugLogging,
 };

@@ -114,7 +114,7 @@ export const getEnvTestReport = () => {
  */
 export const logEnvTest = () => {
   const report = getEnvTestReport();
-  // eslint-disable-next-line no-console
+   
   console.log(report);
 
   const results = testEnvLoading();

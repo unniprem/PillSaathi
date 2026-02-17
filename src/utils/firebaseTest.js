@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 /* eslint-disable prefer-template */
 /**
  * Firebase Test Utilities

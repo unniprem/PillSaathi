@@ -125,7 +125,7 @@ export const verifyDevFirebaseConnection = async () => {
       results.checks.messagingService;
 
     // Print summary
-    console.log('\n' + '='.repeat(50));
+    console.log(`\n${  '='.repeat(50)}`);
     console.log('Firebase Dev Connection Verification Summary');
     console.log('='.repeat(50));
     console.log(`Environment: ${results.environment}`);
@@ -160,7 +160,7 @@ export const verifyFirestoreWrite = async () => {
     console.log('🔍 Testing Firestore write capability...');
     const testDoc = firebase.firestore
       .collection('_connection_test')
-      .doc('test_' + Date.now());
+      .doc(`test_${  Date.now()}`);
 
     await testDoc.set({
       timestamp: new Date().toISOString(),
@@ -220,12 +220,12 @@ export const runCompleteVerification = async (includeNetworkTests = false) => {
       read: readSuccess,
     };
 
-    console.log('\n' + '='.repeat(50));
+    console.log(`\n${  '='.repeat(50)}`);
     console.log('Network Tests Summary');
     console.log('='.repeat(50));
     console.log(`Firestore Write: ${writeSuccess ? '✅ PASSED' : '❌ FAILED'}`);
     console.log(`Firestore Read: ${readSuccess ? '✅ PASSED' : '❌ FAILED'}`);
-    console.log('='.repeat(50) + '\n');
+    console.log(`${'='.repeat(50)  }\n`);
   }
 
   return results;

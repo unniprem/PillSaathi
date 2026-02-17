@@ -13,7 +13,6 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import navigators
 import AuthNavigator from '../src/navigation/AuthNavigator';
@@ -62,8 +61,6 @@ jest.mock('../src/types/navigation', () => ({
     SETTINGS: 'Settings',
   },
 }));
-
-const Stack = createNativeStackNavigator();
 
 describe('Navigation Tests', () => {
   describe('AuthNavigator', () => {

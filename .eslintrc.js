@@ -15,6 +15,29 @@ module.exports = {
   root: true,
   extends: '@react-native',
   plugins: ['react-hooks', 'react-native'],
+  overrides: [
+    {
+      // Allow console statements in scripts, utilities, and test files
+      files: [
+        'scripts/**/*.js',
+        'src/utils/**/*.js',
+        'src/services/**/*.js',
+        '**/*.test.js',
+        'verify-*.js',
+      ],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+    {
+      // Relax color literal warnings for placeholder screens (Phase 0)
+      files: ['src/screens/**/*.js', 'src/navigation/**/*.js'],
+      rules: {
+        'react-native/no-color-literals': 'off',
+        'react/no-unstable-nested-components': 'off',
+      },
+    },
+  ],
   rules: {
     // JavaScript Best Practices
     'no-console': ['warn', { allow: ['warn', 'error'] }],
@@ -69,6 +92,30 @@ module.exports = {
               'Use @react-native-firebase packages instead of web Firebase SDK',
           },
         ],
+      },
+    ],
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector:
+          "CallExpression[callee.object.name='firestore'][callee.property.name='collection'] > Literal",
+        message:
+          'Avoid hardcoded collection names. Use constants from a centralized location.',
+      },
+      {
+        selector:
+          "CallExpression[callee.property.name='onSnapshot']:not([arguments.length>=2])",
+        message:
+          'Firebase onSnapshot should include error handler as second argument.',
+      },
+    ],
+    'no-restricted-properties': [
+      'error',
+      {
+        object: 'auth',
+        property: 'currentUser',
+        message:
+          'Use auth().currentUser with null check or onAuthStateChanged listener.',
       },
     ],
   },

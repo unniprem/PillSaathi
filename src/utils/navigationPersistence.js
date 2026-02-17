@@ -22,11 +22,11 @@ export async function getSavedNavigationState() {
     const stateString = await AsyncStorage.getItem(NAVIGATION_STATE_KEY);
     if (stateString) {
       const state = JSON.parse(stateString);
-      // eslint-disable-next-line no-console
+       
       console.log('📱 Saved Navigation State:', JSON.stringify(state, null, 2));
       return state;
     }
-    // eslint-disable-next-line no-console
+     
     console.log('📱 No saved navigation state found');
     return null;
   } catch (error) {
@@ -43,7 +43,7 @@ export async function getSavedNavigationState() {
 export async function clearNavigationState() {
   try {
     await AsyncStorage.removeItem(NAVIGATION_STATE_KEY);
-    // eslint-disable-next-line no-console
+     
     console.log('✅ Navigation state cleared');
     return true;
   } catch (error) {
@@ -59,24 +59,24 @@ export async function clearNavigationState() {
  * @returns {Promise<void>}
  */
 export async function testNavigationPersistence() {
-  // eslint-disable-next-line no-console
+   
   console.log('\n🧪 Testing Navigation State Persistence...\n');
 
   const state = await getSavedNavigationState();
 
   if (state) {
-    // eslint-disable-next-line no-console
+     
     console.log('✅ Navigation state persistence is working!');
-    // eslint-disable-next-line no-console
+     
     console.log('Current route:', state.routes?.[state.index]?.name);
   } else {
-    // eslint-disable-next-line no-console
+     
     console.log(
       'ℹ️  No navigation state saved yet (this is normal on first launch)',
     );
   }
 
-  // eslint-disable-next-line no-console
+   
   console.log(
     '\n💡 Navigate to different screens and restart the app to test persistence\n',
   );
