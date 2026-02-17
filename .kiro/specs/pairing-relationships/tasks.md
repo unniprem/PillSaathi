@@ -172,7 +172,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test authentication requirement
     - _Requirements: 6.2, 7.4, 7.5_
 
-- [-] 7. Implement Cloud Function: cleanupExpiredInviteCodes (scheduled)
+- [x] 7. Implement Cloud Function: cleanupExpiredInviteCodes (scheduled)
 
   - Create scheduled function to run every hour
   - Query invite codes older than 48 hours
@@ -180,16 +180,16 @@ The plan builds incrementally, with each task producing working, testable code. 
   - Log cleanup results
   - _Requirements: 8.2_
 
-- [~] 8. Implement PairingContext
+- [x] 8. Implement PairingContext
 
-  - [ ] 8.1 Create PairingContext with state management
+  - [x] 8.1 Create PairingContext with state management
 
     - Define context state: inviteCode, relationships, loading, error
     - Implement context provider component
     - Create custom hook `usePairing()` for consuming context
     - _Requirements: 1.1, 4.1, 5.1_
 
-  - [ ] 8.2 Implement context methods
+  - [x] 8.2 Implement context methods
 
     - Implement `generateInviteCode()` using InviteCodeService
     - Implement `redeemInviteCode(code)` calling Cloud Function
@@ -198,7 +198,7 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Add error handling and loading state management
     - _Requirements: 1.1, 3.5, 6.2, 9.1_
 
-  - [ ] 8.3 Set up real-time listeners in context
+  - [x] 8.3 Set up real-time listeners in context
 
     - Subscribe to relationships on context mount
     - Update context state when relationships change
@@ -218,9 +218,9 @@ The plan builds incrementally, with each task producing working, testable code. 
 
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 10. Implement UI Components: Invite Code Display
+- [-] 10. Implement UI Components: Invite Code Display
 
-  - [ ] 10.1 Create InviteCodeDisplay component
+  - [-] 10.1 Create InviteCodeDisplay component
 
     - Display invite code in large, readable format
     - Show expiration countdown timer

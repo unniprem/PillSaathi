@@ -275,3 +275,74 @@ exports.removeRelationship = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+/**
+ * cleanupExpiredInviteCodes - Scheduled Cloud Function
+ *
+ * Automatically cleans up expired invite codes from Firestore.
+ * Runs every hour to delete codes that are older than 48 hours.
+ * This keeps the database clean and prevents accumulation of stale data.
+ *
+ * Requirements: 8.2 - Automatic cleanup of expired codes
+ *
+ * @param {Object} context - Function context with event information
+ * @returns {Promise<null>} Returns null on completion
+ *
+ * Schedule: Runs every 1 hour
+ * Cleanup threshold: Codes older than 48 hours
+ *
+ * @example
+ * // This function runs automatically on schedule
+ * // No client-side invocation needed
+ */
+exports.cleanupExpiredInviteCodes = functions.pubsub
+  .schedule('every 1 hours')
+  .onRun(async context => {
+    try {
+      // Calculate cutoff time: 48 hours ago
+      const cutoffTime = admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() - 48 * 60 * 60 * 1000),
+      );
+
+      console.log(
+        `Starting cleanup of invite codes older than ${cutoffTime
+          .toDate()
+          .toISOString()}`,
+      );
+
+      // Query invite codes older than 48 hours
+      const expiredCodesSnapshot = await admin
+        .firestore()
+        .collection('inviteCodes')
+        .where('expiresAt', '<', cutoffTime)
+        .get();
+
+      // If no expired codes, log and exit
+      if (expiredCodesSnapshot.empty) {
+        console.log('No expired invite codes to clean up');
+        return null;
+      }
+
+      // Delete expired codes in batch
+      const batch = admin.firestore().batch();
+      expiredCodesSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+
+      // Log cleanup results
+      const deletedCount = expiredCodesSnapshot.size;
+      console.log(
+        `Successfully cleaned up ${deletedCount} expired invite code${
+          deletedCount === 1 ? '' : 's'
+        }`,
+      );
+
+      return null;
+    } catch (error) {
+      // Log error but don't throw - scheduled functions should not fail
+      console.error('Error during invite code cleanup:', error);
+      return null;
+    }
+  });
