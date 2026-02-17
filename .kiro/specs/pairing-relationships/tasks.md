@@ -218,9 +218,9 @@ The plan builds incrementally, with each task producing working, testable code. 
 
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 10. Implement UI Components: Invite Code Display
+- [x] 10. Implement UI Components: Invite Code Display
 
-  - [-] 10.1 Create InviteCodeDisplay component
+  - [x] 10.1 Create InviteCodeDisplay component
 
     - Display invite code in large, readable format
     - Show expiration countdown timer
@@ -237,9 +237,9 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test expired code UI
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [~] 11. Implement UI Components: Relationship Card
+- [x] 11. Implement UI Components: Relationship Card
 
-  - [ ] 11.1 Create RelationshipCard component
+  - [x] 11.1 Create RelationshipCard component
 
     - Display user name and phone number
     - Display relationship creation date
@@ -254,9 +254,9 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test loading state during removal
     - _Requirements: 4.2, 5.2, 6.1_
 
-- [~] 12. Implement ParentPairingScreen
+- [x] 12. Implement ParentPairingScreen
 
-  - [ ] 12.1 Create ParentPairingScreen component
+  - [x] 12.1 Create ParentPairingScreen component
 
     - Display active invite code or generate button
     - Show InviteCodeDisplay when code exists
@@ -276,9 +276,9 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test error state display
     - _Requirements: 1.1, 2.1, 5.1, 5.4, 9.2, 9.3, 9.4_
 
-- [~] 13. Implement CaregiverPairingScreen
+- [x] 13. Implement CaregiverPairingScreen
 
-  - [ ] 13.1 Create CaregiverPairingScreen component
+  - [x] 13.1 Create CaregiverPairingScreen component
 
     - Create input field for invite code entry
     - Implement code format validation (8 characters, alphanumeric)
@@ -298,9 +298,9 @@ The plan builds incrementally, with each task producing working, testable code. 
     - Test loading state display
     - _Requirements: 3.1, 4.1, 4.4, 9.1, 9.2, 9.3, 9.4_
 
-- [~] 14. Implement error handling and user feedback
+- [-] 14. Implement error handling and user feedback
 
-  - [ ] 14.1 Create error message mapping
+  - [-] 14.1 Create error message mapping
 
     - Define ERROR_MESSAGES object with all error codes
     - Map Firebase errors to user-friendly messages
