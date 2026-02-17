@@ -1,20 +1,30 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
+ * PillSathi App
+ * Main application entry point
  *
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { StatusBar, useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { logEnvTest } from './src/utils/envTest';
 import { initializeFirebase } from './src/config/firebase';
+import { testNavigationPersistence } from './src/utils/navigationPersistence';
+import RootNavigator from './src/navigation/RootNavigator';
 
+/**
+ * Main App Component
+ *
+ * Sets up the application with:
+ * - SafeAreaProvider for safe area handling
+ * - StatusBar configuration
+ * - Firebase initialization
+ * - Environment variable testing
+ * - Root navigation structure
+ *
+ * @returns {React.ReactElement} App component
+ */
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -40,33 +50,17 @@ function App() {
     } else {
       console.error('\n❌ Firebase initialization failed!\n');
     }
+
+    // Test navigation state persistence
+    testNavigationPersistence();
   }, []);
 
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <RootNavigator />
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
