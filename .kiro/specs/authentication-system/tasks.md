@@ -14,9 +14,9 @@ This implementation plan breaks down the authentication system into discrete, in
   - Create error message mapping constants
   - _Requirements: 1.4, 6.2_
 
-- [ ] 2. Implement AuthService for Firebase Authentication
+- [x] 2. Implement AuthService for Firebase Authentication
 
-  - [ ] 2.1 Create AuthService class with phone OTP methods
+  - [x] 2.1 Create AuthService class with phone OTP methods
 
     - Implement `sendPhoneOTP(phoneNumber)` method
     - Implement `verifyPhoneOTP(verificationId, code)` method
@@ -48,9 +48,9 @@ This implementation plan breaks down the authentication system into discrete, in
     - Test network error handling
     - _Requirements: 1.1, 1.5, 1.6, 6.1_
 
-- [ ] 3. Implement ProfileService for Firestore operations
+- [x] 3. Implement ProfileService for Firestore operations
 
-  - [ ] 3.1 Create ProfileService class with CRUD methods
+  - [x] 3.1 Create ProfileService class with CRUD methods
 
     - Implement `createProfile(uid, profileData)` method
     - Implement `getProfile(uid)` method
