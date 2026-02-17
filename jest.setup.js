@@ -33,20 +33,10 @@ jest.mock('react-native-config', () => ({
   ENABLE_PERFORMANCE_MONITORING: 'false',
 }));
 
-// Mock Firebase modules
-jest.mock('@react-native-firebase/auth', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    currentUser: null,
-  })),
-}));
-
-jest.mock('@react-native-firebase/firestore', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    collection: jest.fn(),
-  })),
-}));
+// Mock Firebase modules - using comprehensive mocks from __mocks__ directory
+// The mocks are automatically loaded from __mocks__/@react-native-firebase/
+jest.mock('@react-native-firebase/auth');
+jest.mock('@react-native-firebase/firestore');
 
 jest.mock('@react-native-firebase/messaging', () => ({
   __esModule: true,

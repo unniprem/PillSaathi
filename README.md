@@ -1,5 +1,46 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+# PillSathi - Medication Management App
+
+PillSathi is a React Native application for medication management, designed to help parents and caregivers track and manage medications for children.
+
+## Project Status
+
+**Current Phase**: Phase 0 - Foundation & Firebase Setup (In Progress)
+
+Phase 0 establishes the foundational infrastructure including Firebase integration, navigation structure, and development environment. See [Phase 0 Tasks](.kiro/specs/phase-0-foundation/tasks.md) for detailed progress.
+
+## Documentation
+
+This project includes comprehensive documentation to help you get started:
+
+### Setup Guides
+
+- **[Setup Guide Index](docs/SETUP-GUIDE-INDEX.md)** - Central hub for all setup documentation
+- **[Android Setup Guide](docs/ANDROID-SETUP-GUIDE.md)** - Complete Android configuration
+- **[iOS Setup Guide](docs/IOS-SETUP-GUIDE.md)** - Complete iOS configuration
+- **[Environment Variables](docs/ENVIRONMENT-VARIABLES.md)** - Environment configuration reference
+
+### Firebase Documentation
+
+- **[Firebase Setup Guide](FIREBASE-SETUP-GUIDE.md)** - Complete Firebase configuration
+- **[Firebase Android Registration](FIREBASE-ANDROID-REGISTRATION.md)** - Android app registration
+- **[Firebase Dev Connection Verification](docs/FIREBASE-DEV-CONNECTION-VERIFICATION.md)** - Connection testing
+
+### Development Guides
+
+- **[Debugging Quick Start](docs/DEBUGGING-QUICK-START.md)** - Quick debugging reference
+- **[Debugging Setup](docs/DEBUGGING-SETUP.md)** - Complete debugging configuration
+- **[Common Issues and Solutions](docs/COMMON-ISSUES-AND-SOLUTIONS.md)** - Troubleshooting guide
+- **[Code Quality Improvements](docs/CODE-QUALITY-IMPROVEMENTS.md)** - Code standards and best practices
+- **[Best Practices Checklist](docs/BEST-PRACTICES-CHECKLIST.md)** - Development checklist
+
+### Project Documentation
+
+- **[Security Audit](SECURITY-AUDIT.md)** - Security considerations and audit results
+- **[Implementation Phases](IMPLEMENTATION-PHASES.md)** - Project roadmap and phases
+- **[Project Roadmap](PROJECT-ROADMAP.md)** - Feature roadmap
+
 # Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
@@ -8,7 +49,7 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 Before running the app, ensure you have:
 
-- Node.js 18+ installed
+- Node.js 22.11.0+ installed (required by project)
 - React Native development environment set up
 - Android Studio (for Android development)
 - Xcode 14+ (for iOS development, macOS only)
@@ -25,7 +66,7 @@ Before running the app, ensure you have:
 
 **Development Tools:**
 
-- Node.js 18+ and npm 8+
+- Node.js 22.11.0+ and npm 10+
 - Git
 - Watchman (recommended for macOS/Linux)
 - JDK 17 (for Android)
@@ -221,8 +262,8 @@ After completing the setup, verify everything is working:
 1. **Check Node.js and npm**:
 
    ```bash
-   node --version  # Should be 18+
-   npm --version   # Should be 8+
+   node --version  # Should be 22.11.0+
+   npm --version   # Should be 10+
    ```
 
 2. **Check React Native CLI**:
@@ -251,6 +292,88 @@ After completing the setup, verify everything is working:
    ```
 
 If all checks pass, you're ready to run the app!
+
+## Project Structure
+
+The project follows a standard React Native structure with organized directories:
+
+```
+PillSathi/
+├── .kiro/                    # Kiro specs and configuration
+│   └── specs/                # Feature specifications
+│       └── phase-0-foundation/
+├── android/                  # Android native code
+├── ios/                      # iOS native code
+├── src/                      # Application source code
+│   ├── components/           # Reusable React components
+│   ├── config/               # Configuration files (Firebase, etc.)
+│   ├── contexts/             # React contexts
+│   ├── navigation/           # Navigation configuration
+│   ├── screens/              # Screen components
+│   │   ├── auth/             # Authentication screens
+│   │   ├── parent/           # Parent role screens
+│   │   └── caregiver/        # Caregiver role screens
+│   ├── services/             # Service layer (API, Firebase)
+│   ├── types/                # Type definitions and constants
+│   └── utils/                # Utility functions
+├── __tests__/                # Test files
+├── docs/                     # Documentation
+├── scripts/                  # Utility scripts
+├── .env.development          # Development environment variables
+├── .env.production           # Production environment variables
+├── App.js                    # Root application component
+└── package.json              # Project dependencies
+```
+
+### Key Directories
+
+- **src/config/** - Firebase and app configuration
+- **src/navigation/** - React Navigation setup (RootNavigator, AuthNavigator, etc.)
+- **src/screens/** - All screen components organized by feature/role
+- **src/services/** - Firebase services and API integrations
+- **src/utils/** - Helper functions and utilities
+- **docs/** - Comprehensive project documentation
+
+## Technology Stack
+
+PillSathi is built with the following technologies:
+
+### Core
+
+- **React Native 0.84.0** - Cross-platform mobile framework
+- **React 19.2.3** - UI library
+- **JavaScript (ES6+)** - Primary development language
+
+### Navigation
+
+- **React Navigation 7.x** - Navigation framework
+  - Native Stack Navigator
+  - Bottom Tabs Navigator
+- **react-native-screens** - Native screen optimization
+- **react-native-safe-area-context** - Safe area handling
+
+### Firebase Services
+
+- **@react-native-firebase/app** - Firebase core
+- **@react-native-firebase/auth** - Authentication
+- **@react-native-firebase/firestore** - Cloud database
+- **@react-native-firebase/messaging** - Cloud messaging
+
+### Notifications
+
+- **@notifee/react-native** - Local notifications
+
+### Storage & Configuration
+
+- **@react-native-async-storage/async-storage** - Local storage
+- **react-native-config** - Environment variable management
+
+### Development Tools
+
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **Jest** - Testing framework
+- **React Testing Library** - Component testing
 
 ## Firebase Setup
 
@@ -519,35 +642,28 @@ Or in Xcode: **Product > Clean Build Folder** (⇧⌘K)
 The project includes npm scripts for common build tasks:
 
 ```bash
-# Start Metro bundler
-npm start
+# Development
+npm start                 # Start Metro bundler
+npm start:reset          # Start Metro with cache reset
+npm run android          # Run on Android
+npm run ios              # Run on iOS
+npm run android:debug    # Run Android debug build
+npm run ios:debug        # Run iOS debug build
 
-# Run on Android
-npm run android
+# Testing
+npm test                 # Run Jest tests
+npm run lint             # Run ESLint
+npm run lint:fix         # Run ESLint with auto-fix
+npm run format           # Format code with Prettier
+npm run format:check     # Check code formatting
 
-# Run on iOS
-npm run ios
+# Logging
+npm run log:android      # View Android logs
+npm run log:ios          # View iOS logs
 
-# Run tests
-npm test
-
-# Run linter
-npm run lint
-
-# Format code
-npm run format
-
-# Clean Android build
-npm run clean:android
-
-# Clean iOS build
-npm run clean:ios
-
-# View Android logs
-npm run log:android
-
-# View iOS logs
-npm run log:ios
+# Cleaning
+npm run clean:android    # Clean Android build
+npm run clean:ios        # Clean iOS build
 ```
 
 ### Build Verification
