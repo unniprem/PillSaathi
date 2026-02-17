@@ -242,9 +242,9 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 ### 9.3 Create Test Utilities
 
 - [x] Create `src/utils/firebaseTest.js`
-- [~] Add function to test Firestore write
-- [~] Add function to test Firestore read
-- [~] Test on both platforms
+- [x] Add function to test Firestore write
+- [x] Add function to test Firestore read
+- [x] Test on both platforms
 
 ---
 
@@ -252,23 +252,23 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 10.1 Configure Debugging
 
-- [~] Set up React Native Debugger
+- [ ] Set up React Native Debugger
 - [ ] Configure Flipper (if not already)
-- [~] Test debugging on Android
+- [ ] Test debugging on Android
 - [ ] Test debugging on iOS
 
 ### 10.2 Configure Linting
 
-- [~] Update `.eslintrc.js` for JavaScript best practices
-- [~] Add Firebase-specific lint rules
-- [~] Run linter and fix issues
-- [~] Add lint script to package.json
+- [ ] Update `.eslintrc.js` for JavaScript best practices
+- [ ] Add Firebase-specific lint rules
+- [ ] Run linter and fix issues
+- [ ] Add lint script to package.json
 
 ### 10.3 Configure Formatting
 
-- [~] Update `.prettierrc.js` if needed
-- [~] Format all new files
-- [~] Add format script to package.json
+- [x] Update `.prettierrc.js` if needed
+- [x] Format all new files
+- [x] Add format script to package.json
 
 ---
 
@@ -276,22 +276,22 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 11.1 Update README
 
-- [~] Add Firebase setup instructions
-- [~] Add environment setup instructions
-- [~] Add build instructions
-- [~] Add troubleshooting section
+- [ ] Add Firebase setup instructions
+- [ ] Add environment setup instructions
+- [ ] Add build instructions
+- [ ] Add troubleshooting section
 
 ### 11.2 Create Setup Guide
 
-- [~] Document Android setup steps
+- [x] Document Android setup steps
 - [ ] Document iOS setup steps
 - [ ] Document common issues and solutions
 
 ### 11.3 Code Documentation
 
-- [~] Add JSDoc comments to config files
-- [~] Add comments to navigation setup
-- [~] Document environment variables
+- [x] Add JSDoc comments to config files
+- [ ] Add comments to navigation setup
+- [ ] Document environment variables
 
 ---
 
@@ -299,10 +299,10 @@ This task list covers Phase 0 implementation for the existing React Native app. 
 
 ### 12.1 Android Testing
 
-- [~] Clean build: `cd android && ./gradlew clean`
-- [~] Build debug APK
-- [~] Install on physical device
-- [~] Verify app launches
+- [ ] Clean build: `cd android && ./gradlew clean`
+- [ ] Build debug APK
+- [ ] Install on physical device
+- [ ] Verify app launches
 - [ ] Verify Firebase connection
 - [ ] Verify navigation works
 - [ ] Check logs for errors

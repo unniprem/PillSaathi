@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/app/.cxx/
+ios/build/
+ios/Pods/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+
+# Generated files
+*.log
+coverage/
+.DS_Store
+google-services.json
+GoogleService-Info.plist
+
+# React Native
+.bundle/
+metro-cache/
+
+# iOS
+ios/**/Images.xcassets/
+

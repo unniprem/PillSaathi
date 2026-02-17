@@ -1,3 +1,16 @@
+/**
+ * ESLint Configuration
+ *
+ * Configures linting rules for JavaScript code in the React Native project.
+ * Extends the React Native community preset and adds custom rules for:
+ * - JavaScript best practices
+ * - React and React Hooks patterns
+ * - React Native specific rules
+ * - Firebase integration guidelines
+ * - Code quality standards
+ *
+ * @see https://eslint.org/docs/user-guide/configuring
+ */
 module.exports = {
   root: true,
   extends: '@react-native',
