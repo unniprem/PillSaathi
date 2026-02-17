@@ -3,7 +3,7 @@
  *
  * Top-level navigation structure for PillSathi app.
  * Manages navigation between:
- * - Splash screen (initial loading)
+ * - Splash screen (initial loading during auth state initialization)
  * - Auth flow (login, verification, role selection)
  * - Parent flow (parent-specific screens)
  * - Caregiver flow (caregiver-specific screens)
@@ -11,6 +11,19 @@
  * Features:
  * - Navigation state persistence using AsyncStorage
  * - Automatic state restoration on app restart
+ * - Auth state-based routing
+ * - Role-based navigation access control
+ *
+ * Requirements:
+ * - 2.3: Navigate based on existing role
+ * - 2.5: Grant Parent users access to ParentNavigator
+ * - 2.6: Grant Caregiver users access to CaregiverNavigator
+ * - 4.2: Check for existing authentication state
+ * - 4.3: Restore user session from valid state
+ * - 5.1: Display only AuthNavigator for unauthenticated users
+ * - 5.2: Display ParentNavigator for authenticated Parent users
+ * - 5.3: Display CaregiverNavigator for authenticated Caregiver users
+ * - 7.4: Display splash/loading screen during auth state initialization
  *
  * @format
  */
@@ -20,6 +33,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootScreens } from '../types/navigation';
+import { useAuth } from '../contexts/AuthContext';
 
 // Import navigators
 import AuthNavigator from './AuthNavigator';
@@ -37,8 +51,8 @@ const NAVIGATION_STATE_KEY = '@navigation_state';
 /**
  * Root Navigator Component
  *
- * Manages the top-level navigation flow:
- * 1. Shows splash screen while checking auth state
+ * Manages the top-level navigation flow based on authentication state:
+ * 1. Shows splash screen while auth state is initializing
  * 2. Routes to Auth flow if not authenticated
  * 3. Routes to Parent or Caregiver flow based on user role
  *
@@ -47,21 +61,23 @@ const NAVIGATION_STATE_KEY = '@navigation_state';
  * - Restores navigation state on app restart
  * - Handles state restoration gracefully with error handling
  *
+ * Auth State Routing:
+ * - Unauthenticated: Shows AuthNavigator (Requirement 5.1)
+ * - Authenticated + Parent role: Shows ParentNavigator (Requirements 2.5, 5.2)
+ * - Authenticated + Caregiver role: Shows CaregiverNavigator (Requirements 2.6, 5.3)
+ * - Authenticated + No role: Shows AuthNavigator for role selection
+ *
  * @returns {React.ReactElement} Root navigator component
  */
 function RootNavigator() {
-  const [isLoading, setIsLoading] = useState(true);
-  // eslint-disable-next-line no-unused-vars
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [userRole, setUserRole] = useState(null); // 'parent' | 'caregiver' | null
+  const { user, profile, initialized } = useAuth();
   const [initialState, setInitialState] = useState();
   const [isReady, setIsReady] = useState(false);
   const routeNameRef = useRef();
   const navigationRef = useRef();
 
+  // Restore navigation state on mount
   useEffect(() => {
-    // Restore navigation state and check auth
     const restoreState = async () => {
       try {
         // Restore navigation state from AsyncStorage
@@ -88,35 +104,56 @@ function RootNavigator() {
     }
   }, [isReady]);
 
-  useEffect(() => {
-    // Simulate initial loading and auth check
-    // In Phase 1, this will check Firebase auth state
-    const checkAuthState = async () => {
-      try {
-        // TODO: Check Firebase auth state
-        // const user = await auth().currentUser;
-        // if (user) {
-        //   const userDoc = await firestore().collection('users').doc(user.uid).get();
-        //   setUserRole(userDoc.data()?.role);
-        //   setIsAuthenticated(true);
-        // }
-
-        // For now, just simulate loading delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error checking auth state:', error);
-        setIsLoading(false);
-      }
-    };
-
-    checkAuthState();
-  }, []);
-
-  // Don't render until we've restored state
+  // Don't render until we've restored navigation state
   if (!isReady) {
     return null;
   }
+
+  // Determine which navigator to show based on auth state
+  // Requirements: 5.1, 5.2, 5.3, 2.5, 2.6
+  const getNavigatorScreen = () => {
+    // Show splash screen while auth state is initializing
+    // Requirement 7.4: Display splash/loading screen during initialization
+    if (!initialized) {
+      return (
+        <Stack.Screen name={RootScreens.SPLASH} component={SplashScreen} />
+      );
+    }
+
+    // User is not authenticated - show auth flow
+    // Requirement 5.1: Display only AuthNavigator for unauthenticated users
+    if (!user) {
+      return <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />;
+    }
+
+    // User is authenticated but has no profile or role - show auth flow for role selection
+    // Requirement 2.3: Navigate based on existing role
+    if (!profile || !profile.role) {
+      return <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />;
+    }
+
+    // User is authenticated with parent role - show parent navigator
+    // Requirements 2.5, 5.2: Grant Parent users access to ParentNavigator
+    if (profile.role === 'parent') {
+      return (
+        <Stack.Screen name={RootScreens.PARENT} component={ParentNavigator} />
+      );
+    }
+
+    // User is authenticated with caregiver role - show caregiver navigator
+    // Requirements 2.6, 5.3: Grant Caregiver users access to CaregiverNavigator
+    if (profile.role === 'caregiver') {
+      return (
+        <Stack.Screen
+          name={RootScreens.CAREGIVER}
+          component={CaregiverNavigator}
+        />
+      );
+    }
+
+    // Fallback to auth flow if role is not recognized
+    return <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />;
+  };
 
   return (
     <NavigationContainer
@@ -157,25 +194,7 @@ function RootNavigator() {
           animation: 'fade',
         }}
       >
-        {isLoading ? (
-          // Show splash screen while loading
-          <Stack.Screen name={RootScreens.SPLASH} component={SplashScreen} />
-        ) : !isAuthenticated ? (
-          // Show auth flow if not authenticated
-          <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />
-        ) : userRole === 'parent' ? (
-          // Show parent flow if authenticated as parent
-          <Stack.Screen name={RootScreens.PARENT} component={ParentNavigator} />
-        ) : userRole === 'caregiver' ? (
-          // Show caregiver flow if authenticated as caregiver
-          <Stack.Screen
-            name={RootScreens.CAREGIVER}
-            component={CaregiverNavigator}
-          />
-        ) : (
-          // Fallback to auth if role is not set
-          <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />
-        )}
+        {getNavigatorScreen()}
       </Stack.Navigator>
     </NavigationContainer>
   );

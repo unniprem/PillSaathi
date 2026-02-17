@@ -53,6 +53,7 @@ export const AuthScreens = {
   LOGIN: 'Login',
   PHONE_VERIFICATION: 'PhoneVerification',
   ROLE_SELECTION: 'RoleSelection',
+  PROFILE_SETUP: 'ProfileSetup',
 };
 
 /**
@@ -108,6 +109,7 @@ export const CaregiverScreens = {
  * @property {string} PhoneVerification.phoneNumber - Phone number to verify
  * @property {string} PhoneVerification.verificationId - Firebase verification ID
  * @property {undefined} RoleSelection - Role selection screen (no params)
+ * @property {undefined} ProfileSetup - Profile setup screen (no params)
  */
 
 /**

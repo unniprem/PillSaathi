@@ -7,7 +7,15 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 3.7
  */
 
-import firestore from '@react-native-firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from '@react-native-firebase/firestore';
+import { getApp } from '@react-native-firebase/app';
 
 /**
  * Error message mapping for Firestore error codes
@@ -28,7 +36,7 @@ const ERROR_MESSAGES = {
  */
 class ProfileService {
   constructor(firestoreInstance = null) {
-    this.firestore = firestoreInstance || firestore();
+    this.firestore = firestoreInstance || getFirestore(getApp());
     this.usersCollection = 'users';
   }
 
@@ -71,16 +79,14 @@ class ProfileService {
         phoneNumber: profileData.phone,
         role: profileData.role,
         name: profileData.name,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-        lastLoginAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
       };
 
       // Create profile document with UID as document ID
-      await this.firestore
-        .collection(this.usersCollection)
-        .doc(uid)
-        .set(profileDocument);
+      const userDocRef = doc(this.firestore, this.usersCollection, uid);
+      await setDoc(userDocRef, profileDocument);
     } catch (error) {
       // If it's a validation error, rethrow as-is
       if (
@@ -120,12 +126,10 @@ class ProfileService {
    */
   async getProfile(uid) {
     try {
-      const docSnapshot = await this.firestore
-        .collection(this.usersCollection)
-        .doc(uid)
-        .get();
+      const userDocRef = doc(this.firestore, this.usersCollection, uid);
+      const docSnapshot = await getDoc(userDocRef);
 
-      if (!docSnapshot.exists) {
+      if (!docSnapshot.exists()) {
         return null;
       }
 
@@ -173,13 +177,11 @@ class ProfileService {
       // Add updatedAt timestamp to all updates
       const updateData = {
         ...updates,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      await this.firestore
-        .collection(this.usersCollection)
-        .doc(uid)
-        .update(updateData);
+      const userDocRef = doc(this.firestore, this.usersCollection, uid);
+      await updateDoc(userDocRef, updateData);
     } catch (error) {
       const mappedError = new Error(
         ERROR_MESSAGES[error.code] || ERROR_MESSAGES.default,
@@ -268,12 +270,10 @@ class ProfileService {
    */
   async profileExists(uid) {
     try {
-      const docSnapshot = await this.firestore
-        .collection(this.usersCollection)
-        .doc(uid)
-        .get();
+      const userDocRef = doc(this.firestore, this.usersCollection, uid);
+      const docSnapshot = await getDoc(userDocRef);
 
-      return docSnapshot.exists;
+      return docSnapshot.exists();
     } catch (error) {
       const mappedError = new Error(
         ERROR_MESSAGES[error.code] || ERROR_MESSAGES.default,

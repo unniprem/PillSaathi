@@ -7,7 +7,15 @@
  * Requirements: 1.1, 1.4, 1.5, 1.6
  */
 
-import auth from '@react-native-firebase/auth';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithPhoneNumber,
+  signInWithCredential,
+  PhoneAuthProvider,
+  signOut as firebaseSignOut,
+} from '@react-native-firebase/auth';
+import { getApp } from '@react-native-firebase/app';
 
 /**
  * Error message mapping for Firebase Authentication error codes
@@ -35,7 +43,7 @@ const ERROR_MESSAGES = {
  */
 class AuthService {
   constructor(authInstance = null) {
-    this.auth = authInstance || auth();
+    this.auth = authInstance || getAuth(getApp());
   }
 
   /**
@@ -51,8 +59,8 @@ class AuthService {
    * });
    * // Later: unsubscribe();
    */
-  initAuthListener(onAuthStateChanged) {
-    return this.auth.onAuthStateChanged(onAuthStateChanged);
+  initAuthListener(callback) {
+    return onAuthStateChanged(this.auth, callback);
   }
 
   /**
@@ -75,7 +83,7 @@ class AuthService {
    */
   async sendPhoneOTP(phoneNumber) {
     try {
-      const confirmation = await this.auth.signInWithPhoneNumber(phoneNumber);
+      const confirmation = await signInWithPhoneNumber(this.auth, phoneNumber);
       return {
         verificationId: confirmation.verificationId,
       };
@@ -109,11 +117,8 @@ class AuthService {
    */
   async verifyPhoneOTP(verificationId, code) {
     try {
-      const credential = auth.PhoneAuthProvider.credential(
-        verificationId,
-        code,
-      );
-      const userCredential = await this.auth.signInWithCredential(credential);
+      const credential = PhoneAuthProvider.credential(verificationId, code);
+      const userCredential = await signInWithCredential(this.auth, credential);
       return userCredential;
     } catch (error) {
       const mappedError = new Error(this.getErrorMessage(error.code));
@@ -140,7 +145,7 @@ class AuthService {
    */
   async signOut() {
     try {
-      await this.auth.signOut();
+      await firebaseSignOut(this.auth);
     } catch (error) {
       const mappedError = new Error(this.getErrorMessage(error.code));
       mappedError.code = error.code;

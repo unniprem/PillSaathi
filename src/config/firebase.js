@@ -6,9 +6,10 @@
  * from react-native-config to switch between dev and prod environments.
  */
 
-import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
-import messaging from '@react-native-firebase/messaging';
+import { getAuth } from '@react-native-firebase/auth';
+import firestore, { getFirestore } from '@react-native-firebase/firestore';
+import { getMessaging } from '@react-native-firebase/messaging';
+import { getApp } from '@react-native-firebase/app';
 import Config from 'react-native-config';
 
 /**
@@ -67,19 +68,19 @@ export const getFirebaseConfig = () => {
  * Firebase Auth instance
  * Provides authentication services
  */
-export const firebaseAuth = auth();
+export const firebaseAuth = getAuth(getApp());
 
 /**
  * Firestore instance
  * Provides database services
  */
-export const firebaseFirestore = firestore();
+export const firebaseFirestore = getFirestore(getApp());
 
 /**
  * Firebase Messaging instance
  * Provides push notification services
  */
-export const firebaseMessaging = messaging();
+export const firebaseMessaging = getMessaging(getApp());
 
 /**
  * Get environment indicator string
@@ -165,7 +166,8 @@ export const initializeFirebase = () => {
     // based on google-services.json (Android) and GoogleService-Info.plist (iOS)
 
     // Configure Firestore settings
-    firebaseFirestore.settings({
+    const firestoreInstance = getFirestore(getApp());
+    firestoreInstance.settings({
       persistence: true, // Enable offline persistence
       cacheSizeBytes: firestore.CACHE_SIZE_UNLIMITED,
     });

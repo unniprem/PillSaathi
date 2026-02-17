@@ -11,17 +11,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { logEnvTest } from './src/utils/envTest';
 import { initializeFirebase } from './src/config/firebase';
 import { testNavigationPersistence } from './src/utils/navigationPersistence';
+import { AuthProvider } from './src/contexts/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
 /**
  * Main App Component
  *
  * Sets up the application with:
+ * - AuthProvider for authentication state management
  * - SafeAreaProvider for safe area handling
  * - StatusBar configuration
  * - Firebase initialization
  * - Environment variable testing
  * - Root navigation structure
+ *
+ * Requirements: 4.6 - Provide auth state via context to all components
  *
  * @component
  * @returns {React.ReactElement} App component
@@ -70,10 +74,12 @@ function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <RootNavigator />
-    </SafeAreaProvider>
+    <AuthProvider>
+      <SafeAreaProvider>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <RootNavigator />
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }
 

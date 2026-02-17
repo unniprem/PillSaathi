@@ -18,30 +18,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthScreens } from '../types/navigation';
 
 // Import screens
-import LoginScreen from '../screens/auth/LoginScreen';
+import PhoneAuthScreen from '../screens/auth/PhoneAuthScreen';
+import OTPVerificationScreen from '../screens/auth/OTPVerificationScreen';
+import RoleSelectionScreen from '../screens/auth/RoleSelectionScreen';
+import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
-// Temporary placeholder components for screens not yet created
-const PhoneVerificationScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Phone Verification</Text>
-      <Text style={styles.placeholderSubtext}>OTP entry will go here</Text>
-    </View>
-  );
-};
-
-const RoleSelectionScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Role Selection</Text>
-      <Text style={styles.placeholderSubtext}>
-        Parent/Caregiver selection will go here
-      </Text>
-    </View>
-  );
-};
+// Alias for consistency with navigation types
+const PhoneVerificationScreen = OTPVerificationScreen;
 
 const Stack = createNativeStackNavigator();
 
@@ -75,7 +58,7 @@ function AuthNavigator() {
     >
       <Stack.Screen
         name={AuthScreens.LOGIN}
-        component={LoginScreen}
+        component={PhoneAuthScreen}
         options={{
           title: 'Login',
           headerShown: false, // Hide header on login screen for cleaner look
@@ -98,31 +81,17 @@ function AuthNavigator() {
           gestureEnabled: false, // Disable swipe back gesture
         }}
       />
+      <Stack.Screen
+        name={AuthScreens.PROFILE_SETUP}
+        component={ProfileSetupScreen}
+        options={{
+          title: 'Complete Profile',
+          headerBackVisible: false, // Prevent going back after role selection
+          gestureEnabled: false, // Disable swipe back gesture
+        }}
+      />
     </Stack.Navigator>
   );
 }
-
-// Placeholder styles
-const { StyleSheet } = require('react-native');
-const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 20,
-  },
-  placeholderText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-  },
-});
 
 export default AuthNavigator;
