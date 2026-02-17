@@ -4,7 +4,7 @@
  * Displays a relationship between a parent and caregiver with user information
  * and removal functionality.
  *
- * Requirements: 4.2, 5.2, 6.1
+ * Requirements: 4.2, 5.2, 6.1, 9.3
  *
  * @format
  */
@@ -72,7 +72,9 @@ const RelationshipCard = ({
   /**
    * Handle remove button press
    * Shows confirmation dialog before calling onRemove
+   * Shows success confirmation after successful removal
    * Requirements: 6.1 - Display confirmation dialog
+   * Requirements: 9.3 - Show success confirmation
    */
   const handleRemovePress = () => {
     Alert.alert(
@@ -91,9 +93,22 @@ const RelationshipCard = ({
             setIsRemoving(true);
             try {
               await onRemove(relationshipId);
+              // Show success confirmation
+              Alert.alert(
+                'Success',
+                `${userName} has been removed from your connections.`,
+                [{ text: 'OK' }],
+              );
             } catch (error) {
               // Error handling is done by parent component
               console.error('Error removing relationship:', error);
+              // Show error alert
+              Alert.alert(
+                'Error',
+                error.message ||
+                  'Failed to remove relationship. Please try again.',
+                [{ text: 'OK' }],
+              );
             } finally {
               setIsRemoving(false);
             }

@@ -4,7 +4,7 @@
  * Provides pairing and relationship state and methods throughout the app using React Context.
  * Manages invite code generation, redemption, relationship viewing, and real-time updates.
  *
- * Requirements: 1.1, 3.5, 4.1, 4.3, 5.1, 5.3, 6.2, 6.3, 9.1
+ * Requirements: 1.1, 3.5, 4.1, 4.3, 5.1, 5.3, 6.2, 6.3, 9.1, 9.3
  */
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
@@ -171,9 +171,12 @@ export const PairingProvider = ({ children }) => {
   /**
    * Remove a relationship
    * Calls Cloud Function to delete relationship.
-   * Updates relationships state on success.
+   * Uses optimistic UI updates: immediately updates UI, then rolls back on error.
+   * Shows success confirmation on success.
    *
    * Requirements: 6.2 - Remove relationship
+   * Requirements: 6.3 - Update both users' lists when relationship removed
+   * Requirements: 9.3 - Optimistic UI updates
    *
    * @param {string} relationshipId - Relationship document ID to remove
    * @returns {Promise<void>}
@@ -202,14 +205,26 @@ export const PairingProvider = ({ children }) => {
       throw serviceError;
     }
 
+    // Store previous state for rollback
+    const previousRelationships = [...relationships];
+
+    // Optimistically update UI - remove relationship immediately
+    setRelationships(prev =>
+      prev.filter(relationship => relationship.id !== relationshipId),
+    );
+
     setLoading(true);
     setError(null);
 
     try {
+      // Call Cloud Function to remove relationship
       await CloudFunctionsService.removeRelationship(relationshipId);
-      // Refresh relationships to reflect the removal
-      await refreshRelationships();
+
+      // Success - relationship removed
+      // The real-time listener will update the state, but we've already updated optimistically
     } catch (err) {
+      // Rollback on error - restore previous state
+      setRelationships(previousRelationships);
       setError(err.message);
       throw err;
     } finally {

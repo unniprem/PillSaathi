@@ -4,11 +4,12 @@
  * Handles invite code generation, validation, and management for parent-caregiver pairing.
  * Parents generate time-limited invite codes that caregivers can redeem to establish relationships.
  *
- * Requirements: 1.1, 1.2, 1.3, 1.5, 2.3, 8.1, 8.3
+ * Requirements: 1.1, 1.2, 1.3, 1.5, 2.3, 8.1, 8.3, 9.2
  */
 
 import { getFirestore } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
+import { retryOperation } from '../../utils/retryHelper';
 
 /**
  * InviteCodeService class
@@ -88,10 +89,12 @@ class InviteCodeService {
    * Generate or retrieve active invite code for a parent
    * Queries Firestore for active unexpired codes. If one exists, returns it (idempotence).
    * If no active code exists, generates a new code and stores it in Firestore.
+   * Includes retry logic for network errors.
    *
    * Requirements: 1.1 - Generate invite code
    * Requirements: 1.2 - Store code with parent UID, timestamps
    * Requirements: 1.5 - Return existing code if active (idempotence)
+   * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} parentUid - Parent's Firebase Auth UID
    * @returns {Promise<{code: string, expiresAt: Date, createdAt: Date, parentUid: string}>}
@@ -108,49 +111,53 @@ class InviteCodeService {
    */
   async generateInviteCode(parentUid) {
     try {
-      // Query for active unexpired codes for this parent
-      const now = new Date();
-      const querySnapshot = await this.firestore
-        .collection(this.inviteCodesCollection)
-        .where('parentUid', '==', parentUid)
-        .where('expiresAt', '>', now)
-        .limit(1)
-        .get();
+      return await retryOperation(async () => {
+        // Query for active unexpired codes for this parent
+        const now = new Date();
+        const querySnapshot = await this.firestore
+          .collection(this.inviteCodesCollection)
+          .where('parentUid', '==', parentUid)
+          .where('expiresAt', '>', now)
+          .limit(1)
+          .get();
 
-      // If active code exists, return it (idempotence)
-      if (!querySnapshot.empty) {
-        const existingCodeDoc = querySnapshot.docs[0];
-        const data = existingCodeDoc.data();
-        return {
-          code: data.code,
-          expiresAt: data.expiresAt.toDate(),
-          createdAt: data.createdAt.toDate(),
-          parentUid: data.parentUid,
+        // If active code exists, return it (idempotence)
+        if (!querySnapshot.empty) {
+          const existingCodeDoc = querySnapshot.docs[0];
+          const data = existingCodeDoc.data();
+          return {
+            code: data.code,
+            expiresAt: data.expiresAt.toDate(),
+            createdAt: data.createdAt.toDate(),
+            parentUid: data.parentUid,
+          };
+        }
+
+        // No active code exists, generate a new one
+        const code = this.generateRandomCode(8);
+        const createdAt = new Date();
+        const expiresAt = this.calculateExpiration(24);
+
+        // Store in Firestore
+        const docData = {
+          code,
+          parentUid,
+          createdAt,
+          expiresAt,
+          usedCount: 0,
         };
-      }
 
-      // No active code exists, generate a new one
-      const code = this.generateRandomCode(8);
-      const createdAt = new Date();
-      const expiresAt = this.calculateExpiration(24);
+        await this.firestore
+          .collection(this.inviteCodesCollection)
+          .add(docData);
 
-      // Store in Firestore
-      const docData = {
-        code,
-        parentUid,
-        createdAt,
-        expiresAt,
-        usedCount: 0,
-      };
-
-      await this.firestore.collection(this.inviteCodesCollection).add(docData);
-
-      return {
-        code,
-        expiresAt,
-        createdAt,
-        parentUid,
-      };
+        return {
+          code,
+          expiresAt,
+          createdAt,
+          parentUid,
+        };
+      });
     } catch (error) {
       const mappedError = new Error('Failed to generate invite code');
       mappedError.code = 'invite-code-generation-failed';
@@ -163,8 +170,10 @@ class InviteCodeService {
    * Get active invite code for a parent
    * Queries Firestore for active unexpired codes for the specified parent.
    * Returns the code object if found, or null if no active code exists.
+   * Includes retry logic for network errors.
    *
    * Requirements: 2.3 - Display active invite code
+   * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} parentUid - Parent's Firebase Auth UID
    * @returns {Promise<{code: string, expiresAt: Date, createdAt: Date, parentUid: string} | null>}
@@ -184,29 +193,31 @@ class InviteCodeService {
    */
   async getActiveInviteCode(parentUid) {
     try {
-      // Query for active unexpired codes for this parent
-      const now = new Date();
-      const querySnapshot = await this.firestore
-        .collection(this.inviteCodesCollection)
-        .where('parentUid', '==', parentUid)
-        .where('expiresAt', '>', now)
-        .limit(1)
-        .get();
+      return await retryOperation(async () => {
+        // Query for active unexpired codes for this parent
+        const now = new Date();
+        const querySnapshot = await this.firestore
+          .collection(this.inviteCodesCollection)
+          .where('parentUid', '==', parentUid)
+          .where('expiresAt', '>', now)
+          .limit(1)
+          .get();
 
-      // If no active code exists, return null
-      if (querySnapshot.empty) {
-        return null;
-      }
+        // If no active code exists, return null
+        if (querySnapshot.empty) {
+          return null;
+        }
 
-      // Return the active code
-      const codeDoc = querySnapshot.docs[0];
-      const data = codeDoc.data();
-      return {
-        code: data.code,
-        expiresAt: data.expiresAt.toDate(),
-        createdAt: data.createdAt.toDate(),
-        parentUid: data.parentUid,
-      };
+        // Return the active code
+        const codeDoc = querySnapshot.docs[0];
+        const data = codeDoc.data();
+        return {
+          code: data.code,
+          expiresAt: data.expiresAt.toDate(),
+          createdAt: data.createdAt.toDate(),
+          parentUid: data.parentUid,
+        };
+      });
     } catch (error) {
       const mappedError = new Error('Failed to get active invite code');
       mappedError.code = 'invite-code-query-failed';

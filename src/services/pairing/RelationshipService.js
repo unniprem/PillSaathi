@@ -5,11 +5,12 @@
  * Provides methods to query relationships by user and role, subscribe to real-time updates,
  * and fetch user profile data for display.
  *
- * Requirements: 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 6.2
+ * Requirements: 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 6.2, 9.2
  */
 
 import { getFirestore } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
+import { retryOperation } from '../../utils/retryHelper';
 
 /**
  * RelationshipService class
@@ -25,9 +26,11 @@ class RelationshipService {
   /**
    * Get user profile for relationship display
    * Queries users collection for profile data (name and phone)
+   * Includes retry logic for network errors.
    *
    * Requirements: 4.2 - Display user profile information
    * Requirements: 5.2 - Show name and profile information
+   * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} uid - User's Firebase Auth UID
    * @returns {Promise<{name: string, phone: string}>}
@@ -44,22 +47,24 @@ class RelationshipService {
    */
   async getUserProfile(uid) {
     try {
-      const userDoc = await this.firestore
-        .collection(this.usersCollection)
-        .doc(uid)
-        .get();
+      return await retryOperation(async () => {
+        const userDoc = await this.firestore
+          .collection(this.usersCollection)
+          .doc(uid)
+          .get();
 
-      if (!userDoc.exists) {
-        const error = new Error('User profile not found');
-        error.code = 'profile-not-found';
-        throw error;
-      }
+        if (!userDoc.exists) {
+          const error = new Error('User profile not found');
+          error.code = 'profile-not-found';
+          throw error;
+        }
 
-      const data = userDoc.data();
-      return {
-        name: data.name || '',
-        phone: data.phoneNumber || data.phone || '',
-      };
+        const data = userDoc.data();
+        return {
+          name: data.name || '',
+          phone: data.phoneNumber || data.phone || '',
+        };
+      });
     } catch (error) {
       if (error.code === 'profile-not-found') {
         throw error;
@@ -77,9 +82,11 @@ class RelationshipService {
    * Queries Firestore for relationships where the user is a participant.
    * For parents, queries by parentUid. For caregivers, queries by caregiverUid.
    * Fetches and attaches user profile data for display.
+   * Includes retry logic for network errors.
    *
    * Requirements: 4.1 - Query relationships by user and role
    * Requirements: 5.1 - Return all relationships for user
+   * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} uid - User's Firebase Auth UID
    * @param {string} role - User's role ('parent' | 'caregiver')
@@ -99,79 +106,81 @@ class RelationshipService {
    */
   async getRelationships(uid, role) {
     try {
-      // Determine which field to query based on role
-      const queryField = role === 'parent' ? 'parentUid' : 'caregiverUid';
+      return await retryOperation(async () => {
+        // Determine which field to query based on role
+        const queryField = role === 'parent' ? 'parentUid' : 'caregiverUid';
 
-      // Query relationships
-      const querySnapshot = await this.firestore
-        .collection(this.relationshipsCollection)
-        .where(queryField, '==', uid)
-        .get();
+        // Query relationships
+        const querySnapshot = await this.firestore
+          .collection(this.relationshipsCollection)
+          .where(queryField, '==', uid)
+          .get();
 
-      // If no relationships, return empty array
-      if (querySnapshot.empty) {
-        return [];
-      }
+        // If no relationships, return empty array
+        if (querySnapshot.empty) {
+          return [];
+        }
 
-      // Fetch profile data for each relationship
-      const relationships = await Promise.all(
-        querySnapshot.docs.map(async doc => {
-          const data = doc.data();
-          const relationshipId = doc.id;
+        // Fetch profile data for each relationship
+        const relationships = await Promise.all(
+          querySnapshot.docs.map(async doc => {
+            const data = doc.data();
+            const relationshipId = doc.id;
 
-          // Determine which user's profile to fetch (the other party)
-          const otherUserUid =
-            role === 'parent' ? data.caregiverUid : data.parentUid;
+            // Determine which user's profile to fetch (the other party)
+            const otherUserUid =
+              role === 'parent' ? data.caregiverUid : data.parentUid;
 
-          try {
-            const profile = await this.getUserProfile(otherUserUid);
+            try {
+              const profile = await this.getUserProfile(otherUserUid);
 
-            return {
-              id: relationshipId,
-              parentUid: data.parentUid,
-              caregiverUid: data.caregiverUid,
-              createdAt: data.createdAt?.toDate() || null,
-              createdBy: data.createdBy || null,
-              // Attach profile data based on role
-              ...(role === 'parent'
-                ? {
-                    caregiverName: profile.name,
-                    caregiverPhone: profile.phone,
-                  }
-                : {
-                    parentName: profile.name,
-                    parentPhone: profile.phone,
-                  }),
-            };
-          } catch (profileError) {
-            // If profile fetch fails, include relationship with placeholder data
-            console.warn(
-              `Failed to fetch profile for ${otherUserUid}:`,
-              profileError.message,
-            );
+              return {
+                id: relationshipId,
+                parentUid: data.parentUid,
+                caregiverUid: data.caregiverUid,
+                createdAt: data.createdAt?.toDate() || null,
+                createdBy: data.createdBy || null,
+                // Attach profile data based on role
+                ...(role === 'parent'
+                  ? {
+                      caregiverName: profile.name,
+                      caregiverPhone: profile.phone,
+                    }
+                  : {
+                      parentName: profile.name,
+                      parentPhone: profile.phone,
+                    }),
+              };
+            } catch (profileError) {
+              // If profile fetch fails, include relationship with placeholder data
+              console.warn(
+                `Failed to fetch profile for ${otherUserUid}:`,
+                profileError.message,
+              );
 
-            return {
-              id: relationshipId,
-              parentUid: data.parentUid,
-              caregiverUid: data.caregiverUid,
-              createdAt: data.createdAt?.toDate() || null,
-              createdBy: data.createdBy || null,
-              // Placeholder data if profile fetch fails
-              ...(role === 'parent'
-                ? {
-                    caregiverName: 'Unknown',
-                    caregiverPhone: '',
-                  }
-                : {
-                    parentName: 'Unknown',
-                    parentPhone: '',
-                  }),
-            };
-          }
-        }),
-      );
+              return {
+                id: relationshipId,
+                parentUid: data.parentUid,
+                caregiverUid: data.caregiverUid,
+                createdAt: data.createdAt?.toDate() || null,
+                createdBy: data.createdBy || null,
+                // Placeholder data if profile fetch fails
+                ...(role === 'parent'
+                  ? {
+                      caregiverName: 'Unknown',
+                      caregiverPhone: '',
+                    }
+                  : {
+                      parentName: 'Unknown',
+                      parentPhone: '',
+                    }),
+              };
+            }
+          }),
+        );
 
-      return relationships;
+        return relationships;
+      });
     } catch (error) {
       const mappedError = new Error('Failed to get relationships');
       mappedError.code = 'relationships-query-failed';

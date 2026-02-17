@@ -1,8 +1,8 @@
 /**
- * Error message mapping for Firebase Authentication and Firestore errors
+ * Error message mapping for Firebase Authentication, Firestore, and Pairing errors
  * Maps error codes to user-friendly messages
  *
- * Requirements: 1.4, 6.2
+ * Requirements: 1.4, 6.2, 9.1
  */
 
 export const ERROR_MESSAGES = {
@@ -24,6 +24,38 @@ export const ERROR_MESSAGES = {
   'firestore/permission-denied':
     'Permission denied. Please try logging in again',
   'firestore/unavailable': 'Service temporarily unavailable. Please try again',
+
+  // Invite Code Errors
+  'invalid-code-format': 'Please enter a valid 8-character code',
+  'code-not-found': 'This invite code is invalid. Please check and try again',
+  'code-expired': 'This invite code has expired. Please ask for a new code',
+  'invite-code-generation-failed':
+    'Failed to generate invite code. Please try again',
+  'invite-code-query-failed':
+    'Failed to retrieve invite code. Please try again',
+
+  // Relationship Errors
+  'relationship-not-found': 'Relationship not found',
+  'relationship-exists': 'You are already connected with this user',
+  'relationship-removal-failed':
+    'Failed to remove relationship. Please try again',
+  'relationship-query-failed': 'Failed to load relationships. Please try again',
+
+  // Authentication Errors
+  unauthenticated: 'Please log in to continue',
+  'permission-denied': 'You do not have permission to perform this action',
+
+  // Network and Service Errors
+  'network-error': 'Network error. Please check your connection and try again',
+  'service-unavailable':
+    'Service temporarily unavailable. Please try again later',
+  timeout: 'Request timed out. Please try again',
+  unavailable: 'Service temporarily unavailable. Please try again later',
+  'deadline-exceeded': 'Request timed out. Please try again',
+
+  // Cloud Function Errors
+  'invalid-argument': 'Invalid request parameters',
+  internal: 'An internal error occurred. Please try again',
 
   // Default fallback
   default: 'An error occurred. Please try again',

@@ -22,6 +22,7 @@ export const LogLevel = {
 export const ErrorCategory = {
   AUTH: 'AUTH',
   PROFILE: 'PROFILE',
+  PAIRING: 'PAIRING',
   NETWORK: 'NETWORK',
   VALIDATION: 'VALIDATION',
   STORAGE: 'STORAGE',
@@ -149,6 +150,33 @@ export const logProfileError = (
 };
 
 /**
+ * Log pairing-related errors
+ *
+ * @param {string} operation - The pairing operation (e.g., 'generateInviteCode', 'redeemInviteCode', 'removeRelationship')
+ * @param {Error} error - The error object
+ * @param {string} [userId] - User ID if available
+ * @param {Object} [additionalContext] - Additional context
+ *
+ * @example
+ * logPairingError('redeemInviteCode', error, 'user123', { code: 'ABC12345' });
+ */
+export const logPairingError = (
+  operation,
+  error,
+  userId = null,
+  additionalContext = {},
+) => {
+  return logError({
+    operation,
+    error,
+    userId,
+    category: ErrorCategory.PAIRING,
+    level: LogLevel.ERROR,
+    additionalContext,
+  });
+};
+
+/**
  * Log network-related errors
  *
  * @param {string} operation - The operation that failed
@@ -233,6 +261,7 @@ export default {
   logError,
   logAuthError,
   logProfileError,
+  logPairingError,
   logNetworkError,
   logValidationError,
   logStorageError,

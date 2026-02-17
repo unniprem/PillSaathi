@@ -4,13 +4,14 @@
  * Provides client-side methods to call Firebase Cloud Functions for pairing operations.
  * Handles function invocation, error mapping, and response processing.
  *
- * Requirements: 3.1, 3.5, 6.2
+ * Requirements: 3.1, 3.5, 6.2, 9.2
  *
  * NOTE: This service requires @react-native-firebase/functions package.
  * Install it with: npm install @react-native-firebase/functions
  */
 
 import { getApp } from '@react-native-firebase/app';
+import { retryOperation } from '../../utils/retryHelper';
 
 /**
  * CloudFunctionsService class
@@ -38,9 +39,11 @@ class CloudFunctionsService {
   /**
    * Redeem an invite code to create a relationship
    * Calls the redeemInviteCode Cloud Function to validate the code and create a relationship.
+   * Includes retry logic for network errors.
    *
    * Requirements: 3.1 - Redeem invite code
    * Requirements: 3.5 - Create relationship from valid code
+   * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} code - Invite code to redeem (8-character alphanumeric)
    * @param {string} caregiverUid - Caregiver's Firebase Auth UID
@@ -63,12 +66,17 @@ class CloudFunctionsService {
    */
   async redeemInviteCode(code, caregiverUid) {
     try {
-      const functionsModule = require('@react-native-firebase/functions');
-      const httpsCallable = functionsModule.httpsCallable;
-      const redeemFunction = httpsCallable(this.functions, 'redeemInviteCode');
-      const result = await redeemFunction({ code, caregiverUid });
+      return await retryOperation(async () => {
+        const functionsModule = require('@react-native-firebase/functions');
+        const httpsCallable = functionsModule.httpsCallable;
+        const redeemFunction = httpsCallable(
+          this.functions,
+          'redeemInviteCode',
+        );
+        const result = await redeemFunction({ code, caregiverUid });
 
-      return result.data;
+        return result.data;
+      });
     } catch (error) {
       // Map Firebase function errors to user-friendly messages
       const mappedError = this._mapFunctionError(error, 'redeem');
@@ -79,8 +87,10 @@ class CloudFunctionsService {
   /**
    * Remove a relationship between parent and caregiver
    * Calls the removeRelationship Cloud Function to delete a relationship.
+   * Includes retry logic for network errors.
    *
    * Requirements: 6.2 - Remove relationship
+   * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} relationshipId - Relationship document ID to remove
    * @returns {Promise<{success: boolean}>}
@@ -100,15 +110,17 @@ class CloudFunctionsService {
    */
   async removeRelationship(relationshipId) {
     try {
-      const functionsModule = require('@react-native-firebase/functions');
-      const httpsCallable = functionsModule.httpsCallable;
-      const removeFunction = httpsCallable(
-        this.functions,
-        'removeRelationship',
-      );
-      const result = await removeFunction({ relationshipId });
+      return await retryOperation(async () => {
+        const functionsModule = require('@react-native-firebase/functions');
+        const httpsCallable = functionsModule.httpsCallable;
+        const removeFunction = httpsCallable(
+          this.functions,
+          'removeRelationship',
+        );
+        const result = await removeFunction({ relationshipId });
 
-      return result.data;
+        return result.data;
+      });
     } catch (error) {
       // Map Firebase function errors to user-friendly messages
       const mappedError = this._mapFunctionError(error, 'remove');
