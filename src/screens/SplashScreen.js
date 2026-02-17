@@ -14,14 +14,22 @@
  * @format
  */
 
-import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  Animated,
+} from 'react-native';
 
 /**
  * Splash Screen Component
  *
- * Displays app branding and loading indicator.
+ * Displays app branding and loading indicator with smooth fade-in animation.
  * No user interaction is required on this screen.
+ *
+ * Requirements: 7.4 - Display splash/loading screen during auth state initialization
  *
  * @component
  * @returns {React.ReactElement} Splash screen component
@@ -31,11 +39,25 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
  * <Stack.Screen name="Splash" component={SplashScreen} />
  */
 function SplashScreen() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Fade in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
+
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#007AFF" />
-      <Text style={styles.title}>PillSathi</Text>
-      <Text style={styles.subtitle}>Loading...</Text>
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        <Text style={styles.title}>PillSathi</Text>
+        <Text style={styles.subtitle}>Medication Management Made Easy</Text>
+        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -48,17 +70,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 20,
   },
+  content: {
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 24,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#333333',
-    marginTop: 20,
+    color: '#007AFF',
     marginBottom: 8,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
+    marginBottom: 40,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#999999',
+    marginTop: 8,
   },
 });
 

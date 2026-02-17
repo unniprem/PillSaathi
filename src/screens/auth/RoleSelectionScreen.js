@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole, AuthScreens } from '../../types/navigation';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 /**
  * RoleSelectionScreen Component
@@ -109,6 +110,7 @@ const RoleSelectionScreen = ({ navigation }) => {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
     >
+      <LoadingOverlay visible={isLoading} message="Creating your profile..." />
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -125,6 +127,7 @@ const RoleSelectionScreen = ({ navigation }) => {
             style={[
               styles.roleCard,
               selectedRole === UserRole.PARENT && styles.roleCardSelected,
+              isLoading && styles.roleCardDisabled,
             ]}
             onPress={() => handleRoleSelect(UserRole.PARENT)}
             disabled={isLoading}
@@ -156,6 +159,7 @@ const RoleSelectionScreen = ({ navigation }) => {
             style={[
               styles.roleCard,
               selectedRole === UserRole.CAREGIVER && styles.roleCardSelected,
+              isLoading && styles.roleCardDisabled,
             ]}
             onPress={() => handleRoleSelect(UserRole.CAREGIVER)}
             disabled={isLoading}
@@ -293,6 +297,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  roleCardDisabled: {
+    opacity: 0.6,
+  },
   roleIconContainer: {
     alignItems: 'center',
     marginBottom: 12,
@@ -369,11 +376,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    transition: 'all 0.3s ease',
   },
   continueButtonDisabled: {
     backgroundColor: '#CCCCCC',
     shadowOpacity: 0,
     elevation: 0,
+    opacity: 0.6,
   },
   continueButtonText: {
     fontSize: 16,

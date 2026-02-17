@@ -20,6 +20,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 /**
  * ProfileSetupScreen Component
@@ -135,6 +136,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
+      <LoadingOverlay visible={isLoading} message="Saving your profile..." />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -153,7 +155,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
             <Text style={styles.label}>Your Name</Text>
 
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, isLoading && styles.nameInputDisabled]}
               value={name}
               onChangeText={handleNameChange}
               placeholder="Enter your full name"
@@ -257,6 +259,10 @@ const styles = StyleSheet.create({
     color: '#333333',
     minHeight: 52, // Ensures 44pt+ touch target
   },
+  nameInputDisabled: {
+    opacity: 0.6,
+    backgroundColor: '#F0F0F0',
+  },
   errorContainer: {
     marginTop: 8,
     padding: 12,
@@ -282,11 +288,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    transition: 'all 0.3s ease',
   },
   saveButtonDisabled: {
     backgroundColor: '#CCCCCC',
     shadowOpacity: 0,
     elevation: 0,
+    opacity: 0.6,
   },
   saveButtonText: {
     fontSize: 16,

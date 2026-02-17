@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthScreens } from '../../types/navigation';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 // OTP timeout duration in seconds
 const OTP_TIMEOUT_SECONDS = 300; // 5 minutes
@@ -302,6 +303,8 @@ const OTPVerificationScreen = ({ navigation, route }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
+      <LoadingOverlay visible={isSubmitting} message="Verifying code..." />
+      <LoadingOverlay visible={isResending} message="Sending new code..." />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -327,6 +330,7 @@ const OTPVerificationScreen = ({ navigation, route }) => {
                     styles.otpInput,
                     digit && styles.otpInputFilled,
                     displayError && styles.otpInputError,
+                    (isLoading || otpTimeout === 0) && styles.otpInputDisabled,
                   ]}
                   value={digit}
                   onChangeText={value => handleOtpChange(value, index)}
@@ -503,6 +507,10 @@ const styles = StyleSheet.create({
     borderColor: '#E53E3E',
     backgroundColor: '#FFF5F5',
   },
+  otpInputDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#F0F0F0',
+  },
   timeoutWarning: {
     fontSize: 14,
     color: '#F59E0B',
@@ -533,11 +541,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    transition: 'all 0.3s ease',
   },
   verifyButtonDisabled: {
     backgroundColor: '#CCCCCC',
     shadowOpacity: 0,
     elevation: 0,
+    opacity: 0.6,
   },
   verifyButtonText: {
     fontSize: 16,
