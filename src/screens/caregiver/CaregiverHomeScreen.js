@@ -14,10 +14,11 @@
  * @format
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CaregiverScreens } from '../../types/navigation';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Caregiver Home Screen Component
@@ -31,11 +32,66 @@ import { CaregiverScreens } from '../../types/navigation';
  */
 function CaregiverHomeScreen() {
   const navigation = useNavigation();
+  const { signOut, loading } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  /**
+   * Handle logout with confirmation dialog
+   * Requirements: 4.4, 5.5 - Logout functionality with confirmation
+   */
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoggingOut(true);
+              await signOut();
+              // Navigation to login screen is handled automatically by App.js
+              // based on auth state change
+            } catch (error) {
+              setIsLoggingOut(false);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+              console.error('Logout error:', error);
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Caregiver Home</Text>
-      <Text style={styles.subtitle}>Dashboard coming soon...</Text>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Caregiver Home</Text>
+          <Text style={styles.subtitle}>Dashboard coming soon...</Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.logoutButton,
+            (loading || isLoggingOut) && styles.logoutButtonDisabled,
+          ]}
+          onPress={handleLogout}
+          disabled={loading || isLoggingOut}
+          accessibilityLabel="Logout button"
+          accessibilityHint="Double tap to logout from your account"
+          accessibilityRole="button"
+        >
+          <Text style={styles.logoutButtonText}>
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Test navigation buttons */}
       <View style={styles.testButtonsContainer}>
@@ -72,10 +128,15 @@ function CaregiverHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 40,
+    marginTop: 20,
   },
   title: {
     fontSize: 24,
@@ -86,8 +147,25 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666666',
-    textAlign: 'center',
-    marginBottom: 40,
+  },
+  logoutButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 100,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+    opacity: 0.6,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   testButtonsContainer: {
     width: '100%',

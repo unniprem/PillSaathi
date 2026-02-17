@@ -16,6 +16,7 @@ import {
   signOut as firebaseSignOut,
 } from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
+import { logAuthError, logNetworkError } from '../../utils/errorLogger';
 
 /**
  * Error message mapping for Firebase Authentication error codes
@@ -88,6 +89,17 @@ class AuthService {
         verificationId: confirmation.verificationId,
       };
     } catch (error) {
+      // Log the error with context
+      const isNetworkError = error.code === 'auth/network-request-failed';
+      const logFunction = isNetworkError ? logNetworkError : logAuthError;
+
+      logFunction(
+        'sendPhoneOTP',
+        error,
+        null,
+        { phoneNumber: `${phoneNumber.substring(0, 5)}***` }, // Partial phone for privacy
+      );
+
       const mappedError = new Error(this.getErrorMessage(error.code));
       mappedError.code = error.code;
       mappedError.originalError = error;
@@ -121,6 +133,15 @@ class AuthService {
       const userCredential = await signInWithCredential(this.auth, credential);
       return userCredential;
     } catch (error) {
+      // Log the error with context
+      const isNetworkError = error.code === 'auth/network-request-failed';
+      const logFunction = isNetworkError ? logNetworkError : logAuthError;
+
+      logFunction('verifyPhoneOTP', error, null, {
+        verificationIdProvided: !!verificationId,
+        codeLength: code?.length,
+      });
+
       const mappedError = new Error(this.getErrorMessage(error.code));
       mappedError.code = error.code;
       mappedError.originalError = error;
@@ -147,6 +168,15 @@ class AuthService {
     try {
       await firebaseSignOut(this.auth);
     } catch (error) {
+      // Log the error with context
+      const currentUser = this.getCurrentUser();
+      const isNetworkError = error.code === 'auth/network-request-failed';
+      const logFunction = isNetworkError ? logNetworkError : logAuthError;
+
+      logFunction('signOut', error, currentUser?.uid || null, {
+        hadCurrentUser: !!currentUser,
+      });
+
       const mappedError = new Error(this.getErrorMessage(error.code));
       mappedError.code = error.code;
       mappedError.originalError = error;

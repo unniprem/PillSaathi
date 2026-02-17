@@ -11,6 +11,11 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthService from '../services/auth/AuthService';
 import ProfileService from '../services/auth/ProfileService';
+import {
+  logAuthError,
+  logProfileError,
+  logStorageError,
+} from '../utils/errorLogger';
 
 /**
  * Auth state shape:
@@ -85,6 +90,7 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem(AUTH_STATE_KEY, JSON.stringify(stateToSave));
     } catch (err) {
       console.error('Failed to persist auth state:', err);
+      logStorageError('persistAuthState', err, userData?.uid || null);
     }
   };
 
@@ -96,6 +102,7 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.removeItem(AUTH_STATE_KEY);
     } catch (err) {
       console.error('Failed to clear auth state:', err);
+      logStorageError('clearPersistedAuthState', err);
     }
   };
 
@@ -122,6 +129,7 @@ export const AuthProvider = ({ children }) => {
       return false;
     } catch (err) {
       console.error('Failed to restore auth state:', err);
+      logStorageError('restoreAuthState', err);
       return false;
     }
   };
@@ -136,6 +144,7 @@ export const AuthProvider = ({ children }) => {
       return userProfile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
+      logProfileError('loadUserProfile', err, uid);
       setError(err.message);
       return null;
     }
@@ -194,6 +203,7 @@ export const AuthProvider = ({ children }) => {
         return unsubscribe;
       } catch (err) {
         console.error('Auth initialization error:', err);
+        logAuthError('initAuth', err);
         if (isMounted) {
           setError(err.message);
           setInitialized(true);
@@ -237,6 +247,9 @@ export const AuthProvider = ({ children }) => {
       const { verificationId } = await AuthService.sendPhoneOTP(phoneNumber);
       return verificationId;
     } catch (err) {
+      logAuthError('sendOTP', err, null, {
+        phoneNumber: `${phoneNumber.substring(0, 5)}***`,
+      });
       setError(err.message);
       throw err;
     } finally {
@@ -295,6 +308,9 @@ export const AuthProvider = ({ children }) => {
         profile: userProfile,
       };
     } catch (err) {
+      logAuthError('verifyOTP', err, null, {
+        codeLength: code?.length,
+      });
       setError(err.message);
       throw err;
     } finally {
@@ -326,6 +342,9 @@ export const AuthProvider = ({ children }) => {
       const { verificationId } = await AuthService.sendPhoneOTP(phoneNumber);
       return verificationId;
     } catch (err) {
+      logAuthError('resendOTP', err, null, {
+        phoneNumber: `${phoneNumber.substring(0, 5)}***`,
+      });
       setError(err.message);
       throw err;
     } finally {
@@ -366,6 +385,9 @@ export const AuthProvider = ({ children }) => {
       // Update persisted state
       await persistAuthState(user, userProfile);
     } catch (err) {
+      logProfileError('createProfile', err, uid, {
+        role: profileData?.role,
+      });
       setError(err.message);
       throw err;
     } finally {
@@ -402,6 +424,9 @@ export const AuthProvider = ({ children }) => {
       // Update persisted state
       await persistAuthState(user, userProfile);
     } catch (err) {
+      logProfileError('updateProfile', err, uid, {
+        updateFields: Object.keys(updates),
+      });
       setError(err.message);
       throw err;
     } finally {
@@ -437,6 +462,7 @@ export const AuthProvider = ({ children }) => {
       // Clear persisted state
       await clearPersistedAuthState();
     } catch (err) {
+      logAuthError('signOut', err, user?.uid || null);
       setError(err.message);
       throw err;
     } finally {

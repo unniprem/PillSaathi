@@ -16,6 +16,11 @@ import {
   serverTimestamp,
 } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
+import {
+  logProfileError,
+  logValidationError,
+  logNetworkError,
+} from '../../utils/errorLogger';
 
 /**
  * Error message mapping for Firestore error codes
@@ -88,13 +93,28 @@ class ProfileService {
       const userDocRef = doc(this.firestore, this.usersCollection, uid);
       await setDoc(userDocRef, profileDocument);
     } catch (error) {
-      // If it's a validation error, rethrow as-is
+      // If it's a validation error, log and rethrow as-is
       if (
         error.message.includes('required') ||
         error.message.includes('must')
       ) {
+        logValidationError('createProfile', error, uid, {
+          profileData: {
+            role: profileData?.role,
+            hasName: !!profileData?.name,
+            hasPhone: !!profileData?.phone,
+          },
+        });
         throw error;
       }
+
+      // Log Firestore errors
+      const isNetworkError = error.code === 'firestore/unavailable';
+      const logFunction = isNetworkError ? logNetworkError : logProfileError;
+
+      logFunction('createProfile', error, uid, {
+        role: profileData?.role,
+      });
 
       // Map Firestore errors to user-friendly messages
       const mappedError = new Error(
@@ -143,6 +163,12 @@ class ProfileService {
         lastLoginAt: data.lastLoginAt?.toDate(),
       };
     } catch (error) {
+      // Log the error
+      const isNetworkError = error.code === 'firestore/unavailable';
+      const logFunction = isNetworkError ? logNetworkError : logProfileError;
+
+      logFunction('getProfile', error, uid);
+
       const mappedError = new Error(
         ERROR_MESSAGES[error.code] || ERROR_MESSAGES.default,
       );
@@ -183,6 +209,14 @@ class ProfileService {
       const userDocRef = doc(this.firestore, this.usersCollection, uid);
       await updateDoc(userDocRef, updateData);
     } catch (error) {
+      // Log the error
+      const isNetworkError = error.code === 'firestore/unavailable';
+      const logFunction = isNetworkError ? logNetworkError : logProfileError;
+
+      logFunction('updateProfile', error, uid, {
+        updateFields: Object.keys(updates),
+      });
+
       const mappedError = new Error(
         ERROR_MESSAGES[error.code] || ERROR_MESSAGES.default,
       );
@@ -199,7 +233,7 @@ class ProfileService {
    * Requirements: 3.7 - Validate required fields before saving
    *
    * @param {Object} profileData - Profile data to validate
-   * @param {string} profileData.name - User's display name
+   * @param {string} profileData.name - User's display name (can be empty string during initial creation)
    * @param {string} profileData.role - User role ('parent' or 'caregiver')
    * @param {string} profileData.phone - Phone number
    * @returns {boolean} True if valid
@@ -219,35 +253,64 @@ class ProfileService {
    */
   validateProfileData(profileData) {
     if (!profileData) {
-      throw new Error('Profile data is required');
+      const error = new Error('Profile data is required');
+      logValidationError('validateProfileData', error, null, {
+        hasProfileData: false,
+      });
+      throw error;
     }
 
-    // Validate name
-    if (!profileData.name || typeof profileData.name !== 'string') {
-      throw new Error('Name is required and must be a string');
-    }
-
-    if (profileData.name.trim().length === 0) {
-      throw new Error('Name cannot be empty');
+    // Validate name - must be a string but can be empty during initial profile creation
+    if (
+      profileData.name === undefined ||
+      profileData.name === null ||
+      typeof profileData.name !== 'string'
+    ) {
+      const error = new Error('Name is required and must be a string');
+      logValidationError('validateProfileData', error, null, {
+        field: 'name',
+        nameType: typeof profileData.name,
+      });
+      throw error;
     }
 
     // Validate role
     if (!profileData.role || typeof profileData.role !== 'string') {
-      throw new Error('Role is required and must be a string');
+      const error = new Error('Role is required and must be a string');
+      logValidationError('validateProfileData', error, null, {
+        field: 'role',
+        roleType: typeof profileData.role,
+      });
+      throw error;
     }
 
     const validRoles = ['parent', 'caregiver'];
     if (!validRoles.includes(profileData.role.toLowerCase())) {
-      throw new Error('Role must be either "parent" or "caregiver"');
+      const error = new Error('Role must be either "parent" or "caregiver"');
+      logValidationError('validateProfileData', error, null, {
+        field: 'role',
+        providedRole: profileData.role,
+      });
+      throw error;
     }
 
     // Validate phone
     if (!profileData.phone || typeof profileData.phone !== 'string') {
-      throw new Error('Phone number is required and must be a string');
+      const error = new Error('Phone number is required and must be a string');
+      logValidationError('validateProfileData', error, null, {
+        field: 'phone',
+        phoneType: typeof profileData.phone,
+      });
+      throw error;
     }
 
     if (profileData.phone.trim().length === 0) {
-      throw new Error('Phone number cannot be empty');
+      const error = new Error('Phone number cannot be empty');
+      logValidationError('validateProfileData', error, null, {
+        field: 'phone',
+        isEmpty: true,
+      });
+      throw error;
     }
 
     return true;
@@ -275,6 +338,12 @@ class ProfileService {
 
       return docSnapshot.exists();
     } catch (error) {
+      // Log the error
+      const isNetworkError = error.code === 'firestore/unavailable';
+      const logFunction = isNetworkError ? logNetworkError : logProfileError;
+
+      logFunction('profileExists', error, uid);
+
       const mappedError = new Error(
         ERROR_MESSAGES[error.code] || ERROR_MESSAGES.default,
       );
