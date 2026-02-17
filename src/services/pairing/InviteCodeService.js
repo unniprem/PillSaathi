@@ -219,6 +219,11 @@ class InviteCodeService {
         };
       });
     } catch (error) {
+      console.error('getActiveInviteCode error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
       const mappedError = new Error('Failed to get active invite code');
       mappedError.code = 'invite-code-query-failed';
       mappedError.originalError = error;

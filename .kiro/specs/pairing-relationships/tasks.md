@@ -358,16 +358,16 @@ The plan builds incrementally, with each task producing working, testable code. 
     - **Property 13: Cloud Function Authentication Requirement**
     - **Validates: Requirements 7.5**
 
-- [~] 16. Integration and navigation wiring
+- [x] 16. Integration and navigation wiring
 
-  - [ ] 16.1 Add pairing screens to navigation
+  - [x] 16.1 Add pairing screens to navigation
 
     - Add ParentPairingScreen to ParentNavigator
     - Add CaregiverPairingScreen to CaregiverNavigator
     - Configure navigation options (titles, headers)
     - _Requirements: 1.1, 3.1_
 
-  - [ ] 16.2 Wrap app with PairingContext provider
+  - [x] 16.2 Wrap app with PairingContext provider
 
     - Add PairingProvider to app component tree
     - Ensure it's below AuthProvider (depends on auth state)

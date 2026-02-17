@@ -21,6 +21,7 @@ import { CaregiverScreens } from '../types/navigation';
 
 // Placeholder screens (will be created in subsequent tasks)
 import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
+import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
 // import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 // import ParentListScreen from '../screens/caregiver/ParentListScreen';
 // import MedicineDetailsScreen from '../screens/caregiver/MedicineDetailsScreen';
@@ -146,6 +147,13 @@ function HomeStack() {
         options={{
           title: 'Alarm',
           presentation: 'fullScreenModal',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.PAIRING}
+        component={CaregiverPairingScreen}
+        options={{
+          title: 'Pairing & Relationships',
         }}
       />
     </Stack.Navigator>

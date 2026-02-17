@@ -20,6 +20,7 @@ import { ParentScreens } from '../types/navigation';
 
 // Placeholder screens (will be created in subsequent tasks)
 import ParentHomeScreen from '../screens/parent/ParentHomeScreen';
+import ParentPairingScreen from '../screens/parent/ParentPairingScreen';
 // import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
 // import MedicineListScreen from '../screens/parent/MedicineListScreen';
 // import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
@@ -180,6 +181,13 @@ function HomeStack() {
         options={{
           title: 'Add Caregiver',
           presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name={ParentScreens.PAIRING}
+        component={ParentPairingScreen}
+        options={{
+          title: 'Pairing & Relationships',
         }}
       />
     </Stack.Navigator>

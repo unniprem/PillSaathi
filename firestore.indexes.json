@@ -41,26 +41,6 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "relationships",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "caregiverUid",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "relationships",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "parentUid",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []

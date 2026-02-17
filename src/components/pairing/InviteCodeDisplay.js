@@ -186,11 +186,7 @@ const InviteCodeDisplay = ({ code, expiresAt, onRegenerate, loading }) => {
    * Requirements: 2.3 - Show remaining time until expiration
    */
   return (
-    <View
-      style={styles.container}
-      accessibilityRole="region"
-      accessibilityLabel="Invite code display"
-    >
+    <View style={styles.container} accessibilityLabel="Invite code display">
       <Text
         style={styles.label}
         accessibilityRole="text"

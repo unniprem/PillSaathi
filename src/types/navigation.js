@@ -69,6 +69,7 @@ export const ParentScreens = {
   EDIT_MEDICINE: 'EditMedicine',
   CAREGIVER_MANAGEMENT: 'CaregiverManagement',
   ADD_CAREGIVER: 'AddCaregiver',
+  PAIRING: 'ParentPairing',
   NOTIFICATIONS: 'Notifications',
   SETTINGS: 'Settings',
 };
@@ -84,6 +85,7 @@ export const CaregiverScreens = {
   PARENT_LIST: 'ParentList',
   MEDICINE_DETAILS: 'MedicineDetails',
   ALARM: 'Alarm',
+  PAIRING: 'CaregiverPairing',
   NOTIFICATIONS: 'Notifications',
   SETTINGS: 'Settings',
 };
@@ -123,6 +125,7 @@ export const CaregiverScreens = {
  * @property {string} EditMedicine.medicineId - ID of medicine to edit
  * @property {undefined} CaregiverManagement - Caregiver management screen (no params)
  * @property {undefined} AddCaregiver - Add caregiver screen (no params)
+ * @property {undefined} ParentPairing - Parent pairing screen (no params)
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
  */
@@ -139,6 +142,7 @@ export const CaregiverScreens = {
  * @property {Object} Alarm - Alarm screen
  * @property {string} Alarm.medicineId - ID of medicine for alarm
  * @property {string} Alarm.scheduledTime - Scheduled time for alarm
+ * @property {undefined} CaregiverPairing - Caregiver pairing screen (no params)
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
  */

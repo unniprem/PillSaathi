@@ -124,7 +124,6 @@ const RelationshipCard = ({
   return (
     <View
       style={styles.container}
-      accessibilityRole="region"
       accessibilityLabel={`Relationship with ${userName}`}
     >
       <View style={styles.contentContainer}>

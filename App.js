@@ -12,6 +12,7 @@ import { logEnvTest } from './src/utils/envTest';
 import { initializeFirebase } from './src/config/firebase';
 import { testNavigationPersistence } from './src/utils/navigationPersistence';
 import { AuthProvider } from './src/contexts/AuthContext';
+import { PairingProvider } from './src/contexts/PairingContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
 /**
@@ -19,6 +20,7 @@ import RootNavigator from './src/navigation/RootNavigator';
  *
  * Sets up the application with:
  * - AuthProvider for authentication state management
+ * - PairingProvider for pairing and relationship state management
  * - SafeAreaProvider for safe area handling
  * - StatusBar configuration
  * - Firebase initialization
@@ -26,6 +28,7 @@ import RootNavigator from './src/navigation/RootNavigator';
  * - Root navigation structure
  *
  * Requirements: 4.6 - Provide auth state via context to all components
+ * Requirements: 1.1, 4.1, 5.1 - Provide pairing state via context to all components
  *
  * @component
  * @returns {React.ReactElement} App component
@@ -75,10 +78,12 @@ function App() {
 
   return (
     <AuthProvider>
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <RootNavigator />
-      </SafeAreaProvider>
+      <PairingProvider>
+        <SafeAreaProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <RootNavigator />
+        </SafeAreaProvider>
+      </PairingProvider>
     </AuthProvider>
   );
 }

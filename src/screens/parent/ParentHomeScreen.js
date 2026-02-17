@@ -97,6 +97,14 @@ function ParentHomeScreen() {
       <View style={styles.testButtonsContainer}>
         <Text style={styles.testLabel}>Test Stack Navigation:</Text>
         <TouchableOpacity
+          style={[styles.testButton, styles.pairingButton]}
+          onPress={() => navigation.navigate(ParentScreens.PAIRING)}
+        >
+          <Text style={styles.testButtonText}>
+            🔗 Pairing & Relationships (Test Invite)
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={styles.testButton}
           onPress={() => navigation.navigate(ParentScreens.MEDICINE_LIST)}
         >
@@ -189,6 +197,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
     alignItems: 'center',
+  },
+  pairingButton: {
+    backgroundColor: '#34C759',
   },
   testButtonText: {
     color: '#FFFFFF',

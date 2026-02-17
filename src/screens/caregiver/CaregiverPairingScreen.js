@@ -25,6 +25,7 @@ import {
 } from 'react-native';
 import { usePairing } from '../../contexts/PairingContext';
 import RelationshipCard from '../../components/pairing/RelationshipCard';
+import { getErrorMessage } from '../../constants/errorMessages';
 
 /**
  * Validate invite code format
@@ -39,46 +40,6 @@ const validateCodeFormat = code => {
   }
   // Must be exactly 8 characters, alphanumeric (A-Z, 0-9)
   return /^[A-Z0-9]{8}$/.test(code.toUpperCase());
-};
-
-/**
- * Get error message for error code
- * Requirements: 9.1 - Display specific error messages
- *
- * @param {string} errorCode - Error code from service
- * @param {string} defaultMessage - Default message if code not found
- * @returns {string} User-friendly error message
- */
-const getErrorMessage = (errorCode, defaultMessage) => {
-  const ERROR_MESSAGES = {
-    // Invite Code Errors
-    'invalid-code-format': 'Please enter a valid 8-character code',
-    'code-not-found': 'This invite code is invalid. Please check and try again',
-    'code-expired': 'This invite code has expired. Please ask for a new code',
-    'not-found': 'This invite code is invalid or has expired',
-
-    // Relationship Errors
-    'relationship-exists': 'You are already connected with this parent',
-    'relationship-removal-failed':
-      'Failed to remove relationship. Please try again',
-
-    // Authentication Errors
-    unauthenticated: 'Please log in to continue',
-    'permission-denied': 'You do not have permission to perform this action',
-
-    // Network Errors
-    'network-error':
-      'Network error. Please check your connection and try again',
-    'service-unavailable':
-      'Service temporarily unavailable. Please try again later',
-    timeout: 'Request timed out. Please try again',
-  };
-
-  return (
-    ERROR_MESSAGES[errorCode] ||
-    defaultMessage ||
-    'An error occurred. Please try again'
-  );
 };
 
 /**
