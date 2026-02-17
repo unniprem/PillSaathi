@@ -514,7 +514,8 @@ console.log(getEnvironmentInfo());
 
 - [Firebase Setup Guide](./FIREBASE-SETUP-GUIDE.md)
 - [Android Setup Guide](./ANDROID-SETUP-GUIDE.md)
-- [iOS Setup Guide](./IOS-SETUP-GUIDE.md) (to be created)
+- [iOS Setup Guide](./IOS-SETUP-GUIDE.md)
+- [Common Issues and Solutions](./COMMON-ISSUES-AND-SOLUTIONS.md)
 - [Debugging Guide](./DEBUGGING-SETUP.md)
 
 ---
