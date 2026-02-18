@@ -37,12 +37,30 @@ jest.mock('react-native-config', () => ({
 // The mocks are automatically loaded from __mocks__/@react-native-firebase/
 jest.mock('@react-native-firebase/auth');
 jest.mock('@react-native-firebase/firestore');
+jest.mock('@react-native-firebase/app', () => ({
+  getApp: jest.fn(() => ({})),
+  firebase: {},
+  utils: {},
+  default: {},
+}));
 
 jest.mock('@react-native-firebase/messaging', () => ({
   __esModule: true,
   default: jest.fn(() => ({
     requestPermission: jest.fn(),
   })),
+}));
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  setItem: jest.fn(() => Promise.resolve()),
+  getItem: jest.fn(() => Promise.resolve(null)),
+  removeItem: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+  getAllKeys: jest.fn(() => Promise.resolve([])),
+  multiGet: jest.fn(() => Promise.resolve([])),
+  multiSet: jest.fn(() => Promise.resolve()),
+  multiRemove: jest.fn(() => Promise.resolve()),
 }));
 
 // Suppress console warnings in tests (optional)

@@ -64,6 +64,7 @@ export const AuthScreens = {
 export const ParentScreens = {
   HOME: 'ParentHome',
   PROFILE: 'ParentProfile',
+  EDIT_PROFILE: 'EditProfile',
   MEDICINE_LIST: 'MedicineList',
   MEDICINE_VIEW: 'ParentMedicineView',
   UPCOMING_DOSES: 'UpcomingDoses',
@@ -84,6 +85,7 @@ export const ParentScreens = {
 export const CaregiverScreens = {
   HOME: 'CaregiverHome',
   PROFILE: 'CaregiverProfile',
+  EDIT_PROFILE: 'EditProfile',
   PARENT_LIST: 'ParentList',
   MEDICINE_LIST: 'CaregiverMedicineList',
   MEDICINE_FORM: 'MedicineForm',
@@ -123,6 +125,7 @@ export const CaregiverScreens = {
  * @typedef {Object} ParentParamList
  * @property {undefined} ParentHome - Parent home screen (no params)
  * @property {undefined} ParentProfile - Parent profile screen (no params)
+ * @property {undefined} EditProfile - Edit profile screen (no params)
  * @property {undefined} MedicineList - Medicine list screen (no params)
  * @property {undefined} ParentMedicineView - Parent medicine view screen (no params)
  * @property {undefined} UpcomingDoses - Upcoming doses screen (no params)
@@ -141,6 +144,7 @@ export const CaregiverScreens = {
  * @typedef {Object} CaregiverParamList
  * @property {undefined} CaregiverHome - Caregiver home screen (no params)
  * @property {undefined} CaregiverProfile - Caregiver profile screen (no params)
+ * @property {undefined} EditProfile - Edit profile screen (no params)
  * @property {undefined} ParentList - Parent list screen (no params)
  * @property {Object} CaregiverMedicineList - Caregiver medicine list screen
  * @property {string} CaregiverMedicineList.parentId - ID of parent

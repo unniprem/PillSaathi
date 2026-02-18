@@ -23,6 +23,8 @@ import ParentHomeScreen from '../screens/parent/ParentHomeScreen';
 import ParentPairingScreen from '../screens/parent/ParentPairingScreen';
 import ParentMedicineView from '../screens/parent/ParentMedicineView';
 import UpcomingDoses from '../screens/parent/UpcomingDoses';
+import EditProfileScreen from '../screens/shared/EditProfileScreen';
+import LogoutHeader from '../components/LogoutHeader';
 // import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
 // import MedicineListScreen from '../screens/parent/MedicineListScreen';
 // import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
@@ -139,6 +141,7 @@ function HomeStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
       }}
     >
       <Stack.Screen
@@ -232,6 +235,7 @@ function ProfileStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
       }}
     >
       <Stack.Screen
@@ -239,6 +243,14 @@ function ProfileStack() {
         component={ParentProfileScreen}
         options={{
           title: 'Profile',
+        }}
+      />
+      <Stack.Screen
+        name={ParentScreens.EDIT_PROFILE}
+        component={EditProfileScreen}
+        options={{
+          title: 'Edit Profile',
+          presentation: 'modal',
         }}
       />
       <Stack.Screen

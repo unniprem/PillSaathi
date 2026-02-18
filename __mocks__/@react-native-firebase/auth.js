@@ -31,6 +31,9 @@ const mockAuth = {
 
 const auth = jest.fn(() => mockAuth);
 
+// Export getAuth function
+export const getAuth = jest.fn(() => mockAuth);
+
 // Export default function that returns the mock auth instance
 export default auth;
 

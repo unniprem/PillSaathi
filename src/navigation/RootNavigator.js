@@ -24,6 +24,9 @@
  * - 5.2: Display ParentNavigator for authenticated Parent users
  * - 5.3: Display CaregiverNavigator for authenticated Caregiver users
  * - 7.4: Display splash/loading screen during auth state initialization
+ * - 19.1: Check if profile is complete after authentication
+ * - 19.2: Redirect to ProfileSetupScreen if profile is incomplete
+ * - 19.7: Allow direct navigation to dashboard if profile is complete
  *
  * @format
  */
@@ -34,6 +37,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootScreens } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { requiresProfileSetup } from '../utils/profileUtils';
 
 // Import navigators
 import AuthNavigator from './AuthNavigator';
@@ -63,9 +67,10 @@ const NAVIGATION_STATE_KEY = '@navigation_state';
  *
  * Auth State Routing:
  * - Unauthenticated: Shows AuthNavigator (Requirement 5.1)
- * - Authenticated + Parent role: Shows ParentNavigator (Requirements 2.5, 5.2)
- * - Authenticated + Caregiver role: Shows CaregiverNavigator (Requirements 2.6, 5.3)
- * - Authenticated + No role: Shows AuthNavigator for role selection
+ * - Authenticated + No profile/role: Shows AuthNavigator for role selection
+ * - Authenticated + Incomplete profile: Shows AuthNavigator for profile setup (Requirements 19.1, 19.2)
+ * - Authenticated + Parent role + Complete profile: Shows ParentNavigator (Requirements 2.5, 5.2, 19.7)
+ * - Authenticated + Caregiver role + Complete profile: Shows CaregiverNavigator (Requirements 2.6, 5.3, 19.7)
  *
  * @returns {React.ReactElement} Root navigator component
  */
@@ -110,7 +115,9 @@ function RootNavigator() {
   }
 
   // Determine which navigator to show based on auth state
-  // Requirements: 5.1, 5.2, 5.3, 2.5, 2.6
+  // Requirements: 5.1, 5.2, 5.3, 2.5, 2.6, 19.1, 19.2, 19.7
+  // Note: Profile completion check logic is also available via useProfileCompletionCheck hook
+  // for use in individual screens that need dynamic profile status checking
   const getNavigatorScreen = () => {
     // Show splash screen while auth state is initializing
     // Requirement 7.4: Display splash/loading screen during initialization
@@ -129,6 +136,12 @@ function RootNavigator() {
     // User is authenticated but has no profile or role - show auth flow for role selection
     // Requirement 2.3: Navigate based on existing role
     if (!profile || !profile.role) {
+      return <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />;
+    }
+
+    // User is authenticated with role but profile is incomplete - show auth flow for profile setup
+    // Requirements 19.1, 19.2, 19.7: Check profile completion and redirect if needed
+    if (requiresProfileSetup(profile)) {
       return <Stack.Screen name={RootScreens.AUTH} component={AuthNavigator} />;
     }
 

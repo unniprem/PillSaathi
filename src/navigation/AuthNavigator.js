@@ -5,10 +5,12 @@
  * - Login screen (phone number entry)
  * - Phone verification screen (OTP entry)
  * - Role selection screen (parent/caregiver)
+ * - Profile setup screen (name, date of birth, email)
  *
- * This navigator is displayed when the user is not authenticated.
- * After successful authentication and role selection, the app navigates
- * to the appropriate main navigator (Parent or Caregiver).
+ * This navigator is displayed when the user is not authenticated or
+ * when the user needs to complete their profile.
+ * After successful authentication, role selection, and profile completion,
+ * the app navigates to the appropriate main navigator (Parent or Caregiver).
  *
  * @format
  */
@@ -16,6 +18,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthScreens } from '../types/navigation';
+import { useAuth } from '../contexts/AuthContext';
+import { requiresProfileSetup } from '../utils/profileUtils';
 
 // Import screens
 import PhoneAuthScreen from '../screens/auth/PhoneAuthScreen';
@@ -36,13 +40,29 @@ const Stack = createNativeStackNavigator();
  * 1. Login - User enters phone number
  * 2. PhoneVerification - User enters OTP code
  * 3. RoleSelection - User selects role (parent/caregiver)
+ * 4. ProfileSetup - User completes profile (name, DOB, email)
+ *
+ * The initial route is determined by the user's authentication and profile state:
+ * - Not authenticated: Start at Login
+ * - Authenticated with role but incomplete profile: Start at ProfileSetup
  *
  * @returns {React.ReactElement} Auth navigator component
  */
 function AuthNavigator() {
+  const { user, profile } = useAuth();
+
+  // Determine initial route based on auth and profile state
+  // Requirements 19.1, 19.2: Redirect to ProfileSetup if profile is incomplete
+  const getInitialRouteName = () => {
+    if (user && profile && profile.role && requiresProfileSetup(profile)) {
+      return AuthScreens.PROFILE_SETUP;
+    }
+    return AuthScreens.LOGIN;
+  };
+
   return (
     <Stack.Navigator
-      initialRouteName={AuthScreens.LOGIN}
+      initialRouteName={getInitialRouteName()}
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,

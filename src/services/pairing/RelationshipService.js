@@ -140,6 +140,10 @@ class RelationshipService {
                 caregiverUid: data.caregiverUid,
                 createdAt: data.createdAt?.toDate() || null,
                 createdBy: data.createdBy || null,
+                // Include parentAlias field for caregivers
+                ...(role === 'caregiver' && {
+                  parentAlias: data.parentAlias || null,
+                }),
                 // Attach profile data based on role
                 ...(role === 'parent'
                   ? {
@@ -164,6 +168,10 @@ class RelationshipService {
                 caregiverUid: data.caregiverUid,
                 createdAt: data.createdAt?.toDate() || null,
                 createdBy: data.createdBy || null,
+                // Include parentAlias field for caregivers
+                ...(role === 'caregiver' && {
+                  parentAlias: data.parentAlias || null,
+                }),
                 // Placeholder data if profile fetch fails
                 ...(role === 'parent'
                   ? {
@@ -252,6 +260,10 @@ class RelationshipService {
                     caregiverUid: data.caregiverUid,
                     createdAt: data.createdAt?.toDate() || null,
                     createdBy: data.createdBy || null,
+                    // Include parentAlias field for caregivers
+                    ...(role === 'caregiver' && {
+                      parentAlias: data.parentAlias || null,
+                    }),
                     // Attach profile data based on role
                     ...(role === 'parent'
                       ? {
@@ -276,6 +288,10 @@ class RelationshipService {
                     caregiverUid: data.caregiverUid,
                     createdAt: data.createdAt?.toDate() || null,
                     createdBy: data.createdBy || null,
+                    // Include parentAlias field for caregivers
+                    ...(role === 'caregiver' && {
+                      parentAlias: data.parentAlias || null,
+                    }),
                     // Placeholder data if profile fetch fails
                     ...(role === 'parent'
                       ? {

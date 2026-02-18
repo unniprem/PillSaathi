@@ -24,6 +24,8 @@ import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
+import EditProfileScreen from '../screens/shared/EditProfileScreen';
+import LogoutHeader from '../components/LogoutHeader';
 // import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 // import ParentListScreen from '../screens/caregiver/ParentListScreen';
 // import MedicineDetailsScreen from '../screens/caregiver/MedicineDetailsScreen';
@@ -120,6 +122,7 @@ function HomeStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
       }}
     >
       <Stack.Screen
@@ -199,6 +202,7 @@ function ProfileStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
       }}
     >
       <Stack.Screen
@@ -206,6 +210,14 @@ function ProfileStack() {
         component={CaregiverProfileScreen}
         options={{
           title: 'Profile',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.EDIT_PROFILE}
+        component={EditProfileScreen}
+        options={{
+          title: 'Edit Profile',
+          presentation: 'modal',
         }}
       />
       <Stack.Screen

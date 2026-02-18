@@ -45,6 +45,9 @@ const mockFirestore = {
 
 const firestore = jest.fn(() => mockFirestore);
 
+// Export getFirestore function
+export const getFirestore = jest.fn(() => mockFirestore);
+
 // Export Firestore timestamp mock
 firestore.FieldValue = {
   serverTimestamp: jest.fn(() => new Date()),

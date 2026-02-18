@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole, AuthScreens } from '../../types/navigation';
 import LoadingOverlay from '../../components/LoadingOverlay';
+import { useProfileCompletionCheck } from '../../hooks/useProfileCompletionCheck';
 
 /**
  * RoleSelectionScreen Component
@@ -37,6 +38,13 @@ import LoadingOverlay from '../../components/LoadingOverlay';
  */
 const RoleSelectionScreen = ({ navigation }) => {
   const { user, createProfile, loading, error: contextError } = useAuth();
+
+  // Requirements 19.1, 19.2, 19.7: Check profile completion status
+  // This hook monitors profile completion and can redirect if needed
+  // In this screen, we disable auto-redirect since we handle navigation manually
+  const { needsProfileSetup } = useProfileCompletionCheck({
+    autoRedirect: false,
+  });
 
   // State
   const [selectedRole, setSelectedRole] = useState(null);

@@ -1,13 +1,13 @@
 /**
- * ProfileSetupScreen - Profile Setup Screen
+ * EditProfileScreen - Edit Profile Screen
  *
- * Allows users to enter their name, date of birth, and email to complete their profile after role selection.
- * Includes validation, error handling, and navigation to main app.
+ * Allows users to update their profile information including name, date of birth, and email.
+ * Pre-fills form with current user data and validates input before saving.
  *
- * Requirements: 19.2, 19.3, 19.4, 19.6
+ * Requirements: 18.1, 18.2, 18.3, 18.5
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,20 +30,26 @@ import {
 } from '../../models/User';
 
 /**
- * ProfileSetupScreen Component
+ * EditProfileScreen Component
  *
  * Requirements:
- * - 19.2: Display profile completion screen for new users
- * - 19.3: Validate name (required, non-empty) and date of birth (required, valid date, age >= 13)
- * - 19.4: Allow email as optional field with valid format validation
- * - 19.6: Save profile data and navigate to dashboard
+ * - 18.1: Provide fields to enter or edit name and date of birth
+ * - 18.2: Validate input before saving
+ * - 18.3: Persist updated information to database
+ * - 18.5: Display current values when editing existing information
  *
  * @param {Object} props
- * @param {AuthNavigationProp} props.navigation - Navigation prop
+ * @param {Object} props.navigation - Navigation prop
  * @returns {JSX.Element}
  */
-const ProfileSetupScreen = ({ navigation: _navigation }) => {
-  const { user, updateProfile, loading, error: contextError } = useAuth();
+const EditProfileScreen = ({ navigation }) => {
+  const {
+    user,
+    profile,
+    updateProfile,
+    loading,
+    error: contextError,
+  } = useAuth();
 
   // State
   const [name, setName] = useState('');
@@ -51,10 +58,43 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  /**
+   * Pre-fill form with current user profile data
+   * Requirement 18.5: Display current values when editing
+   */
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setDateOfBirth(
+        profile.dateOfBirth
+          ? new Date(profile.dateOfBirth.seconds * 1000)
+          : null,
+      );
+      setEmail(profile.email || '');
+    }
+  }, [profile]);
+
+  /**
+   * Track if user has made changes
+   */
+  useEffect(() => {
+    if (!profile) return;
+
+    const originalDob = profile.dateOfBirth
+      ? new Date(profile.dateOfBirth.seconds * 1000)
+      : null;
+    const dobChanged = dateOfBirth?.getTime() !== originalDob?.getTime();
+    const nameChanged = name !== (profile.name || '');
+    const emailChanged = email !== (profile.email || '');
+
+    setHasChanges(dobChanged || nameChanged || emailChanged);
+  }, [name, dateOfBirth, email, profile]);
 
   /**
    * Validate all form fields
-   * Requirements: 19.3, 19.4 - Validate required and optional fields
+   * Requirement 18.2: Validate input before saving
    *
    * @returns {boolean} True if all fields are valid, false otherwise
    */
@@ -130,11 +170,11 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
   };
 
   /**
-   * Handle Continue button press
-   * Requirements: 19.3 - Validate required fields before submission
-   * Requirements: 19.6 - Save profile data to Firestore
+   * Handle Save button press
+   * Requirement 18.2: Validate input before saving
+   * Requirement 18.3: Save updated profile to Firestore
    */
-  const handleContinue = async () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
@@ -150,28 +190,60 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
     setErrors({});
 
     try {
-      // Update profile with name, date of birth, email, and profileCompleted flag
+      // Update profile with name, date of birth, and email
       await updateProfile(user.uid, {
         name: name.trim(),
         dateOfBirth: dateOfBirth,
         email: email.trim() || null,
-        profileCompleted: true,
       });
 
-      // Profile updated successfully
-      // Navigation will be handled by root navigator based on auth state
-      // The user now has a complete profile and will be routed to the main app
+      // Show success message
+      Alert.alert(
+        'Profile Updated',
+        'Your profile has been updated successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
     } catch (err) {
       setErrors({
         general:
-          err.message || 'Failed to save your profile. Please try again.',
+          err.message || 'Failed to update your profile. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Check if form is valid for submit button
+  /**
+   * Handle Cancel button press
+   */
+  const handleCancel = () => {
+    if (hasChanges) {
+      Alert.alert(
+        'Discard Changes?',
+        'You have unsaved changes. Are you sure you want to discard them?',
+        [
+          {
+            text: 'Keep Editing',
+            style: 'cancel',
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  // Check if form is valid for save button
   const isFormValid = name.trim() !== '' && dateOfBirth !== null;
 
   const isLoading = loading || isSubmitting;
@@ -183,7 +255,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <LoadingOverlay visible={isLoading} message="Saving your profile..." />
+      <LoadingOverlay visible={isLoading} message="Updating your profile..." />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -191,9 +263,9 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Complete Your Profile</Text>
+            <Text style={styles.title}>Edit Profile</Text>
             <Text style={styles.subtitle}>
-              Please provide your information to continue
+              Update your personal information
             </Text>
           </View>
 
@@ -310,7 +382,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
               accessibilityHint="Enter your email address (optional)"
               accessibilityRole="none"
               returnKeyType="done"
-              onSubmitEditing={handleContinue}
+              onSubmitEditing={handleSave}
               importantForAccessibility="yes"
             />
 
@@ -336,30 +408,42 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
             </View>
           )}
 
-          {/* Continue Button */}
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              (!isFormValid || isLoading) && styles.continueButtonDisabled,
-            ]}
-            onPress={handleContinue}
-            disabled={!isFormValid || isLoading}
-            accessibilityLabel="Continue"
-            accessibilityRole="button"
-            accessibilityHint="Save your profile and continue to the app"
-            accessibilityState={{ disabled: !isFormValid || isLoading }}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.continueButtonText}>Continue</Text>
-            )}
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                (!isFormValid || isLoading || !hasChanges) &&
+                  styles.saveButtonDisabled,
+              ]}
+              onPress={handleSave}
+              disabled={!isFormValid || isLoading || !hasChanges}
+              accessibilityLabel="Save changes"
+              accessibilityRole="button"
+              accessibilityHint="Save your profile changes"
+              accessibilityState={{
+                disabled: !isFormValid || isLoading || !hasChanges,
+              }}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
 
-          {/* Info Text */}
-          <Text style={styles.infoText}>
-            You can update your profile later in settings
-          </Text>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              disabled={isLoading}
+              accessibilityLabel="Cancel"
+              accessibilityRole="button"
+              accessibilityHint="Cancel editing and go back"
+              accessibilityState={{ disabled: isLoading }}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -448,13 +532,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#E53E3E',
   },
-  continueButton: {
+  buttonContainer: {
+    marginTop: 8,
+  },
+  saveButton: {
     backgroundColor: '#007AFF',
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     minHeight: 52, // Ensures 44pt+ touch target
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -464,23 +551,32 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  continueButtonDisabled: {
+  saveButtonDisabled: {
     backgroundColor: '#CCCCCC',
     shadowOpacity: 0,
     elevation: 0,
     opacity: 0.6,
   },
-  continueButtonText: {
+  saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  infoText: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 20,
+  cancelButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    minHeight: 52, // Ensures 44pt+ touch target
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });
 
-export default ProfileSetupScreen;
+export default EditProfileScreen;
