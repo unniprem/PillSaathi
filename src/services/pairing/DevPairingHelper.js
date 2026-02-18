@@ -107,7 +107,7 @@ class DevPairingHelper {
 
       console.log('[DevPairingHelper] Checking for existing relationship');
 
-      // Check for existing relationship (idempotence)
+      // Check for existing relationship (prevent duplicate caregiver-parent pairs)
       const existingRelationshipSnapshot = await this.firestore
         .collection('relationships')
         .where('parentUid', '==', parentUid)
@@ -115,15 +115,12 @@ class DevPairingHelper {
         .limit(1)
         .get();
 
-      // If relationship already exists, return success
+      // If relationship already exists, return error
       if (!existingRelationshipSnapshot.empty) {
         console.log('[DevPairingHelper] Relationship already exists');
-        const existingRelationship = existingRelationshipSnapshot.docs[0];
-        return {
-          success: true,
-          relationshipId: existingRelationship.id,
-          message: 'Relationship already exists',
-        };
+        const error = new Error('You are already connected with this parent');
+        error.code = 'already-exists';
+        throw error;
       }
 
       console.log('[DevPairingHelper] Creating new relationship');

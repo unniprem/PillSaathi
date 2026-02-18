@@ -39,6 +39,7 @@ export const ERROR_MESSAGES = {
   // Relationship Errors
   'relationship-not-found': 'Relationship not found',
   'relationship-exists': 'You are already connected with this user',
+  'already-exists': 'You are already connected with this parent',
   'relationship-removal-failed':
     'Failed to remove relationship. Please try again',
   'relationship-query-failed': 'Failed to load relationships. Please try again',

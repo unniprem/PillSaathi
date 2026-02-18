@@ -131,7 +131,7 @@ exports.redeemInviteCode = functions.https.onCall(async (data, context) => {
 
     const { parentUid } = inviteCodeData;
 
-    // Check for existing relationship (idempotence)
+    // Check for existing relationship (prevent duplicate caregiver-parent pairs)
     const existingRelationshipSnapshot = await admin
       .firestore()
       .collection('relationships')
@@ -140,14 +140,12 @@ exports.redeemInviteCode = functions.https.onCall(async (data, context) => {
       .limit(1)
       .get();
 
-    // If relationship already exists, return success without creating duplicate
+    // If relationship already exists, return error (not idempotent anymore)
     if (!existingRelationshipSnapshot.empty) {
-      const existingRelationship = existingRelationshipSnapshot.docs[0];
-      return {
-        success: true,
-        relationshipId: existingRelationship.id,
-        message: 'Relationship already exists',
-      };
+      throw new functions.https.HttpsError(
+        'already-exists',
+        'You are already connected with this parent',
+      );
     }
 
     // Create new relationship document

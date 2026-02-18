@@ -9,6 +9,8 @@ Fixed multiple issues with the invite code pairing system:
 3. ✅ Parent app updates automatically when relationship is removed (via real-time listeners)
 4. ✅ Fixed "please log into continue" error handling
 5. ✅ Invite codes can only be redeemed once
+6. ✅ "Generate New Code" button always visible to update/regenerate codes
+7. ✅ Same caregiver cannot be added twice to the same parent
 
 ## Changes Made
 
@@ -73,21 +75,53 @@ The real-time listener in `PairingContext.js` automatically updates both parent 
 - Throws `failed-precondition` error if code already used
 - Marks code as `used: true` after successful redemption
 - Stores `usedAt` timestamp and `usedBy` caregiver UID
+- Changed from idempotent to error on duplicate relationship attempts
 
 **File: `src/services/pairing/DevPairingHelper.js`**
 
 - Added same `used` field check in dev helper
 - Marks code as used after successful redemption
 - Stores usage metadata (usedAt, usedBy)
+- Throws error if caregiver already connected to parent
 
 **File: `src/services/pairing/InviteCodeService.js`**
 
 - Initializes new codes with `used: false` field
+- Always generates new code (no longer returns existing active code)
+- Invalidates old active codes by setting their expiration to now
 
 **File: `src/services/pairing/CloudFunctionsService.js`**
 
 - Updated error mapping to distinguish between expired and already-used codes
 - Returns specific error message for already-used codes
+- Added mapping for `already-exists` error
+
+### 6. Generate New Code Button
+
+**File: `src/components/pairing/InviteCodeDisplay.js`**
+
+- Added "Generate New Code" button below Copy/Share buttons
+- Button visible even when code is active (not just when expired)
+- Allows parents to update/regenerate codes at any time
+- Uses orange color to distinguish from primary actions
+
+### 7. Prevent Duplicate Caregiver-Parent Relationships
+
+**File: `functions/index.js`**
+
+- Changed relationship check from idempotent to error-throwing
+- Throws `already-exists` error if caregiver already connected to parent
+- Prevents same caregiver from redeeming multiple codes for same parent
+
+**File: `src/services/pairing/DevPairingHelper.js`**
+
+- Same duplicate prevention logic in dev helper
+- Throws `already-exists` error for duplicate relationships
+
+**File: `src/constants/errorMessages.js`**
+
+- Added `already-exists` error message
+- User-friendly message: "You are already connected with this parent"
 
 ## Testing Checklist
 
@@ -104,6 +138,21 @@ The real-time listener in `PairingContext.js` automatically updates both parent 
 - [ ] Try to redeem same code as caregiver #2 - should show "already been used" error
 - [ ] Verify code is marked as `used: true` in Firestore
 - [ ] Verify `usedAt` and `usedBy` fields are set correctly
+
+### Generate New Code Button
+
+- [ ] Generate invite code as parent
+- [ ] Verify "Generate New Code" button is visible below Copy/Share buttons
+- [ ] Click "Generate New Code" - should create new code
+- [ ] Verify old code is invalidated (expiresAt set to now)
+- [ ] Verify new code is displayed with fresh 15-minute timer
+
+### Prevent Duplicate Relationships
+
+- [ ] As caregiver: Redeem code from parent - should succeed
+- [ ] As same caregiver: Try to redeem another code from same parent - should show "already connected" error
+- [ ] Verify only one relationship exists in Firestore
+- [ ] As different caregiver: Redeem code from same parent - should succeed
 
 ### Caregiver-Only Removal
 

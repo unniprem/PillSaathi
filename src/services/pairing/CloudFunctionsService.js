@@ -179,6 +179,11 @@ class CloudFunctionsService {
         }
         break;
 
+      case 'already-exists':
+        mappedError.code = 'already-exists';
+        mappedError.message = 'You are already connected with this parent';
+        break;
+
       case 'failed-precondition':
         mappedError.code = 'code-expired';
         // Check if the error message mentions "already been used"

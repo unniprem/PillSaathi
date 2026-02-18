@@ -87,13 +87,11 @@ class InviteCodeService {
 
   /**
    * Generate or retrieve active invite code for a parent
-   * Queries Firestore for active unexpired codes. If one exists, returns it (idempotence).
-   * If no active code exists, generates a new code and stores it in Firestore.
+   * Always generates a new code and invalidates any existing active codes.
    * Includes retry logic for network errors.
    *
    * Requirements: 1.1 - Generate invite code
    * Requirements: 1.2 - Store code with parent UID, timestamps
-   * Requirements: 1.5 - Return existing code if active (idempotence)
    * Requirements: 9.2 - Retry logic for network errors
    *
    * @param {string} parentUid - Parent's Firebase Auth UID
@@ -121,19 +119,17 @@ class InviteCodeService {
           .limit(1)
           .get();
 
-        // If active code exists, return it (idempotence)
+        // If active code exists, mark it as expired and generate a new one
         if (!querySnapshot.empty) {
           const existingCodeDoc = querySnapshot.docs[0];
-          const data = existingCodeDoc.data();
-          return {
-            code: data.code,
-            expiresAt: data.expiresAt.toDate(),
-            createdAt: data.createdAt.toDate(),
-            parentUid: data.parentUid,
-          };
+          // Mark the old code as expired
+          await existingCodeDoc.ref.update({
+            expiresAt: new Date(), // Set to now to expire it
+            replacedAt: new Date(),
+          });
         }
 
-        // No active code exists, generate a new one
+        // Generate a new code
         const code = this.generateRandomCode(8);
         const createdAt = new Date();
         const expiresAt = this.calculateExpiration(15);
