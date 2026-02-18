@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 /**
  * Format a Date object to HH:MM string
@@ -61,16 +62,19 @@ const TimePicker = ({ value, onChange, label, disabled = false }) => {
 
   /**
    * Handle time change from the picker
-   * Note: This will be used when DateTimePicker is installed
    *
    * @param {Object} event - Event object from DateTimePicker
    * @param {Date} date - Selected date/time
    */
-  // eslint-disable-next-line no-unused-vars
   const handleTimeChange = (event, date) => {
     // On Android, the picker closes automatically
     if (Platform.OS === 'android') {
       setShowPicker(false);
+    }
+
+    if (event.type === 'dismissed') {
+      setShowPicker(false);
+      return;
     }
 
     if (date) {
@@ -124,17 +128,15 @@ const TimePicker = ({ value, onChange, label, disabled = false }) => {
         </Text>
       </TouchableOpacity>
 
-      {/* Note: DateTimePicker would be rendered here when installed */}
-      {/* For now, this is a placeholder that shows the time format */}
-      {/* To complete implementation, install: npm install @react-native-community/datetimepicker */}
       {showPicker && (
-        <View style={styles.pickerPlaceholder}>
-          <Text style={styles.placeholderText}>
-            DateTimePicker will appear here
-          </Text>
-          <Text style={styles.placeholderSubtext}>
-            Install @react-native-community/datetimepicker
-          </Text>
+        <>
+          <DateTimePicker
+            value={selectedTime}
+            mode="time"
+            is24Hour={true}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleTimeChange}
+          />
           {Platform.OS === 'ios' && (
             <TouchableOpacity
               style={styles.doneButton}
@@ -145,7 +147,7 @@ const TimePicker = ({ value, onChange, label, disabled = false }) => {
               <Text style={styles.doneButtonText}>Done</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </>
       )}
     </View>
   );
@@ -182,32 +184,13 @@ const styles = StyleSheet.create({
   buttonTextDisabled: {
     color: '#999999',
   },
-  pickerPlaceholder: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: '#FFF9E6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FFE066',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#666666',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  placeholderSubtext: {
-    fontSize: 12,
-    color: '#999999',
-    textAlign: 'center',
-  },
   doneButton: {
     marginTop: 12,
     backgroundColor: '#007AFF',
     paddingVertical: 8,
     paddingHorizontal: 24,
     borderRadius: 6,
+    alignSelf: 'center',
   },
   doneButtonText: {
     color: '#FFFFFF',
