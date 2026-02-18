@@ -2,145 +2,118 @@
  * Caregiver Home Screen
  *
  * Main dashboard for caregiver users.
- * This is a placeholder screen that will be implemented in Phase 1.
+ * Displays a list of all paired parents with summary information.
  *
- * Future functionality will include:
- * - View assigned patients
- * - Manage medication schedules for patients
- * - View medication history
- * - Receive notifications
- * - Access settings
+ * Requirements: 1.1, 1.2, 1.3, 1.4
  *
  * @format
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CaregiverScreens } from '../../types/navigation';
-import { useAuth } from '../../contexts/AuthContext';
+import { usePairedParents } from '../../hooks/usePairedParents';
+import ParentCard from '../../components/ParentCard';
 
 /**
  * Caregiver Home Screen Component
  *
- * Placeholder screen for caregiver dashboard.
- * Will be fully implemented in Phase 1.
- *
- * Includes test navigation buttons to verify back navigation functionality.
+ * Displays all parents the caregiver is paired with.
+ * Requirements:
+ * - 1.1: Display list of all paired parents
+ * - 1.2: Show parent name and summary information
+ * - 1.3: Navigate to parent detail on tap
+ * - 1.4: Display empty state for no paired parents
  *
  * @returns {React.ReactElement} Caregiver home screen component
  */
 function CaregiverHomeScreen() {
   const navigation = useNavigation();
-  const { signOut, loading } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { parents, loading, error, refetch } = usePairedParents();
 
   /**
-   * Handle logout with confirmation dialog
-   * Requirements: 4.4, 5.5 - Logout functionality with confirmation
+   * Handle parent card press
+   * Requirement 1.3: Navigate to parent detail screen
    */
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoggingOut(true);
-              await signOut();
-              // Navigation to login screen is handled automatically by App.js
-              // based on auth state change
-            } catch (error) {
-              setIsLoggingOut(false);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-              console.error('Logout error:', error);
-            }
-          },
-        },
-      ],
-      { cancelable: true },
-    );
+  const handleParentPress = parent => {
+    navigation.navigate(CaregiverScreens.PARENT_DETAIL, {
+      parentId: parent.id,
+    });
   };
+
+  /**
+   * Render loading state
+   */
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading parents...</Text>
+      </View>
+    );
+  }
+
+  /**
+   * Render error state
+   */
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Failed to load parents</Text>
+        <Text style={styles.errorSubtext}>{error.message}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  /**
+   * Render empty state
+   * Requirement 1.4: Display empty state for no paired parents
+   */
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyIcon}>👥</Text>
+      <Text style={styles.emptyTitle}>No Parents Yet</Text>
+      <Text style={styles.emptySubtitle}>
+        You haven't paired with any parents yet.
+      </Text>
+      <Text style={styles.emptySubtitle}>
+        Go to the Pairing tab to connect with a parent.
+      </Text>
+    </View>
+  );
+
+  /**
+   * Render parent card
+   * Requirements 1.2, 1.3: Display parent info and handle navigation
+   */
+  const renderParentCard = ({ item }) => (
+    <ParentCard parent={item} onPress={() => handleParentPress(item)} />
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Caregiver Home</Text>
-          <Text style={styles.subtitle}>Dashboard coming soon...</Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            styles.logoutButton,
-            (loading || isLoggingOut) && styles.logoutButtonDisabled,
-          ]}
-          onPress={handleLogout}
-          disabled={loading || isLoggingOut}
-          accessibilityLabel="Logout button"
-          accessibilityHint="Double tap to logout from your account"
-          accessibilityRole="button"
-        >
-          <Text style={styles.logoutButtonText}>
-            {isLoggingOut ? 'Logging out...' : 'Logout'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Test navigation buttons */}
-      <View style={styles.testButtonsContainer}>
-        <Text style={styles.testLabel}>Test Stack Navigation:</Text>
-        <TouchableOpacity
-          style={[styles.testButton, styles.pairingButton]}
-          onPress={() => navigation.navigate(CaregiverScreens.PAIRING)}
-        >
-          <Text style={styles.testButtonText}>
-            🔗 Pairing & Relationships (Test Invite)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(CaregiverScreens.PARENT_LIST)}
-        >
-          <Text style={styles.testButtonText}>
-            Go to Parent List (Back Enabled)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() =>
-            navigation.navigate(CaregiverScreens.MEDICINE_LIST, {
-              parentId: 'test-parent-id',
-            })
-          }
-        >
-          <Text style={styles.testButtonText}>
-            💊 Manage Medicines (Phase 3)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(CaregiverScreens.MEDICINE_DETAILS)}
-        >
-          <Text style={styles.testButtonText}>
-            Go to Medicine Details (Back Enabled)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(CaregiverScreens.ALARM)}
-        >
-          <Text style={styles.testButtonText}>
-            Go to Alarm (Full Screen Modal, Back Enabled)
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <FlatList
+        data={parents}
+        renderItem={renderParentCard}
+        keyExtractor={item => item.id}
+        ListEmptyComponent={renderEmptyState}
+        contentContainerStyle={
+          parents.length === 0 ? styles.emptyListContent : styles.listContent
+        }
+        refreshing={loading}
+        onRefresh={refetch}
+      />
     </View>
   );
 }
@@ -148,73 +121,73 @@ function CaregiverHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
+    backgroundColor: '#F5F5F5',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 40,
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  logoutButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    minWidth: 100,
-    minHeight: 44,
+  centerContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F5F5F5',
   },
-  logoutButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-    opacity: 0.6,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666666',
   },
-  logoutButtonText: {
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minHeight: 44,
+  },
+  retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  testButtonsContainer: {
-    width: '100%',
-    marginTop: 20,
-    padding: 20,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
   },
-  testLabel: {
-    fontSize: 14,
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
     fontWeight: '600',
-    color: '#666666',
-    marginBottom: 12,
+    color: '#333333',
+    marginBottom: 8,
     textAlign: 'center',
   },
-  testButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignItems: 'center',
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
-  pairingButton: {
-    backgroundColor: '#34C759',
+  listContent: {
+    paddingVertical: 8,
   },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+  emptyListContent: {
+    flexGrow: 1,
   },
 });
 

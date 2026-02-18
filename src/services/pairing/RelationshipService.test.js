@@ -276,6 +276,7 @@ describe('RelationshipService', () => {
         caregiverUid,
         createdAt: expect.any(Date),
         createdBy: caregiverUid,
+        parentAlias: null,
         parentName: 'Parent Name',
         parentPhone: '+2222222222',
       });
@@ -284,6 +285,115 @@ describe('RelationshipService', () => {
         '==',
         caregiverUid,
       );
+    });
+
+    it('should include parentAlias field for caregiver when alias is set', async () => {
+      // Arrange
+      const parentUid = 'parent-uid';
+      const caregiverUid = 'caregiver-uid';
+
+      const mockRelationshipDocs = [
+        {
+          id: 'rel-alias',
+          data: () => ({
+            parentUid,
+            caregiverUid,
+            parentAlias: 'Mom',
+            createdAt: { toDate: () => new Date('2024-01-02') },
+            createdBy: caregiverUid,
+          }),
+        },
+      ];
+
+      mockQuery.get.mockResolvedValue({
+        empty: false,
+        docs: mockRelationshipDocs,
+      });
+
+      // Mock getUserProfile
+      mockUsersCollection.doc.mockReturnValue({
+        get: jest.fn().mockResolvedValue({
+          exists: true,
+          data: () => ({
+            name: 'Jane Doe',
+            phoneNumber: '+2222222222',
+          }),
+        }),
+      });
+
+      // Act
+      const relationships = await relationshipService.getRelationships(
+        caregiverUid,
+        'caregiver',
+      );
+
+      // Assert
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0]).toEqual({
+        id: 'rel-alias',
+        parentUid,
+        caregiverUid,
+        createdAt: expect.any(Date),
+        createdBy: caregiverUid,
+        parentAlias: 'Mom',
+        parentName: 'Jane Doe',
+        parentPhone: '+2222222222',
+      });
+    });
+
+    it('should not include parentAlias field for parent role', async () => {
+      // Arrange
+      const parentUid = 'parent-uid';
+      const caregiverUid = 'caregiver-uid';
+
+      const mockRelationshipDocs = [
+        {
+          id: 'rel-parent',
+          data: () => ({
+            parentUid,
+            caregiverUid,
+            parentAlias: 'Mom',
+            createdAt: { toDate: () => new Date('2024-01-01') },
+            createdBy: caregiverUid,
+          }),
+        },
+      ];
+
+      mockQuery.get.mockResolvedValue({
+        empty: false,
+        docs: mockRelationshipDocs,
+      });
+
+      // Mock getUserProfile
+      mockUsersCollection.doc.mockReturnValue({
+        get: jest.fn().mockResolvedValue({
+          exists: true,
+          data: () => ({
+            name: 'Caregiver Name',
+            phoneNumber: '+1111111111',
+          }),
+        }),
+      });
+
+      // Act
+      const relationships = await relationshipService.getRelationships(
+        parentUid,
+        'parent',
+      );
+
+      // Assert
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0]).toEqual({
+        id: 'rel-parent',
+        parentUid,
+        caregiverUid,
+        createdAt: expect.any(Date),
+        createdBy: caregiverUid,
+        caregiverName: 'Caregiver Name',
+        caregiverPhone: '+1111111111',
+      });
+      // parentAlias should not be included for parent role
+      expect(relationships[0]).not.toHaveProperty('parentAlias');
     });
 
     it('should return empty array when no relationships exist', async () => {
@@ -353,6 +463,63 @@ describe('RelationshipService', () => {
         createdBy: caregiverUid,
         caregiverName: 'Unknown',
         caregiverPhone: '',
+      });
+      expect(consoleWarnSpy).toHaveBeenCalled();
+
+      // Cleanup
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should include parentAlias in placeholder data for caregiver on profile fetch failure', async () => {
+      // Arrange
+      const parentUid = 'parent-uid';
+      const caregiverUid = 'caregiver-uid';
+
+      const mockRelationshipDocs = [
+        {
+          id: 'rel-fail',
+          data: () => ({
+            parentUid,
+            caregiverUid,
+            parentAlias: 'Dad',
+            createdAt: { toDate: () => new Date('2024-01-03') },
+            createdBy: caregiverUid,
+          }),
+        },
+      ];
+
+      mockQuery.get.mockResolvedValue({
+        empty: false,
+        docs: mockRelationshipDocs,
+      });
+
+      // Mock getUserProfile to fail
+      mockUsersCollection.doc.mockReturnValue({
+        get: jest.fn().mockRejectedValue(new Error('Profile fetch failed')),
+      });
+
+      // Spy on console.warn
+      const consoleWarnSpy = jest
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {});
+
+      // Act
+      const relationships = await relationshipService.getRelationships(
+        caregiverUid,
+        'caregiver',
+      );
+
+      // Assert
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0]).toEqual({
+        id: 'rel-fail',
+        parentUid,
+        caregiverUid,
+        createdAt: expect.any(Date),
+        createdBy: caregiverUid,
+        parentAlias: 'Dad',
+        parentName: 'Unknown',
+        parentPhone: '',
       });
       expect(consoleWarnSpy).toHaveBeenCalled();
 

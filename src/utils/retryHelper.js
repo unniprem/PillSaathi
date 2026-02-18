@@ -36,7 +36,7 @@ const RETRYABLE_ERROR_CODES = [
  * }
  */
 export const isRetryableError = error => {
-  if (!error) return false;
+  if (!error) {return false;}
 
   const errorCode = error.code || '';
   const errorMessage = error.message || '';

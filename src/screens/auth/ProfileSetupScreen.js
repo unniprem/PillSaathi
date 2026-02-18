@@ -124,7 +124,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
    * Format date for display
    */
   const formatDate = date => {
-    if (!date) return '';
+    if (!date) {return '';}
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
@@ -153,7 +153,7 @@ const ProfileSetupScreen = ({ navigation: _navigation }) => {
       // Update profile with name, date of birth, email, and profileCompleted flag
       await updateProfile(user.uid, {
         name: name.trim(),
-        dateOfBirth: dateOfBirth,
+        dateOfBirth,
         email: email.trim() || null,
         profileCompleted: true,
       });

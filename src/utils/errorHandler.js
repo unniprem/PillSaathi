@@ -124,7 +124,7 @@ export const getErrorMessage = (error, defaultMessage = null) => {
  * }
  */
 export const isNetworkError = error => {
-  if (!error) return false;
+  if (!error) {return false;}
 
   const errorCode = error.code || '';
   const networkErrorCodes = [
@@ -153,7 +153,7 @@ export const isNetworkError = error => {
  * }
  */
 export const isAuthorizationError = error => {
-  if (!error) return false;
+  if (!error) {return false;}
 
   const errorCode = error.code || '';
   const authErrorCodes = [
@@ -179,7 +179,7 @@ export const isAuthorizationError = error => {
  * }
  */
 export const isValidationError = error => {
-  if (!error) return false;
+  if (!error) {return false;}
 
   const errorCode = error.code || '';
   return errorCode === 'validation-failed' || errorCode === 'invalid-argument';

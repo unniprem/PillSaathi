@@ -87,6 +87,7 @@ export const CaregiverScreens = {
   PROFILE: 'CaregiverProfile',
   EDIT_PROFILE: 'EditProfile',
   PARENT_LIST: 'ParentList',
+  PARENT_DETAIL: 'ParentDetail',
   MEDICINE_LIST: 'CaregiverMedicineList',
   MEDICINE_FORM: 'MedicineForm',
   MEDICINE_DETAILS: 'MedicineDetails',
@@ -146,6 +147,8 @@ export const CaregiverScreens = {
  * @property {undefined} CaregiverProfile - Caregiver profile screen (no params)
  * @property {undefined} EditProfile - Edit profile screen (no params)
  * @property {undefined} ParentList - Parent list screen (no params)
+ * @property {Object} ParentDetail - Parent detail screen
+ * @property {string} ParentDetail.parentId - ID of parent to view
  * @property {Object} CaregiverMedicineList - Caregiver medicine list screen
  * @property {string} CaregiverMedicineList.parentId - ID of parent
  * @property {Object} MedicineForm - Medicine form screen (create/edit)

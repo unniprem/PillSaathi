@@ -24,6 +24,7 @@ import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
+import ParentDetailScreen from '../screens/caregiver/ParentDetailScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import LogoutHeader from '../components/LogoutHeader';
 // import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
@@ -130,6 +131,13 @@ function HomeStack() {
         component={CaregiverHomeScreen}
         options={{
           title: 'Home',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.PARENT_DETAIL}
+        component={ParentDetailScreen}
+        options={{
+          title: 'Parent Details',
         }}
       />
       <Stack.Screen

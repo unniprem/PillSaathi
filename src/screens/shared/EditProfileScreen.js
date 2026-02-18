@@ -80,7 +80,7 @@ const EditProfileScreen = ({ navigation }) => {
    * Track if user has made changes
    */
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) {return;}
 
     const originalDob = profile.dateOfBirth
       ? new Date(profile.dateOfBirth.seconds * 1000)
@@ -164,7 +164,7 @@ const EditProfileScreen = ({ navigation }) => {
    * Format date for display
    */
   const formatDate = date => {
-    if (!date) return '';
+    if (!date) {return '';}
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
@@ -193,7 +193,7 @@ const EditProfileScreen = ({ navigation }) => {
       // Update profile with name, date of birth, and email
       await updateProfile(user.uid, {
         name: name.trim(),
-        dateOfBirth: dateOfBirth,
+        dateOfBirth,
         email: email.trim() || null,
       });
 

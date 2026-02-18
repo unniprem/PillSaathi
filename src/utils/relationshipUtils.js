@@ -10,6 +10,9 @@
 import { getFirestore } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
 
+// Collection name constant
+const RELATIONSHIPS_COLLECTION = 'relationships';
+
 /**
  * Get parent alias for a specific relationship
  * Retrieves the custom nickname/alias that a caregiver has set for a parent.
@@ -34,7 +37,7 @@ export async function getParentAlias(relationshipId, firestoreInstance = null) {
   try {
     const firestore = firestoreInstance || getFirestore(getApp());
     const relationshipDoc = await firestore
-      .collection('relationships')
+      .collection(RELATIONSHIPS_COLLECTION)
       .doc(relationshipId)
       .get();
 
@@ -89,7 +92,7 @@ export async function setParentAlias(
   try {
     const firestore = firestoreInstance || getFirestore(getApp());
     const relationshipRef = firestore
-      .collection('relationships')
+      .collection(RELATIONSHIPS_COLLECTION)
       .doc(relationshipId);
 
     // Check if relationship exists

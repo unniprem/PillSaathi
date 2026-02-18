@@ -84,7 +84,7 @@ function generateDosesForSchedule(schedule, medicine, startDate, days = 7) {
             medicineName: medicine.name,
             dosageAmount: medicine.dosageAmount,
             dosageUnit: medicine.dosageUnit,
-            scheduledTime: scheduledTime,
+            scheduledTime,
             status: 'pending',
             createdAt: new Date(),
           });
