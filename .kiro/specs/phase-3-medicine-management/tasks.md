@@ -336,9 +336,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test cleanup preserves recent doses
     - Test batch deletion handles large counts
 
-- [-] 16. Wire up navigation and integrate screens
+- [x] 16. Wire up navigation and integrate screens
 
-  - [-] 16.1 Add navigation routes
+  - [x] 16.1 Add navigation routes
 
     - Add CaregiverMedicineList screen to navigation
     - Add MedicineForm screen to navigation (create and edit modes)
@@ -348,7 +348,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Add navigation from parent dashboard to medicine view and upcoming doses
     - _Requirements: All UI requirements_
 
-  - [ ] 16.2 Add "Add Medicine" button
+  - [x] 16.2 Add "Add Medicine" button
     - Add floating action button or header button to CaregiverMedicineList
     - Navigate to MedicineForm in create mode
     - Pass parentId to MedicineForm

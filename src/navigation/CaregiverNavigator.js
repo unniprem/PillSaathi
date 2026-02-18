@@ -23,7 +23,7 @@ import { CaregiverScreens } from '../types/navigation';
 import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
-import MedicineForm from '../components/MedicineForm';
+import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
 // import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 // import ParentListScreen from '../screens/caregiver/ParentListScreen';
 // import MedicineDetailsScreen from '../screens/caregiver/MedicineDetailsScreen';
@@ -167,7 +167,7 @@ function HomeStack() {
       />
       <Stack.Screen
         name={CaregiverScreens.MEDICINE_FORM}
-        component={MedicineForm}
+        component={MedicineFormScreen}
         options={({ route }) => ({
           title: route.params?.medicineId ? 'Edit Medicine' : 'Add Medicine',
           presentation: 'modal',

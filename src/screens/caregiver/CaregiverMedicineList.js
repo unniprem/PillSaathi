@@ -27,9 +27,10 @@ import {
   ActivityIndicator,
   Switch,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import medicineService from '../../services/medicineService';
 import { getErrorMessage, logError } from '../../utils/errorHandler';
+import { CaregiverScreens } from '../../types/navigation';
 
 /**
  * CaregiverMedicineList Component
@@ -41,7 +42,7 @@ import { getErrorMessage, logError } from '../../utils/errorHandler';
  * @returns {JSX.Element}
  */
 const CaregiverMedicineList = ({ route }) => {
-  // const navigation = useNavigation(); // TODO: Will be used in task 16 for navigation
+  const navigation = useNavigation();
   const { parentId, caregiverId } = route.params || {};
 
   // State
@@ -113,9 +114,10 @@ const CaregiverMedicineList = ({ route }) => {
    * @param {string} medicineId - Medicine document ID
    */
   const handleEdit = medicineId => {
-    // TODO: Navigate to MedicineForm with medicineId
-    // This will be implemented when navigation is wired up in task 16
-    Alert.alert('Edit Medicine', `Edit medicine ID: ${medicineId}`);
+    navigation.navigate(CaregiverScreens.MEDICINE_FORM, {
+      parentId,
+      medicineId,
+    });
   };
 
   /**
@@ -289,9 +291,9 @@ const CaregiverMedicineList = ({ route }) => {
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
-            // TODO: Navigate to MedicineForm in create mode
-            // This will be implemented when navigation is wired up in task 16
-            Alert.alert('Add Medicine', 'Navigate to medicine form');
+            navigation.navigate(CaregiverScreens.MEDICINE_FORM, {
+              parentId,
+            });
           }}
           accessibilityRole="button"
           accessibilityLabel="Add first medicine"
@@ -352,9 +354,9 @@ const CaregiverMedicineList = ({ route }) => {
         <TouchableOpacity
           style={styles.floatingButton}
           onPress={() => {
-            // TODO: Navigate to MedicineForm in create mode
-            // This will be implemented when navigation is wired up in task 16
-            Alert.alert('Add Medicine', 'Navigate to medicine form');
+            navigation.navigate(CaregiverScreens.MEDICINE_FORM, {
+              parentId,
+            });
           }}
           accessibilityRole="button"
           accessibilityLabel="Add new medicine"
