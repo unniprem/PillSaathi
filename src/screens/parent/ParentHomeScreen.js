@@ -106,6 +106,18 @@ function ParentHomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.testButton}
+          onPress={() => navigation.navigate(ParentScreens.MEDICINE_VIEW)}
+        >
+          <Text style={styles.testButtonText}>💊 My Medicines (Phase 3)</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.testButton}
+          onPress={() => navigation.navigate(ParentScreens.UPCOMING_DOSES)}
+        >
+          <Text style={styles.testButtonText}>📅 Upcoming Doses (Phase 3)</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.testButton}
           onPress={() => navigation.navigate(ParentScreens.MEDICINE_LIST)}
         >
           <Text style={styles.testButtonText}>

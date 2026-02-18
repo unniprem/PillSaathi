@@ -21,6 +21,8 @@ import { ParentScreens } from '../types/navigation';
 // Placeholder screens (will be created in subsequent tasks)
 import ParentHomeScreen from '../screens/parent/ParentHomeScreen';
 import ParentPairingScreen from '../screens/parent/ParentPairingScreen';
+import ParentMedicineView from '../screens/parent/ParentMedicineView';
+import UpcomingDoses from '../screens/parent/UpcomingDoses';
 // import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
 // import MedicineListScreen from '../screens/parent/MedicineListScreen';
 // import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
@@ -188,6 +190,20 @@ function HomeStack() {
         component={ParentPairingScreen}
         options={{
           title: 'Pairing & Relationships',
+        }}
+      />
+      <Stack.Screen
+        name={ParentScreens.MEDICINE_VIEW}
+        component={ParentMedicineView}
+        options={{
+          title: 'My Medicines',
+        }}
+      />
+      <Stack.Screen
+        name={ParentScreens.UPCOMING_DOSES}
+        component={UpcomingDoses}
+        options={{
+          title: 'Upcoming Doses',
         }}
       />
     </Stack.Navigator>

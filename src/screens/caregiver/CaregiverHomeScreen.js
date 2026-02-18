@@ -114,6 +114,18 @@ function CaregiverHomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.testButton}
+          onPress={() =>
+            navigation.navigate(CaregiverScreens.MEDICINE_LIST, {
+              parentId: 'test-parent-id',
+            })
+          }
+        >
+          <Text style={styles.testButtonText}>
+            💊 Manage Medicines (Phase 3)
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.testButton}
           onPress={() => navigation.navigate(CaregiverScreens.MEDICINE_DETAILS)}
         >
           <Text style={styles.testButtonText}>

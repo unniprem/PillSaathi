@@ -18,6 +18,9 @@ const RETRYABLE_ERROR_CODES = [
   'deadline-exceeded',
   'auth/network-request-failed',
   'firestore/unavailable',
+  'firestore/deadline-exceeded',
+  'firestore/resource-exhausted',
+  'resource-exhausted',
 ];
 
 /**
@@ -36,7 +39,27 @@ export const isRetryableError = error => {
   if (!error) return false;
 
   const errorCode = error.code || '';
-  return RETRYABLE_ERROR_CODES.includes(errorCode);
+  const errorMessage = error.message || '';
+
+  // Check error code
+  if (RETRYABLE_ERROR_CODES.includes(errorCode)) {
+    return true;
+  }
+
+  // Check error message for network-related keywords
+  const networkKeywords = [
+    'network',
+    'timeout',
+    'unavailable',
+    'connection',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+  ];
+
+  return networkKeywords.some(keyword =>
+    errorMessage.toLowerCase().includes(keyword.toLowerCase()),
+  );
 };
 
 /**

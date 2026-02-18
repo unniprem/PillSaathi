@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import medicineService from '../../services/medicineService';
+import { getErrorMessage, logError } from '../../utils/errorHandler';
 
 /**
  * CaregiverMedicineList Component
@@ -36,11 +37,12 @@ import medicineService from '../../services/medicineService';
  * @param {Object} props
  * @param {Object} props.route - Navigation route object
  * @param {string} props.route.params.parentId - Parent's Firebase Auth UID
+ * @param {string} props.route.params.caregiverId - Caregiver's Firebase Auth UID
  * @returns {JSX.Element}
  */
 const CaregiverMedicineList = ({ route }) => {
   // const navigation = useNavigation(); // TODO: Will be used in task 16 for navigation
-  const { parentId } = route.params || {};
+  const { parentId, caregiverId } = route.params || {};
 
   // State
   const [medicines, setMedicines] = useState([]);
@@ -70,8 +72,12 @@ const CaregiverMedicineList = ({ route }) => {
       );
       setMedicines(medicinesList);
     } catch (err) {
-      console.error('Error loading medicines:', err);
-      setError('Failed to load medicines. Please try again.');
+      logError(err, 'CaregiverMedicineList.loadMedicines', { parentId });
+      const errorMessage = getErrorMessage(
+        err,
+        'Failed to load medicines. Please try again.',
+      );
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -116,6 +122,7 @@ const CaregiverMedicineList = ({ route }) => {
    * Delete a medicine with confirmation
    * Requirements: 6.1 - Medicine deletion removes record
    * Requirements: 6.2 - Medicine deletion cascades to schedules
+   * Requirements: 6.3 - Validate caregiver is authorized
    * Requirements: 10.3 - Show delete options
    *
    * @param {string} medicineId - Medicine document ID
@@ -135,16 +142,20 @@ const CaregiverMedicineList = ({ route }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await medicineService.deleteMedicine(medicineId);
+              await medicineService.deleteMedicine(medicineId, caregiverId);
               // Reload medicines list
               await loadMedicines();
               Alert.alert('Success', 'Medicine deleted successfully');
             } catch (err) {
-              console.error('Error deleting medicine:', err);
-              Alert.alert(
-                'Error',
+              logError(err, 'CaregiverMedicineList.handleDelete', {
+                medicineId,
+                caregiverId,
+              });
+              const errorMessage = getErrorMessage(
+                err,
                 'Failed to delete medicine. Please try again.',
               );
+              Alert.alert('Error', errorMessage);
             }
           },
         },
@@ -157,6 +168,7 @@ const CaregiverMedicineList = ({ route }) => {
    * Toggle medicine status (active/inactive)
    * Requirements: 7.1 - Set status to inactive
    * Requirements: 7.3 - Set status to active
+   * Requirements: 7.5 - Validate caregiver authorization
    * Requirements: 10.4 - Show activation toggle
    *
    * @param {string} medicineId - Medicine document ID
@@ -164,7 +176,10 @@ const CaregiverMedicineList = ({ route }) => {
    */
   const handleToggleStatus = async (medicineId, _currentStatus) => {
     try {
-      const newStatus = await medicineService.toggleMedicineStatus(medicineId);
+      const newStatus = await medicineService.toggleMedicineStatus(
+        medicineId,
+        caregiverId,
+      );
 
       // Update local state
       setMedicines(prevMedicines =>
@@ -176,11 +191,15 @@ const CaregiverMedicineList = ({ route }) => {
       const statusText = newStatus === 'active' ? 'activated' : 'deactivated';
       Alert.alert('Success', `Medicine ${statusText} successfully`);
     } catch (err) {
-      console.error('Error toggling medicine status:', err);
-      Alert.alert(
-        'Error',
+      logError(err, 'CaregiverMedicineList.handleToggleStatus', {
+        medicineId,
+        caregiverId,
+      });
+      const errorMessage = getErrorMessage(
+        err,
         'Failed to update medicine status. Please try again.',
       );
+      Alert.alert('Error', errorMessage);
     }
   };
 

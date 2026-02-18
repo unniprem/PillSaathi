@@ -283,9 +283,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 17: Updates validate required fields**
     - **Validates: Requirements 5.1, 5.4, 5.5**
 
-- [-] 13. Implement authorization checks
+- [x] 13. Implement authorization checks
 
-  - [ ] 13.1 Add authorization helpers to services
+  - [x] 13.1 Add authorization helpers to services
 
     - Implement checkCaregiverLinked(caregiverId, parentId) helper
     - Add authorization checks to all medicine write operations
@@ -299,9 +299,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 25: Only authorized caregivers can toggle status**
     - **Validates: Requirements 1.4, 6.3, 7.5**
 
-- [~] 14. Implement offline support and error handling
+- [x] 14. Implement offline support and error handling
 
-  - [ ] 14.1 Add network error handling
+  - [x] 14.1 Add network error handling
 
     - Wrap all Firestore operations in try-catch blocks
     - Display user-friendly error messages
@@ -309,7 +309,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Add loading and error states to all components
     - _Requirements: 16.2, 16.4_
 
-  - [ ] 14.2 Add offline queue (optional enhancement)
+  - [x] 14.2 Add offline queue (optional enhancement)
 
     - Queue write operations when offline
     - Show pending sync indicator in UI
@@ -321,9 +321,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test retry logic attempts multiple times
     - Test offline queue stores operations
 
-- [~] 15. Implement dose cleanup Cloud Function
+- [x] 15. Implement dose cleanup Cloud Function
 
-  - [ ] 15.1 Create functions/cleanupOldDoses.js
+  - [x] 15.1 Create functions/cleanupOldDoses.js
 
     - Query doses with scheduledTime older than 30 days
     - Delete doses in batches of 500
@@ -336,9 +336,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test cleanup preserves recent doses
     - Test batch deletion handles large counts
 
-- [~] 16. Wire up navigation and integrate screens
+- [-] 16. Wire up navigation and integrate screens
 
-  - [ ] 16.1 Add navigation routes
+  - [-] 16.1 Add navigation routes
 
     - Add CaregiverMedicineList screen to navigation
     - Add MedicineForm screen to navigation (create and edit modes)

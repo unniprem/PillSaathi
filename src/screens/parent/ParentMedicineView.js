@@ -27,6 +27,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import medicineService from '../../services/medicineService';
 import scheduleService from '../../services/scheduleService';
+import { getErrorMessage, logError } from '../../utils/errorHandler';
 
 /**
  * ParentMedicineView Component
@@ -83,18 +84,21 @@ const ParentMedicineView = ({ route }) => {
               schedulesMap[medicine.id] = schedule;
             }
           } catch (err) {
-            console.error(
-              `Error loading schedule for medicine ${medicine.id}:`,
-              err,
-            );
+            logError(err, 'ParentMedicineView.loadSchedule', {
+              medicineId: medicine.id,
+            });
             // Continue loading other schedules even if one fails
           }
         }),
       );
       setSchedules(schedulesMap);
     } catch (err) {
-      console.error('Error loading medicines:', err);
-      setError('Failed to load medicines. Please try again.');
+      logError(err, 'ParentMedicineView.loadMedicinesAndSchedules', { userId });
+      const errorMessage = getErrorMessage(
+        err,
+        'Failed to load medicines. Please try again.',
+      );
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -12,6 +12,8 @@ import { getFirestore } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
 import { retryOperation } from '../utils/retryHelper';
 import { validateMedicine } from '../models/Medicine';
+import offlineQueue from '../utils/offlineQueue';
+import { isNetworkError } from '../utils/errorHandler';
 
 /**
  * MedicineService class
@@ -60,6 +62,7 @@ class MedicineService {
    * Requirements: 1.1 - Create medicine with valid data
    * Requirements: 1.3 - Default status to active
    * Requirements: 1.5 - Store creator ID
+   * Requirements: 16.4 - Queue writes when offline
    *
    * @param {Object} data - Medicine data
    * @param {string} data.name - Medicine name (required)
@@ -68,6 +71,7 @@ class MedicineService {
    * @param {number} data.dosageAmount - Dosage amount (required, positive number)
    * @param {string} data.dosageUnit - Dosage unit (required, e.g., "mg", "ml")
    * @param {string} data.instructions - Optional instructions
+   * @param {boolean} [options.useOfflineQueue=false] - Whether to use offline queue for this operation
    * @returns {Promise<string>} Medicine document ID
    * @throws {Error} If validation fails or caregiver is not linked
    *
@@ -80,13 +84,15 @@ class MedicineService {
    *     dosageAmount: 100,
    *     dosageUnit: 'mg',
    *     instructions: 'Take with food'
-   *   });
+   *   }, { useOfflineQueue: true });
    *   console.log('Medicine created:', medicineId);
    * } catch (error) {
    *   console.error('Failed to create medicine:', error.message);
    * }
    */
-  async createMedicine(data) {
+  async createMedicine(data, options = {}) {
+    const { useOfflineQueue: shouldUseQueue = false } = options;
+
     try {
       // Validate medicine data
       const validation = validateMedicine(data);
@@ -108,28 +114,48 @@ class MedicineService {
         throw error;
       }
 
-      return await retryOperation(async () => {
-        const now = new Date();
+      const createOperation = async () => {
+        return retryOperation(async () => {
+          const now = new Date();
 
-        // Create medicine document
-        const medicineData = {
-          name: data.name.trim(),
-          parentId: data.parentId,
-          caregiverId: data.caregiverId,
-          dosageAmount: data.dosageAmount,
-          dosageUnit: data.dosageUnit.trim(),
-          instructions: data.instructions?.trim() || '',
-          status: 'active', // Requirement 1.3: Default to active
-          createdAt: now,
-          updatedAt: now,
-        };
+          // Create medicine document
+          const medicineData = {
+            name: data.name.trim(),
+            parentId: data.parentId,
+            caregiverId: data.caregiverId,
+            dosageAmount: data.dosageAmount,
+            dosageUnit: data.dosageUnit.trim(),
+            instructions: data.instructions?.trim() || '',
+            status: 'active', // Requirement 1.3: Default to active
+            createdAt: now,
+            updatedAt: now,
+          };
 
-        const docRef = await this.firestore
-          .collection(this.medicinesCollection)
-          .add(medicineData);
+          const docRef = await this.firestore
+            .collection(this.medicinesCollection)
+            .add(medicineData);
 
-        return docRef.id;
-      });
+          return docRef.id;
+        });
+      };
+
+      // Try to execute immediately
+      try {
+        return await createOperation();
+      } catch (error) {
+        // If network error and offline queue enabled, queue the operation
+        if (shouldUseQueue && isNetworkError(error)) {
+          console.log('[MedicineService] Network error, queueing operation');
+          await offlineQueue.enqueue('createMedicine', createOperation, {
+            medicineName: data.name,
+          });
+
+          // Return a temporary ID
+          const tempId = `temp_${Date.now()}`;
+          return tempId;
+        }
+        throw error;
+      }
     } catch (error) {
       if (error.code === 'validation-failed' || error.code === 'unauthorized') {
         throw error;
@@ -150,9 +176,11 @@ class MedicineService {
    * Requirements: 5.1 - Validate caregiver is linked
    * Requirements: 5.2 - Preserve creation timestamp
    * Requirements: 5.3 - Update last modified timestamp
+   * Requirements: 5.5 - Reject unauthorized updates
    *
    * @param {string} medicineId - Medicine document ID
    * @param {Object} data - Medicine data to update
+   * @param {string} caregiverId - Caregiver's Firebase Auth UID
    * @returns {Promise<void>}
    * @throws {Error} If validation fails, medicine not found, or unauthorized
    *
@@ -163,13 +191,13 @@ class MedicineService {
    *     dosageAmount: 150,
    *     dosageUnit: 'mg',
    *     instructions: 'Take with food after meals'
-   *   });
+   *   }, 'caregiver456');
    *   console.log('Medicine updated successfully');
    * } catch (error) {
    *   console.error('Failed to update medicine:', error.message);
    * }
    */
-  async updateMedicine(medicineId, data) {
+  async updateMedicine(medicineId, data, caregiverId) {
     try {
       return await retryOperation(async () => {
         // Fetch existing medicine
@@ -186,6 +214,19 @@ class MedicineService {
 
         const existingData = medicineDoc.data();
 
+        // Check authorization (Requirement 5.1, 5.5)
+        const isLinked = await this.checkCaregiverLinked(
+          caregiverId,
+          existingData.parentId,
+        );
+        if (!isLinked) {
+          const error = new Error(
+            'You are not authorized to update this medicine. Only linked caregivers can modify medicines.',
+          );
+          error.code = 'unauthorized';
+          throw error;
+        }
+
         // Validate updated data
         const updatedData = {
           ...existingData,
@@ -197,19 +238,6 @@ class MedicineService {
           error.code = 'validation-failed';
           error.errors = validation.errors;
           throw error;
-        }
-
-        // Check authorization (Requirement 5.1)
-        if (data.caregiverId) {
-          const isLinked = await this.checkCaregiverLinked(
-            data.caregiverId,
-            existingData.parentId,
-          );
-          if (!isLinked) {
-            const error = new Error('Caregiver is not linked to this parent');
-            error.code = 'unauthorized';
-            throw error;
-          }
         }
 
         // Update medicine document
@@ -251,20 +279,22 @@ class MedicineService {
    * Note: Cascade deletion of schedules and doses should be handled by Cloud Functions.
    *
    * Requirements: 6.1 - Remove medicine record
+   * Requirements: 6.3 - Validate caregiver is authorized
    *
    * @param {string} medicineId - Medicine document ID
+   * @param {string} caregiverId - Caregiver's Firebase Auth UID
    * @returns {Promise<void>}
-   * @throws {Error} If medicine not found or deletion fails
+   * @throws {Error} If medicine not found, unauthorized, or deletion fails
    *
    * @example
    * try {
-   *   await medicineService.deleteMedicine('med123');
+   *   await medicineService.deleteMedicine('med123', 'caregiver456');
    *   console.log('Medicine deleted successfully');
    * } catch (error) {
    *   console.error('Failed to delete medicine:', error.message);
    * }
    */
-  async deleteMedicine(medicineId) {
+  async deleteMedicine(medicineId, caregiverId) {
     try {
       return await retryOperation(async () => {
         // Check if medicine exists
@@ -279,6 +309,21 @@ class MedicineService {
           throw error;
         }
 
+        const medicineData = medicineDoc.data();
+
+        // Check authorization (Requirement 6.3)
+        const isLinked = await this.checkCaregiverLinked(
+          caregiverId,
+          medicineData.parentId,
+        );
+        if (!isLinked) {
+          const error = new Error(
+            'You are not authorized to delete this medicine. Only linked caregivers can delete medicines.',
+          );
+          error.code = 'unauthorized';
+          throw error;
+        }
+
         // Delete medicine document
         await this.firestore
           .collection(this.medicinesCollection)
@@ -286,7 +331,10 @@ class MedicineService {
           .delete();
       });
     } catch (error) {
-      if (error.code === 'medicine-not-found') {
+      if (
+        error.code === 'medicine-not-found' ||
+        error.code === 'unauthorized'
+      ) {
         throw error;
       }
 
@@ -303,20 +351,22 @@ class MedicineService {
    *
    * Requirements: 7.1 - Set status to inactive
    * Requirements: 7.3 - Set status to active
+   * Requirements: 7.5 - Validate caregiver authorization
    *
    * @param {string} medicineId - Medicine document ID
+   * @param {string} caregiverId - Caregiver's Firebase Auth UID
    * @returns {Promise<string>} New status ('active' or 'inactive')
-   * @throws {Error} If medicine not found or update fails
+   * @throws {Error} If medicine not found, unauthorized, or update fails
    *
    * @example
    * try {
-   *   const newStatus = await medicineService.toggleMedicineStatus('med123');
+   *   const newStatus = await medicineService.toggleMedicineStatus('med123', 'caregiver456');
    *   console.log('Medicine status:', newStatus);
    * } catch (error) {
    *   console.error('Failed to toggle status:', error.message);
    * }
    */
-  async toggleMedicineStatus(medicineId) {
+  async toggleMedicineStatus(medicineId, caregiverId) {
     try {
       return await retryOperation(async () => {
         // Fetch existing medicine
@@ -332,6 +382,20 @@ class MedicineService {
         }
 
         const existingData = medicineDoc.data();
+
+        // Check authorization (Requirement 7.5)
+        const isLinked = await this.checkCaregiverLinked(
+          caregiverId,
+          existingData.parentId,
+        );
+        if (!isLinked) {
+          const error = new Error(
+            'You are not authorized to change the status of this medicine. Only linked caregivers can modify medicine status.',
+          );
+          error.code = 'unauthorized';
+          throw error;
+        }
+
         const currentStatus = existingData.status || 'active';
 
         // Toggle status
@@ -349,7 +413,10 @@ class MedicineService {
         return newStatus;
       });
     } catch (error) {
-      if (error.code === 'medicine-not-found') {
+      if (
+        error.code === 'medicine-not-found' ||
+        error.code === 'unauthorized'
+      ) {
         throw error;
       }
 

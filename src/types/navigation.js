@@ -65,6 +65,8 @@ export const ParentScreens = {
   HOME: 'ParentHome',
   PROFILE: 'ParentProfile',
   MEDICINE_LIST: 'MedicineList',
+  MEDICINE_VIEW: 'ParentMedicineView',
+  UPCOMING_DOSES: 'UpcomingDoses',
   ADD_MEDICINE: 'AddMedicine',
   EDIT_MEDICINE: 'EditMedicine',
   CAREGIVER_MANAGEMENT: 'CaregiverManagement',
@@ -83,6 +85,8 @@ export const CaregiverScreens = {
   HOME: 'CaregiverHome',
   PROFILE: 'CaregiverProfile',
   PARENT_LIST: 'ParentList',
+  MEDICINE_LIST: 'CaregiverMedicineList',
+  MEDICINE_FORM: 'MedicineForm',
   MEDICINE_DETAILS: 'MedicineDetails',
   ALARM: 'Alarm',
   PAIRING: 'CaregiverPairing',
@@ -120,6 +124,8 @@ export const CaregiverScreens = {
  * @property {undefined} ParentHome - Parent home screen (no params)
  * @property {undefined} ParentProfile - Parent profile screen (no params)
  * @property {undefined} MedicineList - Medicine list screen (no params)
+ * @property {undefined} ParentMedicineView - Parent medicine view screen (no params)
+ * @property {undefined} UpcomingDoses - Upcoming doses screen (no params)
  * @property {undefined} AddMedicine - Add medicine screen (no params)
  * @property {Object} EditMedicine - Edit medicine screen
  * @property {string} EditMedicine.medicineId - ID of medicine to edit
@@ -136,6 +142,11 @@ export const CaregiverScreens = {
  * @property {undefined} CaregiverHome - Caregiver home screen (no params)
  * @property {undefined} CaregiverProfile - Caregiver profile screen (no params)
  * @property {undefined} ParentList - Parent list screen (no params)
+ * @property {Object} CaregiverMedicineList - Caregiver medicine list screen
+ * @property {string} CaregiverMedicineList.parentId - ID of parent
+ * @property {Object} MedicineForm - Medicine form screen (create/edit)
+ * @property {string} MedicineForm.parentId - ID of parent
+ * @property {string} [MedicineForm.medicineId] - ID of medicine to edit (optional)
  * @property {Object} MedicineDetails - Medicine details screen
  * @property {string} MedicineDetails.medicineId - ID of medicine to view
  * @property {string} MedicineDetails.parentId - ID of parent

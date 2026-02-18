@@ -466,3 +466,51 @@ exports.onScheduleUpdate = functions.firestore
       // Don't throw - we don't want to retry indefinitely
     }
   });
+
+/**
+ * scheduledCleanupOldDoses - Scheduled Cloud Function
+ *
+ * Runs daily to clean up dose records older than 30 days.
+ * This function is triggered by Cloud Scheduler and helps maintain database performance.
+ *
+ * Requirements: 6.5 - Delete old doses while preserving recent historical records
+ *
+ * @returns {Promise<void>}
+ *
+ * Note: This function requires Cloud Scheduler to be set up with the schedule:
+ * - Schedule: "0 2 * * *" (runs daily at 2:00 AM)
+ * - Timezone: Your preferred timezone (e.g., "America/New_York")
+ *
+ * To deploy with Cloud Scheduler, use:
+ * firebase deploy --only functions:scheduledCleanupOldDoses
+ *
+ * Then set up the schedule in Google Cloud Console or using gcloud CLI:
+ * gcloud scheduler jobs create pubsub cleanup-old-doses \
+ *   --schedule="0 2 * * *" \
+ *   --topic=firebase-schedule-scheduledCleanupOldDoses \
+ *   --message-body='{}' \
+ *   --time-zone="America/New_York"
+ */
+exports.scheduledCleanupOldDoses = functions.pubsub
+  .schedule('0 2 * * *') // Run daily at 2:00 AM
+  .timeZone('UTC') // Use UTC timezone
+  .onRun(async _context => {
+    const { cleanupOldDoses } = require('./cleanupOldDoses');
+
+    try {
+      console.log('Starting scheduled dose cleanup...');
+
+      const deletedCount = await cleanupOldDoses(admin.firestore());
+
+      console.log(
+        `Scheduled cleanup completed successfully. Deleted ${deletedCount} old doses.`,
+      );
+
+      return null;
+    } catch (error) {
+      console.error('Error during scheduled dose cleanup:', error);
+      // Don't throw - we don't want the function to be marked as failed
+      // The error is logged for monitoring
+      return null;
+    }
+  });

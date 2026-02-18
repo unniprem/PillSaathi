@@ -31,6 +31,7 @@ import TimePicker from './TimePicker';
 import FrequencySelector from './FrequencySelector';
 import medicineService from '../services/medicineService';
 import scheduleService from '../services/scheduleService';
+import { getErrorMessage, logError } from '../utils/errorHandler';
 
 /**
  * MedicineForm Component
@@ -98,8 +99,12 @@ const MedicineForm = ({
         setSelectedDays(schedule.selectedDays || []);
       }
     } catch (error) {
-      console.error('Error loading medicine data:', error);
-      Alert.alert('Error', 'Failed to load medicine data');
+      logError(error, 'MedicineForm.loadMedicineData', { medicineId });
+      const errorMessage = getErrorMessage(
+        error,
+        'Failed to load medicine data',
+      );
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -305,7 +310,11 @@ const MedicineForm = ({
 
       if (medicineId) {
         // Edit mode: Update existing medicine and schedule
-        await medicineService.updateMedicine(medicineId, medicineData);
+        await medicineService.updateMedicine(
+          medicineId,
+          medicineData,
+          caregiverId,
+        );
 
         // Update schedule
         const existingSchedule = await scheduleService.getScheduleForMedicine(
@@ -315,9 +324,14 @@ const MedicineForm = ({
           await scheduleService.updateSchedule(
             existingSchedule.id,
             scheduleData,
+            caregiverId,
           );
         } else {
-          await scheduleService.createSchedule(medicineId, scheduleData);
+          await scheduleService.createSchedule(
+            medicineId,
+            scheduleData,
+            caregiverId,
+          );
         }
 
         resultMedicineId = medicineId;
@@ -327,7 +341,11 @@ const MedicineForm = ({
         resultMedicineId = await medicineService.createMedicine(medicineData);
 
         // Create schedule linked to medicine
-        await scheduleService.createSchedule(resultMedicineId, scheduleData);
+        await scheduleService.createSchedule(
+          resultMedicineId,
+          scheduleData,
+          caregiverId,
+        );
       }
 
       // Success callback
@@ -335,20 +353,13 @@ const MedicineForm = ({
         onSuccess(resultMedicineId);
       }
     } catch (error) {
-      console.error('Error submitting medicine form:', error);
+      logError(error, 'MedicineForm.handleSubmit', {
+        medicineId,
+        isEditMode: !!medicineId,
+      });
 
       // Requirement 16.2: Display error message on failure
-      let errorMessage = 'Failed to save medicine';
-
-      if (error.code === 'validation-failed') {
-        const errorsStr = JSON.stringify(error.errors);
-        errorMessage = `Validation failed: ${errorsStr}`;
-      } else if (error.code === 'unauthorized') {
-        errorMessage = 'You are not authorized to perform this action';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = getErrorMessage(error, 'Failed to save medicine');
       Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);

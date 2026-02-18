@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import doseService from '../../services/doseService';
+import { getErrorMessage, logError } from '../../utils/errorHandler';
 
 /**
  * UpcomingDoses Component
@@ -112,8 +113,12 @@ const UpcomingDoses = ({ route }) => {
       const grouped = groupDosesByTime(dosesList);
       setGroupedDoses(grouped);
     } catch (err) {
-      console.error('Error loading upcoming doses:', err);
-      setError('Failed to load upcoming doses. Please try again.');
+      logError(err, 'UpcomingDoses.loadUpcomingDoses', { userId });
+      const errorMessage = getErrorMessage(
+        err,
+        'Failed to load upcoming doses. Please try again.',
+      );
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);

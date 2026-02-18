@@ -22,6 +22,8 @@ import { CaregiverScreens } from '../types/navigation';
 // Placeholder screens (will be created in subsequent tasks)
 import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
+import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
+import MedicineForm from '../components/MedicineForm';
 // import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 // import ParentListScreen from '../screens/caregiver/ParentListScreen';
 // import MedicineDetailsScreen from '../screens/caregiver/MedicineDetailsScreen';
@@ -155,6 +157,21 @@ function HomeStack() {
         options={{
           title: 'Pairing & Relationships',
         }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.MEDICINE_LIST}
+        component={CaregiverMedicineList}
+        options={{
+          title: 'Medicines',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.MEDICINE_FORM}
+        component={MedicineForm}
+        options={({ route }) => ({
+          title: route.params?.medicineId ? 'Edit Medicine' : 'Add Medicine',
+          presentation: 'modal',
+        })}
       />
     </Stack.Navigator>
   );
