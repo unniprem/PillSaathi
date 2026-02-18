@@ -181,8 +181,15 @@ class CloudFunctionsService {
 
       case 'failed-precondition':
         mappedError.code = 'code-expired';
-        mappedError.message =
-          'This invite code has expired. Please ask for a new code';
+        // Check if the error message mentions "already been used"
+        if (error.message && error.message.includes('already been used')) {
+          mappedError.code = 'code-already-used';
+          mappedError.message =
+            'This invite code has already been used. Please ask for a new code';
+        } else {
+          mappedError.message =
+            'This invite code has expired. Please ask for a new code';
+        }
         break;
 
       case 'unavailable':

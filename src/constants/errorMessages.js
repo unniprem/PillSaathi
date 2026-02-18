@@ -29,6 +29,8 @@ export const ERROR_MESSAGES = {
   'invalid-code-format': 'Please enter a valid 8-character code',
   'code-not-found': 'This invite code is invalid. Please check and try again',
   'code-expired': 'This invite code has expired. Please ask for a new code',
+  'code-already-used':
+    'This invite code has already been used. Please ask for a new code',
   'invite-code-generation-failed':
     'Failed to generate invite code. Please try again',
   'invite-code-query-failed':

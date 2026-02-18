@@ -93,6 +93,16 @@ class DevPairingHelper {
         throw error;
       }
 
+      // Check if code has already been used
+      if (inviteCodeData.used === true) {
+        console.error('[DevPairingHelper] Code already used');
+        const error = new Error(
+          'This invite code has already been used. Please request a new code from the parent',
+        );
+        error.code = 'failed-precondition';
+        throw error;
+      }
+
       const { parentUid } = inviteCodeData;
 
       console.log('[DevPairingHelper] Checking for existing relationship');
@@ -133,9 +143,12 @@ class DevPairingHelper {
         relationshipRef.id,
       );
 
-      // Increment usedCount on the invite code
+      // Mark the invite code as used and increment usedCount
       await inviteCodeDoc.ref.update({
+        used: true,
         usedCount: (inviteCodeData.usedCount || 0) + 1,
+        usedAt: new Date(),
+        usedBy: caregiverUid,
       });
 
       console.log('[DevPairingHelper] Success!');

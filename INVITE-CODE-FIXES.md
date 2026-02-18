@@ -8,6 +8,7 @@ Fixed multiple issues with the invite code pairing system:
 2. ✅ Only caregivers can remove parent relationships
 3. ✅ Parent app updates automatically when relationship is removed (via real-time listeners)
 4. ✅ Fixed "please log into continue" error handling
+5. ✅ Invite codes can only be redeemed once
 
 ## Changes Made
 
@@ -62,6 +63,31 @@ The real-time listener in `PairingContext.js` automatically updates both parent 
 - Updated `getErrorMessage()` function to accept optional `fallbackMessage` parameter
 - Now returns: error code message → fallback message → default message
 - Prevents generic "please log into continue" errors when more specific messages are available
+- Added `code-already-used` error message
+
+### 5. Single-Use Invite Codes
+
+**File: `functions/index.js`**
+
+- Added check for `used` field before creating relationship
+- Throws `failed-precondition` error if code already used
+- Marks code as `used: true` after successful redemption
+- Stores `usedAt` timestamp and `usedBy` caregiver UID
+
+**File: `src/services/pairing/DevPairingHelper.js`**
+
+- Added same `used` field check in dev helper
+- Marks code as used after successful redemption
+- Stores usage metadata (usedAt, usedBy)
+
+**File: `src/services/pairing/InviteCodeService.js`**
+
+- Initializes new codes with `used: false` field
+
+**File: `src/services/pairing/CloudFunctionsService.js`**
+
+- Updated error mapping to distinguish between expired and already-used codes
+- Returns specific error message for already-used codes
 
 ## Testing Checklist
 
@@ -70,6 +96,14 @@ The real-time listener in `PairingContext.js` automatically updates both parent 
 - [ ] Generate invite code as parent
 - [ ] Verify code expires after 15 minutes
 - [ ] Try to redeem expired code - should show "code expired" error
+
+### Single-Use Invite Codes
+
+- [ ] Generate invite code as parent
+- [ ] Redeem code as caregiver #1 - should succeed
+- [ ] Try to redeem same code as caregiver #2 - should show "already been used" error
+- [ ] Verify code is marked as `used: true` in Firestore
+- [ ] Verify `usedAt` and `usedBy` fields are set correctly
 
 ### Caregiver-Only Removal
 

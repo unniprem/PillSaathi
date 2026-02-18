@@ -242,6 +242,21 @@ const InviteCodeDisplay = ({ code, expiresAt, onRegenerate, loading }) => {
           <Text style={styles.actionButtonText}>Share Code</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Generate New Code Button */}
+      <TouchableOpacity
+        style={[styles.updateCodeButton, loading && styles.buttonDisabled]}
+        onPress={onRegenerate}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel="Generate new code"
+        accessibilityHint="Creates a new invite code and invalidates the current one"
+        accessibilityState={{ disabled: loading }}
+      >
+        <Text style={styles.updateCodeButtonText}>
+          {loading ? 'Generating...' : 'Generate New Code'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -348,6 +363,19 @@ const styles = StyleSheet.create({
   regenerateButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  updateCodeButton: {
+    backgroundColor: '#FF9500',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  updateCodeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

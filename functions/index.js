@@ -116,6 +116,14 @@ exports.redeemInviteCode = functions.https.onCall(async (data, context) => {
       );
     }
 
+    // Check if code has already been used
+    if (inviteCodeData.used === true) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'This invite code has already been used. Please request a new code from the parent',
+      );
+    }
+
     // ============================================================================
     // SUBTASK 3.4: Implement relationship creation logic
     // Requirements: 3.5, 3.6, 3.7 - Relationship creation and idempotence
@@ -153,9 +161,12 @@ exports.redeemInviteCode = functions.https.onCall(async (data, context) => {
         createdBy: caregiverUid,
       });
 
-    // Optionally increment usedCount on the invite code
+    // Mark the invite code as used and increment usedCount
     await inviteCodeDoc.ref.update({
+      used: true,
       usedCount: admin.firestore.FieldValue.increment(1),
+      usedAt: admin.firestore.FieldValue.serverTimestamp(),
+      usedBy: caregiverUid,
     });
 
     return {

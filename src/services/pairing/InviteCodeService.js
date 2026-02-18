@@ -145,6 +145,7 @@ class InviteCodeService {
           createdAt,
           expiresAt,
           usedCount: 0,
+          used: false,
         };
 
         await this.firestore
