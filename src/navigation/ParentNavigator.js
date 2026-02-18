@@ -23,6 +23,7 @@ import ParentHomeScreen from '../screens/parent/ParentHomeScreen';
 import ParentPairingScreen from '../screens/parent/ParentPairingScreen';
 import ParentMedicineView from '../screens/parent/ParentMedicineView';
 import UpcomingDoses from '../screens/parent/UpcomingDoses';
+import ParentUpcomingScreen from '../screens/parent/ParentUpcomingScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import LogoutHeader from '../components/LogoutHeader';
 // import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
@@ -272,12 +273,53 @@ function ProfileStack() {
 }
 
 /**
+ * Upcoming Stack Navigator
+ *
+ * Stack navigator for upcoming medicines tab.
+ * Shows all medicines scheduled for today (midnight to midnight).
+ *
+ * Requirements: 17.1
+ *
+ * @returns {React.ReactElement} Upcoming stack navigator
+ */
+function UpcomingStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true,
+        headerBackTitleVisible: false,
+        headerTintColor: '#007AFF',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
+        animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
+      }}
+    >
+      <Stack.Screen
+        name={ParentScreens.UPCOMING_DOSES}
+        component={ParentUpcomingScreen}
+        options={{
+          title: "Today's Medicines",
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
  * Parent Navigator Component
  *
  * Bottom tab navigator for parent-specific screens.
  * Tabs:
  * 1. Home - Dashboard, medicine list, caregiver management
- * 2. Profile - User profile, notifications, settings
+ * 2. Upcoming - Today's medicine schedule
+ * 3. Profile - User profile, notifications, settings
+ *
+ * Requirements: 17.1
  *
  * @returns {React.ReactElement} Parent navigator component
  */
@@ -310,6 +352,17 @@ function ParentNavigator() {
           tabBarIcon: ({ color, size }) => {
             const { Text } = require('react-native');
             return <Text style={{ fontSize: size, color }}>🏠</Text>;
+          },
+        }}
+      />
+      <Tab.Screen
+        name="UpcomingTab"
+        component={UpcomingStack}
+        options={{
+          tabBarLabel: 'Upcoming',
+          tabBarIcon: ({ color, size }) => {
+            const { Text } = require('react-native');
+            return <Text style={{ fontSize: size, color }}>📅</Text>;
           },
         }}
       />

@@ -4,8 +4,9 @@
  * Displays a dose card for parent view with medicine name, scheduled time, and dosage.
  * Highlights overdue doses.
  * Handles tap to navigate to medicine details.
+ * Provides quick action button to mark dose as taken.
  *
- * Requirements: 11.2
+ * Requirements: 17.3, 17.5
  */
 
 import React from 'react';
@@ -35,11 +36,12 @@ function formatTime(date) {
  * DoseCard Component
  *
  * Displays dose information in a card format with:
- * - Medicine name - Requirement 11.2
- * - Scheduled time - Requirement 11.2
- * - Dosage - Requirement 11.2
- * - Overdue highlighting - Requirement 11.4
+ * - Medicine name - Requirement 17.3
+ * - Scheduled time - Requirement 17.3
+ * - Dosage - Requirement 17.3
+ * - Overdue highlighting - Requirement 17.5
  * - Tap handler for navigation
+ * - Quick action to mark as taken - Requirement 17.5
  *
  * @param {Object} props
  * @param {Object} props.dose - Dose data object
@@ -50,6 +52,7 @@ function formatTime(date) {
  * @param {Date} props.dose.scheduledTime - Scheduled time
  * @param {boolean} props.dose.isOverdue - Whether dose is overdue
  * @param {Function} props.onPress - Handler called when card is tapped
+ * @param {Function} [props.onMarkTaken] - Optional handler for marking dose as taken
  * @returns {React.ReactElement}
  *
  * @example
@@ -63,9 +66,22 @@ function formatTime(date) {
  *     isOverdue: false
  *   }}
  *   onPress={() => navigation.navigate('MedicineDetails', { medicineId: 'med456' })}
+ *   onMarkTaken={() => markDoseAsTaken('dose123')}
  * />
  */
-function DoseCard({ dose, onPress }) {
+function DoseCard({ dose, onPress, onMarkTaken }) {
+  /**
+   * Handle mark as taken button press
+   * Prevents event propagation to avoid triggering card onPress
+   */
+  const handleMarkTaken = e => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    if (onMarkTaken) {
+      onMarkTaken();
+    }
+  };
   return (
     <TouchableOpacity
       style={[styles.card, dose.isOverdue && styles.cardOverdue]}
@@ -101,6 +117,18 @@ function DoseCard({ dose, onPress }) {
         </View>
 
         <View style={styles.rightSection}>
+          {onMarkTaken && (
+            <TouchableOpacity
+              style={styles.markTakenButton}
+              onPress={handleMarkTaken}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Mark as taken"
+              accessibilityHint="Double tap to mark this dose as taken"
+            >
+              <Text style={styles.markTakenText}>✓</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.arrowIcon}>›</Text>
         </View>
       </View>
@@ -118,6 +146,7 @@ DoseCard.propTypes = {
     isOverdue: PropTypes.bool,
   }).isRequired,
   onPress: PropTypes.func.isRequired,
+  onMarkTaken: PropTypes.func,
 };
 
 const styles = StyleSheet.create({
@@ -186,7 +215,23 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  markTakenButton: {
+    backgroundColor: '#34C759',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  markTakenText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   arrowIcon: {
     fontSize: 28,
