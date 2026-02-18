@@ -63,6 +63,12 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   multiRemove: jest.fn(() => Promise.resolve()),
 }));
 
+// Mock NetInfo
+jest.mock('@react-native-community/netinfo', () => ({
+  fetch: jest.fn(() => Promise.resolve({ isConnected: true })),
+  addEventListener: jest.fn(() => jest.fn()),
+}));
+
 // Suppress console warnings in tests (optional)
 global.console = {
   ...console,
