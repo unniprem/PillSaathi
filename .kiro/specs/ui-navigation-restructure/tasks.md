@@ -123,7 +123,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 5: Logout Button Consistent Positioning**
     - **Validates: Requirements 2.1, 2.4, 12.1, 12.4**
 
-- [-] 8. Add parent alias field to relationship data model
+- [x] 8. Add parent alias field to relationship data model
 
   - Update Firestore relationships collection schema to include `parentAlias` field
   - Create utility functions for getting/setting parent alias
@@ -135,16 +135,16 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
   - **Property 26: Parent Actual Name Preservation**
   - **Validates: Requirements 16.3**
 
-- [ ] 9. Implement EditAliasDialog component
+- [x] 9. Implement EditAliasDialog component
 
-  - [ ] 9.1 Create EditAliasDialog modal component
+  - [x] 9.1 Create EditAliasDialog modal component
 
     - Create modal with text input for alias
     - Pre-fill with current alias if exists
     - Implement save and cancel actions
     - _Requirements: 16.1_
 
-  - [ ] 9.2 Implement alias save logic
+  - [x] 9.2 Implement alias save logic
 
     - Update relationship document in Firestore with new alias
     - Update local state to reflect alias change
@@ -158,21 +158,21 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
 
 - [ ] 10. Redesign CaregiverHomeScreen to display parent list
 
-  - [ ] 10.1 Create usePairedParents hook
+  - [x] 10.1 Create usePairedParents hook
 
     - Fetch all relationships where caregiverId matches current user
     - For each relationship, fetch parent data and alias
     - Calculate upcoming medicine count for each parent
     - _Requirements: 1.1_
 
-  - [ ] 10.2 Create ParentCard component
+  - [x] 10.2 Create ParentCard component
 
     - Display parent name (use alias if available)
     - Display summary information (upcoming medicine count)
     - Handle tap to navigate to parent detail
     - _Requirements: 1.2, 1.3_
 
-  - [ ] 10.3 Update CaregiverHomeScreen to render parent list
+  - [x] 10.3 Update CaregiverHomeScreen to render parent list
 
     - Use FlatList to display ParentCard components
     - Implement empty state for no paired parents
@@ -184,9 +184,9 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 3: Parent Selection Navigation**
     - **Validates: Requirements 1.1, 1.2, 1.3**
 
-- [ ] 11. Create ParentDetailScreen for caregiver view
+- [x] 11. Create ParentDetailScreen for caregiver view
 
-  - [ ] 11.1 Create ParentDetailScreen component
+  - [x] 11.1 Create ParentDetailScreen component
 
     - Fetch parent data and alias using parentId from route params
     - Display parent information section with edit alias button
@@ -194,13 +194,13 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - Display medicine list section
     - _Requirements: 4.1, 5.1, 7.1_
 
-  - [ ] 11.2 Integrate EditAliasDialog into ParentDetailScreen
+  - [x] 11.2 Integrate EditAliasDialog into ParentDetailScreen
 
     - Show dialog when edit alias button is tapped
     - Update parent name display when alias is saved
     - _Requirements: 16.1, 16.2_
 
-  - [ ] 11.3 Implement medicine list in ParentDetailScreen
+  - [x] 11.3 Implement medicine list in ParentDetailScreen
 
     - Display all medicines for the parent
     - Show medicine name and dosage for each
