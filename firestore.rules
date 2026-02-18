@@ -19,6 +19,12 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/relationships/$(parentId + "_" + request.auth.uid));
     }
 
+    // Helper function to check if user is a caregiver for a parent
+    function isLinkedCaregiver(parentId) {
+      return exists(/databases/$(database)/documents/relationships/$(parentId + '_' + request.auth.uid))
+        || exists(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + parentId));
+    }
+
     match /users/{userId} {
       allow read, update: if request.auth.uid == userId;
       allow create: if request.auth.uid == userId;
@@ -39,21 +45,43 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Medicines collection - Phase 3 Medicine Management
     match /medicines/{medicineId} {
-      allow read: if request.auth.uid == resource.data.parentId || isLinked(resource.data.parentId);
-      allow create: if isCaregiver(request.auth.uid);
-      allow update: if isCaregiver(request.auth.uid);
+      allow read: if request.auth != null &&
+        (resource.data.parentId == request.auth.uid || isLinkedCaregiver(resource.data.parentId));
+
+      allow create: if request.auth != null &&
+        request.resource.data.caregiverId == request.auth.uid &&
+        isLinkedCaregiver(request.resource.data.parentId) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.dosageAmount is number &&
+        request.resource.data.dosageAmount > 0;
+
+      allow update: if request.auth != null &&
+        resource.data.caregiverId == request.auth.uid &&
+        isLinkedCaregiver(resource.data.parentId);
+
+      allow delete: if request.auth != null &&
+        resource.data.caregiverId == request.auth.uid &&
+        isLinkedCaregiver(resource.data.parentId);
     }
 
+    // Schedules collection - Phase 3 Medicine Management
     match /schedules/{scheduleId} {
-      allow read: if isSignedIn();
-      allow write: if isCaregiver(request.auth.uid);
+      allow read: if request.auth != null;
+
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/medicines/$(request.resource.data.medicineId)).data.caregiverId == request.auth.uid;
     }
 
+    // Doses collection - Phase 3 Medicine Management
+    // Only Cloud Functions can write doses
     match /doses/{doseId} {
-      allow read: if request.auth.uid == resource.data.parentId || isLinked(resource.data.parentId);
-      allow update: if request.auth.uid == resource.data.parentId;
-      allow create: if isSignedIn();
+      allow read: if request.auth != null &&
+        (resource.data.parentId == request.auth.uid || isLinkedCaregiver(resource.data.parentId));
+
+      allow write: if false;  // Only Cloud Functions can write doses
     }
 
     // Invite Codes - Pairing & Relationships System

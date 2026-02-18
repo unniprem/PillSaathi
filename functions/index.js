@@ -284,3 +284,185 @@ exports.removeRelationship = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+/**
+ * onScheduleCreate - Firestore Trigger
+ *
+ * Automatically generates doses when a new schedule is created.
+ * This function is triggered by Firestore onCreate events on the schedules collection.
+ *
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.4, 9.5
+ *
+ * @param {Object} snapshot - Firestore document snapshot of the created schedule
+ * @param {Object} context - Event context with document path and other metadata
+ * @returns {Promise<void>}
+ */
+exports.onScheduleCreate = functions.firestore
+  .document('schedules/{scheduleId}')
+  .onCreate(async (snapshot, context) => {
+    const {
+      generateDosesForSchedule,
+      writeDosesInBatches,
+    } = require('./generateDoses');
+
+    try {
+      const scheduleId = context.params.scheduleId;
+      const scheduleData = snapshot.data();
+
+      console.log(`Schedule created: ${scheduleId}, generating doses...`);
+
+      // Fetch the associated medicine document
+      const medicineDoc = await admin
+        .firestore()
+        .collection('medicines')
+        .doc(scheduleData.medicineId)
+        .get();
+
+      if (!medicineDoc.exists) {
+        console.error(
+          `Medicine ${scheduleData.medicineId} not found for schedule ${scheduleId}`,
+        );
+        return;
+      }
+
+      const medicineData = medicineDoc.data();
+
+      // Only generate doses if medicine is active (Requirement 7.2)
+      if (medicineData.status !== 'active') {
+        console.log(
+          `Medicine ${scheduleData.medicineId} is inactive, skipping dose generation`,
+        );
+        return;
+      }
+
+      // Prepare schedule and medicine objects with IDs
+      const schedule = {
+        id: scheduleId,
+        ...scheduleData,
+      };
+
+      const medicine = {
+        id: medicineDoc.id,
+        ...medicineData,
+      };
+
+      // Generate doses for the next 7 days (Requirements 8.1-8.5)
+      const startDate = new Date();
+      const doses = generateDosesForSchedule(schedule, medicine, startDate, 7);
+
+      // Write doses to Firestore in batches (Requirements 9.1, 9.2, 9.4)
+      const dosesWritten = await writeDosesInBatches(admin.firestore(), doses);
+
+      // Requirement 9.5: Log dose creation count
+      console.log(
+        `Successfully generated ${dosesWritten} doses for schedule ${scheduleId}`,
+      );
+    } catch (error) {
+      console.error(
+        `Error generating doses for schedule ${context.params.scheduleId}:`,
+        error,
+      );
+      // Don't throw - we don't want to retry indefinitely
+    }
+  });
+
+/**
+ * onScheduleUpdate - Firestore Trigger
+ *
+ * Regenerates doses when a schedule is updated.
+ * This function deletes future doses and creates new ones based on the updated schedule.
+ *
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.4, 9.5
+ *
+ * @param {Object} change - Firestore document change with before and after snapshots
+ * @param {Object} context - Event context with document path and other metadata
+ * @returns {Promise<void>}
+ */
+exports.onScheduleUpdate = functions.firestore
+  .document('schedules/{scheduleId}')
+  .onUpdate(async (change, context) => {
+    const {
+      generateDosesForSchedule,
+      writeDosesInBatches,
+    } = require('./generateDoses');
+
+    try {
+      const scheduleId = context.params.scheduleId;
+      const scheduleData = change.after.data();
+
+      console.log(`Schedule updated: ${scheduleId}, regenerating doses...`);
+
+      // Fetch the associated medicine document
+      const medicineDoc = await admin
+        .firestore()
+        .collection('medicines')
+        .doc(scheduleData.medicineId)
+        .get();
+
+      if (!medicineDoc.exists) {
+        console.error(
+          `Medicine ${scheduleData.medicineId} not found for schedule ${scheduleId}`,
+        );
+        return;
+      }
+
+      const medicineData = medicineDoc.data();
+
+      // Delete all future doses for this schedule
+      const now = admin.firestore.Timestamp.now();
+      const futureDosesSnapshot = await admin
+        .firestore()
+        .collection('doses')
+        .where('scheduleId', '==', scheduleId)
+        .where('scheduledTime', '>', now)
+        .get();
+
+      // Delete future doses in batches
+      const deleteBatch = admin.firestore().batch();
+      futureDosesSnapshot.docs.forEach(doc => {
+        deleteBatch.delete(doc.ref);
+      });
+      await deleteBatch.commit();
+
+      console.log(
+        `Deleted ${futureDosesSnapshot.size} future doses for schedule ${scheduleId}`,
+      );
+
+      // Only generate new doses if medicine is active (Requirement 7.2)
+      if (medicineData.status !== 'active') {
+        console.log(
+          `Medicine ${scheduleData.medicineId} is inactive, skipping dose generation`,
+        );
+        return;
+      }
+
+      // Prepare schedule and medicine objects with IDs
+      const schedule = {
+        id: scheduleId,
+        ...scheduleData,
+      };
+
+      const medicine = {
+        id: medicineDoc.id,
+        ...medicineData,
+      };
+
+      // Generate new doses for the next 7 days (Requirements 8.1-8.5)
+      const startDate = new Date();
+      const doses = generateDosesForSchedule(schedule, medicine, startDate, 7);
+
+      // Write doses to Firestore in batches (Requirements 9.1, 9.2, 9.4)
+      const dosesWritten = await writeDosesInBatches(admin.firestore(), doses);
+
+      // Requirement 9.5: Log dose creation count
+      console.log(
+        `Successfully regenerated ${dosesWritten} doses for schedule ${scheduleId}`,
+      );
+    } catch (error) {
+      console.error(
+        `Error regenerating doses for schedule ${context.params.scheduleId}:`,
+        error,
+      );
+      // Don't throw - we don't want to retry indefinitely
+    }
+  });

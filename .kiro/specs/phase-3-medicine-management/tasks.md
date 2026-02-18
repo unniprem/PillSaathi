@@ -78,7 +78,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 12: Day numbers are in valid range**
     - **Validates: Requirements 4.4**
 
-- [-] 4. Implement dose generation Cloud Function
+- [x] 4. Implement dose generation Cloud Function
 
   - [x] 4.1 Create functions/generateDoses.js
 
@@ -96,7 +96,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Add error handling and retry logic
     - _Requirements: 9.1, 9.2, 9.4_
 
-  - [-] 4.3 Wire up Cloud Function trigger
+  - [x] 4.3 Wire up Cloud Function trigger
 
     - Set up Firestore onCreate trigger for schedules collection
     - Set up Firestore onUpdate trigger for schedules collection
@@ -120,9 +120,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
   - Verify dose generation creates correct doses
   - Ask the user if questions arise
 
-- [~] 6. Implement Firestore security rules
+- [-] 6. Implement Firestore security rules
 
-  - [ ] 6.1 Update firestore.rules
+  - [-] 6.1 Update firestore.rules
 
     - Add isLinkedCaregiver(parentId) helper function
     - Add medicines collection rules (read, create, update, delete)
@@ -158,7 +158,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test FrequencySelector renders and handles pattern changes
     - Test day selection toggles correctly
 
-- [ ] 8. Implement medicine form component
+- [~] 8. Implement medicine form component
 
   - [ ] 8.1 Create src/components/MedicineForm.js
 
@@ -202,7 +202,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 52: Duplicate times are prevented**
     - **Validates: Requirements 15.1, 15.2, 15.3, 15.4**
 
-- [ ] 9. Implement caregiver medicine list
+- [~] 9. Implement caregiver medicine list
 
   - [ ] 9.1 Create src/screens/CaregiverMedicineList.js
 
@@ -226,7 +226,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test delete removes future doses only
     - _Requirements: 6.1, 6.2, 6.4, 6.5_
 
-- [ ] 10. Implement parent medicine view
+- [~] 10. Implement parent medicine view
 
   - [ ] 10.1 Create src/screens/ParentMedicineView.js
 
@@ -242,7 +242,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 35: Parent medicine view includes schedule times**
     - **Validates: Requirements 11.1, 11.3**
 
-- [ ] 11. Implement dose service and parent dose view
+- [~] 11. Implement dose service and parent dose view
 
   - [ ] 11.1 Create src/services/doseService.js
 
@@ -267,7 +267,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 39: Doses grouped by time when shared**
     - **Validates: Requirements 12.1, 12.2, 12.3, 12.5**
 
-- [ ] 12. Implement medicine editing
+- [~] 12. Implement medicine editing
 
   - [ ] 12.1 Update MedicineForm.js to support edit mode
 
@@ -283,7 +283,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 17: Updates validate required fields**
     - **Validates: Requirements 5.1, 5.4, 5.5**
 
-- [ ] 13. Implement authorization checks
+- [~] 13. Implement authorization checks
 
   - [ ] 13.1 Add authorization helpers to services
 
@@ -299,7 +299,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 25: Only authorized caregivers can toggle status**
     - **Validates: Requirements 1.4, 6.3, 7.5**
 
-- [ ] 14. Implement offline support and error handling
+- [~] 14. Implement offline support and error handling
 
   - [ ] 14.1 Add network error handling
 
@@ -321,7 +321,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test retry logic attempts multiple times
     - Test offline queue stores operations
 
-- [ ] 15. Implement dose cleanup Cloud Function
+- [~] 15. Implement dose cleanup Cloud Function
 
   - [ ] 15.1 Create functions/cleanupOldDoses.js
 
@@ -336,7 +336,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test cleanup preserves recent doses
     - Test batch deletion handles large counts
 
-- [ ] 16. Wire up navigation and integrate screens
+- [~] 16. Wire up navigation and integrate screens
 
   - [ ] 16.1 Add navigation routes
 
