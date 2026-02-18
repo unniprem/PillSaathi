@@ -18,7 +18,6 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
-  FlatList,
 } from 'react-native';
 import { usePairing } from '../../contexts/PairingContext';
 import { useAuth } from '../../contexts/AuthContext';

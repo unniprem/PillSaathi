@@ -2,221 +2,226 @@
  * Parent Home Screen
  *
  * Main dashboard for parent users.
- * This is a placeholder screen that will be implemented in Phase 1.
+ * Displays upcoming medicines and all medicines list.
  *
- * Future functionality will include:
- * - View list of dependents
- * - Manage medication schedules
- * - View medication history
- * - Receive notifications
- * - Access settings
+ * Requirements: 10.1, 10.2, 10.3, 11.1, 11.2
  *
  * @format
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  FlatList,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ParentScreens } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import useMyMedicines from '../../hooks/useMyMedicines';
+import useUpcomingDoses from '../../hooks/useUpcomingDoses';
+import MedicineCard from '../../components/MedicineCard';
+import DoseCard from '../../components/DoseCard';
 
 /**
  * Parent Home Screen Component
  *
- * Placeholder screen for parent dashboard.
- * Will be fully implemented in Phase 1.
- *
- * Includes test navigation buttons to verify back navigation functionality.
+ * Displays:
+ * - Upcoming Medicines section (next 24 hours) - Requirements 11.1, 11.2
+ * - All Medicines section - Requirements 10.1, 10.2, 10.3
  *
  * @returns {React.ReactElement} Parent home screen component
  */
 function ParentHomeScreen() {
   const navigation = useNavigation();
-  const { signOut, loading } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { user } = useAuth();
+
+  // Fetch medicines and upcoming doses
+  const {
+    medicines,
+    loading: medicinesLoading,
+    error: medicinesError,
+  } = useMyMedicines(user?.uid);
+
+  const {
+    doses,
+    loading: dosesLoading,
+    error: dosesError,
+  } = useUpcomingDoses(user?.uid, 24);
 
   /**
-   * Handle logout with confirmation dialog
-   * Requirements: 4.4, 5.5 - Logout functionality with confirmation
+   * Navigate to medicine details
    */
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoggingOut(true);
-              await signOut();
-              // Navigation to login screen is handled automatically by App.js
-              // based on auth state change
-            } catch (error) {
-              setIsLoggingOut(false);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-              console.error('Logout error:', error);
-            }
-          },
-        },
-      ],
-      { cancelable: true },
+  const handleMedicinePress = medicineId => {
+    navigation.navigate(ParentScreens.MEDICINE_DETAILS, { medicineId });
+  };
+
+  /**
+   * Navigate to medicine details from dose
+   */
+  const handleDosePress = dose => {
+    navigation.navigate(ParentScreens.MEDICINE_DETAILS, {
+      medicineId: dose.medicineId,
+    });
+  };
+
+  /**
+   * Render upcoming medicines section
+   */
+  const renderUpcomingSection = () => {
+    if (dosesLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#007AFF" />
+        </View>
+      );
+    }
+
+    if (dosesError) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            Failed to load upcoming medicines
+          </Text>
+        </View>
+      );
+    }
+
+    if (doses.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            No upcoming medicines in the next 24 hours
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={doses}
+        renderItem={({ item }) => (
+          <DoseCard dose={item} onPress={() => handleDosePress(item)} />
+        )}
+        keyExtractor={item => item.id}
+        scrollEnabled={false}
+      />
+    );
+  };
+
+  /**
+   * Render all medicines section
+   */
+  const renderMedicinesSection = () => {
+    if (medicinesLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#007AFF" />
+        </View>
+      );
+    }
+
+    if (medicinesError) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Failed to load medicines</Text>
+        </View>
+      );
+    }
+
+    if (medicines.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No medicines added yet</Text>
+          <Text style={styles.emptySubtext}>
+            Ask your caregiver to add medicines for you
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={medicines}
+        renderItem={({ item }) => (
+          <MedicineCard
+            medicine={item}
+            onPress={() => handleMedicinePress(item.id)}
+          />
+        )}
+        keyExtractor={item => item.id}
+        scrollEnabled={false}
+      />
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Parent Home</Text>
-          <Text style={styles.subtitle}>Dashboard coming soon...</Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            styles.logoutButton,
-            (loading || isLoggingOut) && styles.logoutButtonDisabled,
-          ]}
-          onPress={handleLogout}
-          disabled={loading || isLoggingOut}
-          accessibilityLabel="Logout button"
-          accessibilityHint="Double tap to logout from your account"
-          accessibilityRole="button"
-        >
-          <Text style={styles.logoutButtonText}>
-            {isLoggingOut ? 'Logging out...' : 'Logout'}
-          </Text>
-        </TouchableOpacity>
+    <ScrollView style={styles.container}>
+      {/* Upcoming Medicines Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Upcoming Medicines</Text>
+        <Text style={styles.sectionSubtitle}>Next 24 hours</Text>
+        {renderUpcomingSection()}
       </View>
 
-      {/* Test navigation buttons */}
-      <View style={styles.testButtonsContainer}>
-        <Text style={styles.testLabel}>Test Stack Navigation:</Text>
-        <TouchableOpacity
-          style={[styles.testButton, styles.pairingButton]}
-          onPress={() => navigation.navigate(ParentScreens.PAIRING)}
-        >
-          <Text style={styles.testButtonText}>
-            🔗 Pairing & Relationships (Test Invite)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(ParentScreens.MEDICINE_VIEW)}
-        >
-          <Text style={styles.testButtonText}>💊 My Medicines (Phase 3)</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(ParentScreens.UPCOMING_DOSES)}
-        >
-          <Text style={styles.testButtonText}>📅 Upcoming Doses (Phase 3)</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(ParentScreens.MEDICINE_LIST)}
-        >
-          <Text style={styles.testButtonText}>
-            Go to Medicine List (Back Enabled)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => navigation.navigate(ParentScreens.ADD_MEDICINE)}
-        >
-          <Text style={styles.testButtonText}>
-            Go to Add Medicine (Modal, Back Enabled)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() =>
-            navigation.navigate(ParentScreens.CAREGIVER_MANAGEMENT)
-          }
-        >
-          <Text style={styles.testButtonText}>
-            Go to Caregiver Management (Back Enabled)
-          </Text>
-        </TouchableOpacity>
+      {/* All Medicines Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>All Medicines</Text>
+        {renderMedicinesSection()}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
+    backgroundColor: '#F5F5F5',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 40,
+  section: {
     marginTop: 20,
+    marginBottom: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#333333',
+    marginHorizontal: 16,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  logoutButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    minWidth: 100,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoutButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-    opacity: 0.6,
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  testButtonsContainer: {
-    width: '100%',
-    marginTop: 20,
-    padding: 20,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-  },
-  testLabel: {
+  emptySubtext: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666666',
-    marginBottom: 12,
+    color: '#999999',
     textAlign: 'center',
-  },
-  testButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  pairingButton: {
-    backgroundColor: '#34C759',
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
 

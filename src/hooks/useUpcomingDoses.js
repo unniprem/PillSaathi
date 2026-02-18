@@ -3,8 +3,9 @@
  *
  * Custom hook to fetch upcoming doses for a parent within a time window.
  * Used to display upcoming medicines scheduled in the next N hours.
+ * Marks overdue doses for highlighting.
  *
- * Requirements: 7.1
+ * Requirements: 7.1, 11.1
  */
 
 import { useState, useEffect } from 'react';
@@ -15,6 +16,7 @@ import doseService from '../services/doseService';
  *
  * Fetches doses scheduled within the specified time window (default 24 hours).
  * Returns doses sorted chronologically by scheduled time.
+ * Marks doses as overdue if scheduledTime is in the past.
  *
  * @param {string} parentId - Parent's Firebase Auth UID
  * @param {number} hours - Number of hours to look ahead (default: 24)
@@ -58,7 +60,15 @@ export function useUpcomingDoses(parentId, hours = 24) {
       setError(null);
 
       const upcomingDoses = await doseService.getUpcomingDoses(parentId, hours);
-      setDoses(upcomingDoses);
+
+      // Mark overdue doses (Requirement 11.1)
+      const now = new Date();
+      const dosesWithOverdueFlag = upcomingDoses.map(dose => ({
+        ...dose,
+        isOverdue: dose.scheduledTime && dose.scheduledTime < now,
+      }));
+
+      setDoses(dosesWithOverdueFlag);
     } catch (err) {
       console.error('Error fetching upcoming doses:', err);
       setError(err);
