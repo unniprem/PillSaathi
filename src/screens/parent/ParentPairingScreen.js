@@ -339,9 +339,10 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
                 userName={relationship.caregiverName || 'Unknown Caregiver'}
                 userPhone={relationship.caregiverPhone || ''}
                 createdAt={relationship.createdAt}
-                onRemove={handleRemoveRelationship}
+                onRemove={null}
                 loading={loading}
                 userRole="Caregiver"
+                showRemoveButton={false}
               />
             ))}
           </View>

@@ -1,0 +1,115 @@
+# Invite Code System Fixes
+
+## Summary
+
+Fixed multiple issues with the invite code pairing system:
+
+1. ✅ Invite code expiration changed from 24 hours to 15 minutes
+2. ✅ Only caregivers can remove parent relationships
+3. ✅ Parent app updates automatically when relationship is removed (via real-time listeners)
+4. ✅ Fixed "please log into continue" error handling
+
+## Changes Made
+
+### 1. Invite Code Expiration (15 minutes)
+
+**File: `src/services/pairing/InviteCodeService.js`**
+
+- Changed `calculateExpiration()` method from hours to minutes
+- Updated default parameter from 24 hours to 15 minutes
+- Updated all documentation to reflect 15-minute expiration
+
+### 2. Caregiver-Only Removal
+
+**File: `functions/index.js`**
+
+- Updated `removeRelationship` Cloud Function to only allow caregivers
+- Changed permission check from "parent OR caregiver" to "caregiver only"
+- Updated error message to "Only caregivers can remove relationships"
+
+**File: `src/contexts/PairingContext.js`**
+
+- Added role check in `removeRelationship()` method
+- Throws `permission-denied` error if user is not a caregiver
+- Added same check to DevPairingHelper path
+
+**File: `src/services/pairing/DevPairingHelper.js`**
+
+- Added new `removeRelationshipDev()` method for development testing
+- Implements same caregiver-only permission check
+- Validates relationship exists before deletion
+
+**File: `src/screens/parent/ParentPairingScreen.js`**
+
+- Removed `onRemove` handler from RelationshipCard
+- Added `showRemoveButton={false}` prop to hide remove button for parents
+
+**File: `src/components/pairing/RelationshipCard.js`**
+
+- Added `showRemoveButton` prop (default: true)
+- Conditionally renders remove button based on prop
+- Updated documentation
+
+### 3. Real-Time Updates for Parent App
+
+**Already Working:**
+The real-time listener in `PairingContext.js` automatically updates both parent and caregiver apps when a relationship is removed. The `subscribeToRelationships()` method listens to Firestore changes and updates the UI immediately.
+
+### 4. Error Message Handling
+
+**File: `src/constants/errorMessages.js`**
+
+- Updated `getErrorMessage()` function to accept optional `fallbackMessage` parameter
+- Now returns: error code message → fallback message → default message
+- Prevents generic "please log into continue" errors when more specific messages are available
+
+## Testing Checklist
+
+### Invite Code Expiration
+
+- [ ] Generate invite code as parent
+- [ ] Verify code expires after 15 minutes
+- [ ] Try to redeem expired code - should show "code expired" error
+
+### Caregiver-Only Removal
+
+- [ ] As caregiver: Remove parent relationship - should succeed
+- [ ] As parent: Try to remove caregiver - remove button should not be visible
+- [ ] Verify parent sees caregiver list but cannot remove them
+
+### Real-Time Updates
+
+- [ ] As caregiver: Remove parent relationship
+- [ ] Verify parent app immediately shows relationship removed
+- [ ] Verify caregiver app immediately shows relationship removed
+
+### Error Messages
+
+- [ ] Try to redeem invalid code - should show specific error
+- [ ] Try to redeem expired code - should show "code expired" message
+- [ ] Try operations without authentication - should show appropriate error
+
+## Development Mode
+
+The system uses `USE_DEV_HELPER = true` in `PairingContext.js` for local testing without deployed Cloud Functions. This uses:
+
+- `DevPairingHelper.redeemInviteCodeDev()` for code redemption
+- `DevPairingHelper.removeRelationshipDev()` for relationship removal
+
+Set `USE_DEV_HELPER = false` when Cloud Functions are deployed to production.
+
+## Cloud Functions Deployment
+
+After testing, deploy the updated Cloud Functions:
+
+```bash
+cd functions
+npm install
+firebase deploy --only functions
+```
+
+Then update `src/contexts/PairingContext.js`:
+
+```javascript
+const USE_DEV_HELPER = false; // Switch to production mode
+```

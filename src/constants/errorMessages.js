@@ -64,8 +64,9 @@ export const ERROR_MESSAGES = {
 /**
  * Get user-friendly error message for a given error code
  * @param {string} errorCode - Firebase error code
+ * @param {string} fallbackMessage - Optional fallback message
  * @returns {string} User-friendly error message
  */
-export const getErrorMessage = errorCode => {
-  return ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.default;
+export const getErrorMessage = (errorCode, fallbackMessage) => {
+  return ERROR_MESSAGES[errorCode] || fallbackMessage || ERROR_MESSAGES.default;
 };

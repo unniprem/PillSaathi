@@ -45,6 +45,7 @@ const formatDate = date => {
  * @param {Function} props.onRemove - Callback when remove is confirmed
  * @param {boolean} [props.loading] - Whether removal is in progress
  * @param {string} [props.userRole] - Role label for the user (e.g., 'Caregiver', 'Parent')
+ * @param {boolean} [props.showRemoveButton] - Whether to show the remove button (default: true)
  * @returns {JSX.Element}
  *
  * @example
@@ -56,6 +57,7 @@ const formatDate = date => {
  *   onRemove={handleRemove}
  *   loading={false}
  *   userRole="Caregiver"
+ *   showRemoveButton={true}
  * />
  */
 const RelationshipCard = ({
@@ -66,6 +68,7 @@ const RelationshipCard = ({
   onRemove,
   loading = false,
   userRole = 'User',
+  showRemoveButton = true,
 }) => {
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -169,23 +172,25 @@ const RelationshipCard = ({
           </Text>
         </View>
 
-        {/* Remove Button */}
-        <TouchableOpacity
-          style={[
-            styles.removeButton,
-            isLoading && styles.removeButtonDisabled,
-          ]}
-          onPress={handleRemovePress}
-          disabled={isLoading}
-          accessibilityRole="button"
-          accessibilityLabel="Remove relationship"
-          accessibilityHint={`Remove ${userName} from your connections`}
-          accessibilityState={{ disabled: isLoading }}
-        >
-          <Text style={styles.removeButtonText}>
-            {isLoading ? 'Removing...' : 'Remove'}
-          </Text>
-        </TouchableOpacity>
+        {/* Remove Button - Only show if showRemoveButton is true */}
+        {showRemoveButton && onRemove && (
+          <TouchableOpacity
+            style={[
+              styles.removeButton,
+              isLoading && styles.removeButtonDisabled,
+            ]}
+            onPress={handleRemovePress}
+            disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Remove relationship"
+            accessibilityHint={`Remove ${userName} from your connections`}
+            accessibilityState={{ disabled: isLoading }}
+          >
+            <Text style={styles.removeButtonText}>
+              {isLoading ? 'Removing...' : 'Remove'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

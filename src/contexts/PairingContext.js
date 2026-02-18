@@ -11,7 +11,11 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import InviteCodeService from '../services/pairing/InviteCodeService';
 import RelationshipService from '../services/pairing/RelationshipService';
 import CloudFunctionsService from '../services/pairing/CloudFunctionsService';
+import DevPairingHelper from '../services/pairing/DevPairingHelper';
 import { useAuth } from './AuthContext';
+
+// Use dev helper for local testing (set to false when Cloud Functions are deployed)
+const USE_DEV_HELPER = true; // TODO: Change to false after deploying Cloud Functions
 
 /**
  * Pairing state shape:
@@ -145,19 +149,16 @@ export const PairingProvider = ({ children }) => {
       throw permError;
     }
 
-    if (!CloudFunctionsService) {
-      const serviceError = new Error(
-        'Cloud Functions service not available. Please ensure @react-native-firebase/functions is installed.',
-      );
-      serviceError.code = 'service-unavailable';
-      throw serviceError;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      await CloudFunctionsService.redeemInviteCode(code, user.uid);
+      // Use dev helper if Cloud Functions not available
+      if (USE_DEV_HELPER) {
+        await DevPairingHelper.redeemInviteCodeDev(code, user.uid);
+      } else {
+        await CloudFunctionsService.redeemInviteCode(code, user.uid);
+      }
       // Refresh relationships to include the new one
       await refreshRelationships();
     } catch (err) {
@@ -173,8 +174,9 @@ export const PairingProvider = ({ children }) => {
    * Calls Cloud Function to delete relationship.
    * Uses optimistic UI updates: immediately updates UI, then rolls back on error.
    * Shows success confirmation on success.
+   * Only caregivers can remove relationships.
    *
-   * Requirements: 6.2 - Remove relationship
+   * Requirements: 6.2 - Remove relationship (caregiver only)
    * Requirements: 6.3 - Update both users' lists when relationship removed
    * Requirements: 9.3 - Optimistic UI updates
    *
@@ -197,7 +199,13 @@ export const PairingProvider = ({ children }) => {
       throw authError;
     }
 
-    if (!CloudFunctionsService) {
+    if (profile?.role !== 'caregiver') {
+      const permError = new Error('Only caregivers can remove relationships');
+      permError.code = 'permission-denied';
+      throw permError;
+    }
+
+    if (!USE_DEV_HELPER && !CloudFunctionsService) {
       const serviceError = new Error(
         'Cloud Functions service not available. Please ensure @react-native-firebase/functions is installed.',
       );
@@ -217,8 +225,12 @@ export const PairingProvider = ({ children }) => {
     setError(null);
 
     try {
-      // Call Cloud Function to remove relationship
-      await CloudFunctionsService.removeRelationship(relationshipId);
+      // Use dev helper if Cloud Functions not available
+      if (USE_DEV_HELPER) {
+        await DevPairingHelper.removeRelationshipDev(relationshipId, user.uid);
+      } else {
+        await CloudFunctionsService.removeRelationship(relationshipId);
+      }
 
       // Success - relationship removed
       // The real-time listener will update the state, but we've already updated optimistically

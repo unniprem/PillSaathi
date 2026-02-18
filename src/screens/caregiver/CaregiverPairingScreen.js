@@ -24,6 +24,7 @@ import {
   Platform,
 } from 'react-native';
 import { usePairing } from '../../contexts/PairingContext';
+import { useAuth } from '../../contexts/AuthContext';
 import RelationshipCard from '../../components/pairing/RelationshipCard';
 import { getErrorMessage } from '../../constants/errorMessages';
 
@@ -69,12 +70,15 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
     refreshRelationships,
   } = usePairing();
 
+  const { user, profile } = useAuth();
+
   // Local state
   const [code, setCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [validationError, setValidationError] = useState(null);
+  const [showDebug, setShowDebug] = useState(true); // Show debug by default
 
   /**
    * Handle code input change
@@ -104,6 +108,8 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
    * Requirements: 9.3 - Display success confirmation
    */
   const handleRedeemCode = async () => {
+    console.log('[CaregiverPairingScreen] handleRedeemCode called', { code });
+
     // Validate code format
     if (!validateCodeFormat(code)) {
       setValidationError(
@@ -117,6 +123,7 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
     setValidationError(null);
 
     try {
+      console.log('[CaregiverPairingScreen] Calling redeemInviteCode');
       await redeemInviteCode(code);
 
       // Requirements: 9.3 - Display success confirmation
@@ -129,6 +136,7 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
       // Clear the input field on success
       setCode('');
     } catch (err) {
+      console.error('[CaregiverPairingScreen] Error redeeming code:', err);
       // Requirements: 9.1 - Display specific error messages
       const errorMessage = getErrorMessage(err.code, err.message);
       setLocalError(errorMessage);
@@ -219,15 +227,51 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
         accessibilityRole="scrollview"
         accessibilityLabel="Caregiver pairing screen"
       >
+        {/* Debug Panel - Tap title 3 times to toggle */}
+        {showDebug && (
+          <View style={styles.debugPanel}>
+            <Text style={styles.debugTitle}>Debug Info</Text>
+            <Text style={styles.debugText}>
+              User: {user ? user.uid : 'null'}
+            </Text>
+            <Text style={styles.debugText}>
+              Profile: {profile ? JSON.stringify(profile) : 'null'}
+            </Text>
+            <Text style={styles.debugText}>
+              Role: {profile?.role || 'null'}
+            </Text>
+            <Text style={styles.debugText}>
+              Is Caregiver: {profile?.role === 'caregiver' ? 'YES' : 'NO'}
+            </Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
-          <Text
-            style={styles.title}
-            accessibilityRole="header"
-            accessibilityLabel="Connect with Parents"
+          <TouchableOpacity
+            onPress={() => {
+              let tapCount = 0;
+              return () => {
+                tapCount++;
+                if (tapCount === 3) {
+                  setShowDebug(!showDebug);
+                  tapCount = 0;
+                }
+                setTimeout(() => {
+                  tapCount = 0;
+                }, 1000);
+              };
+            }}
+            activeOpacity={0.9}
           >
-            Connect with Parents
-          </Text>
+            <Text
+              style={styles.title}
+              accessibilityRole="header"
+              accessibilityLabel="Connect with Parents"
+            >
+              Connect with Parents
+            </Text>
+          </TouchableOpacity>
           <Text
             style={styles.subtitle}
             accessibilityRole="text"
@@ -575,6 +619,26 @@ const styles = StyleSheet.create({
   },
   relationshipsList: {
     marginTop: 8,
+  },
+  debugPanel: {
+    backgroundColor: '#FFF9C4',
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#FBC02D',
+  },
+  debugTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#F57F17',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#333333',
+    marginBottom: 4,
+    fontFamily: 'monospace',
   },
 });
 

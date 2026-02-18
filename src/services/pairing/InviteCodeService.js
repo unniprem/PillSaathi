@@ -48,20 +48,20 @@ class InviteCodeService {
 
   /**
    * Calculate expiration timestamp
-   * Computes the expiration date/time based on hours from now
+   * Computes the expiration date/time based on minutes from now
    *
-   * Requirements: 1.3 - Set TTL to 24 hours
+   * Requirements: 1.3 - Set TTL to 15 minutes
    *
-   * @param {number} hours - Hours until expiration (default: 24)
+   * @param {number} minutes - Minutes until expiration (default: 15)
    * @returns {Date} Expiration timestamp
    *
    * @example
-   * const expiresAt = inviteCodeService.calculateExpiration(24);
-   * // Returns: Date object 24 hours from now
+   * const expiresAt = inviteCodeService.calculateExpiration(15);
+   * // Returns: Date object 15 minutes from now
    */
-  calculateExpiration(hours = 24) {
+  calculateExpiration(minutes = 15) {
     const now = new Date();
-    const expirationTime = now.getTime() + hours * 60 * 60 * 1000;
+    const expirationTime = now.getTime() + minutes * 60 * 1000;
     return new Date(expirationTime);
   }
 
@@ -136,7 +136,7 @@ class InviteCodeService {
         // No active code exists, generate a new one
         const code = this.generateRandomCode(8);
         const createdAt = new Date();
-        const expiresAt = this.calculateExpiration(24);
+        const expiresAt = this.calculateExpiration(15);
 
         // Store in Firestore
         const docData = {
