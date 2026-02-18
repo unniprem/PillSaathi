@@ -120,9 +120,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
   - Verify dose generation creates correct doses
   - Ask the user if questions arise
 
-- [-] 6. Implement Firestore security rules
+- [x] 6. Implement Firestore security rules
 
-  - [-] 6.1 Update firestore.rules
+  - [x] 6.1 Update firestore.rules
 
     - Add isLinkedCaregiver(parentId) helper function
     - Add medicines collection rules (read, create, update, delete)
@@ -137,16 +137,16 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 44: Dose read access control**
     - **Validates: Requirements 13.1, 13.2, 13.3, 13.5**
 
-- [~] 7. Implement reusable UI components
+- [x] 7. Implement reusable UI components
 
-  - [ ] 7.1 Create src/components/TimePicker.js
+  - [x] 7.1 Create src/components/TimePicker.js
 
     - Implement time picker using React Native DateTimePicker
     - Add formatTime(date) helper to return "HH:MM"
     - Handle time selection and onChange callback
     - _Requirements: 3.3_
 
-  - [ ] 7.2 Create src/components/FrequencySelector.js
+  - [x] 7.2 Create src/components/FrequencySelector.js
 
     - Implement radio buttons for "daily" vs "specific_days"
     - Implement day checkboxes (Sun-Sat) for specific_days pattern
@@ -158,9 +158,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test FrequencySelector renders and handles pattern changes
     - Test day selection toggles correctly
 
-- [~] 8. Implement medicine form component
+- [x] 8. Implement medicine form component
 
-  - [ ] 8.1 Create src/components/MedicineForm.js
+  - [x] 8.1 Create src/components/MedicineForm.js
 
     - Add form fields: name, dosageAmount, dosageUnit, instructions
     - Add times list with add/remove functionality
@@ -169,7 +169,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Implement form state management
     - _Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 4.1, 4.2_
 
-  - [ ] 8.2 Add form validation
+  - [x] 8.2 Add form validation
 
     - Validate required fields on blur and submit
     - Validate dosageAmount is positive number
@@ -178,7 +178,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Disable submit button when validation fails
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-  - [ ] 8.3 Implement form submission
+  - [x] 8.3 Implement form submission
 
     - Call medicineService.createMedicine() with form data
     - Call scheduleService.createSchedule() with schedule data
@@ -202,9 +202,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 52: Duplicate times are prevented**
     - **Validates: Requirements 15.1, 15.2, 15.3, 15.4**
 
-- [~] 9. Implement caregiver medicine list
+- [x] 9. Implement caregiver medicine list
 
-  - [ ] 9.1 Create src/screens/CaregiverMedicineList.js
+  - [x] 9.1 Create src/screens/CaregiverMedicineList.js
 
     - Load medicines using medicineService.getMedicinesForParent()
     - Display medicine cards with name, dosage, status
@@ -226,9 +226,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - Test delete removes future doses only
     - _Requirements: 6.1, 6.2, 6.4, 6.5_
 
-- [~] 10. Implement parent medicine view
+- [x] 10. Implement parent medicine view
 
-  - [ ] 10.1 Create src/screens/ParentMedicineView.js
+  - [x] 10.1 Create src/screens/ParentMedicineView.js
 
     - Load active medicines using medicineService.getActiveMedicinesForParent()
     - Display medicine cards with name, dosage, instructions
@@ -242,16 +242,16 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 35: Parent medicine view includes schedule times**
     - **Validates: Requirements 11.1, 11.3**
 
-- [~] 11. Implement dose service and parent dose view
+- [x] 11. Implement dose service and parent dose view
 
-  - [ ] 11.1 Create src/services/doseService.js
+  - [x] 11.1 Create src/services/doseService.js
 
     - Implement getUpcomingDoses(parentId, hours) function
     - Query doses with scheduledTime in next N hours
     - Return doses sorted by scheduledTime
     - _Requirements: 12.1, 12.3_
 
-  - [ ] 11.2 Create src/screens/UpcomingDoses.js
+  - [x] 11.2 Create src/screens/UpcomingDoses.js
 
     - Load doses using doseService.getUpcomingDoses(parentId, 24)
     - Display dose cards with medicine name, dosage, scheduled time
@@ -267,9 +267,9 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 39: Doses grouped by time when shared**
     - **Validates: Requirements 12.1, 12.2, 12.3, 12.5**
 
-- [~] 12. Implement medicine editing
+- [x] 12. Implement medicine editing
 
-  - [ ] 12.1 Update MedicineForm.js to support edit mode
+  - [x] 12.1 Update MedicineForm.js to support edit mode
 
     - Accept medicineId prop for edit mode
     - Load existing medicine and schedule data when medicineId provided
@@ -283,7 +283,7 @@ The implementation assumes Firebase (Firestore, Auth, Cloud Functions) is alread
     - **Property 17: Updates validate required fields**
     - **Validates: Requirements 5.1, 5.4, 5.5**
 
-- [~] 13. Implement authorization checks
+- [-] 13. Implement authorization checks
 
   - [ ] 13.1 Add authorization helpers to services
 
