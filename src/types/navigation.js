@@ -93,6 +93,8 @@ export const CaregiverScreens = {
   MEDICINE_DETAILS: 'MedicineDetails',
   ALARM: 'Alarm',
   PAIRING: 'CaregiverPairing',
+  GENERATE_CODE: 'GenerateCode',
+  UPCOMING: 'CaregiverUpcoming',
   NOTIFICATIONS: 'Notifications',
   SETTINGS: 'Settings',
 };
@@ -161,6 +163,8 @@ export const CaregiverScreens = {
  * @property {string} Alarm.medicineId - ID of medicine for alarm
  * @property {string} Alarm.scheduledTime - Scheduled time for alarm
  * @property {undefined} CaregiverPairing - Caregiver pairing screen (no params)
+ * @property {undefined} GenerateCode - Generate code screen (no params)
+ * @property {undefined} CaregiverUpcoming - Caregiver upcoming medicines screen (no params)
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
  */

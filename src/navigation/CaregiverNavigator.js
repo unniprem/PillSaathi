@@ -22,6 +22,8 @@ import { CaregiverScreens } from '../types/navigation';
 // Placeholder screens (will be created in subsequent tasks)
 import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
+import GenerateCodeScreen from '../screens/caregiver/GenerateCodeScreen';
+import CaregiverUpcomingScreen from '../screens/caregiver/CaregiverUpcomingScreen';
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
 import ParentDetailScreen from '../screens/caregiver/ParentDetailScreen';
@@ -163,13 +165,6 @@ function HomeStack() {
         }}
       />
       <Stack.Screen
-        name={CaregiverScreens.PAIRING}
-        component={CaregiverPairingScreen}
-        options={{
-          title: 'Pairing & Relationships',
-        }}
-      />
-      <Stack.Screen
         name={CaregiverScreens.MEDICINE_LIST}
         component={CaregiverMedicineList}
         options={{
@@ -183,6 +178,85 @@ function HomeStack() {
           title: route.params?.medicineId ? 'Edit Medicine' : 'Add Medicine',
           presentation: 'modal',
         })}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * Pairing Stack Navigator
+ *
+ * Stack navigator for pairing-related screens.
+ * Includes pairing screen and generate code screen.
+ *
+ * @returns {React.ReactElement} Pairing stack navigator
+ */
+function PairingStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true,
+        headerBackTitleVisible: false,
+        headerTintColor: '#007AFF',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
+        animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
+      }}
+    >
+      <Stack.Screen
+        name={CaregiverScreens.PAIRING}
+        component={CaregiverPairingScreen}
+        options={{
+          title: 'Pairing & Relationships',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.GENERATE_CODE}
+        component={GenerateCodeScreen}
+        options={{
+          title: 'Generate Code',
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * Upcoming Stack Navigator
+ *
+ * Stack navigator for upcoming medicines tab.
+ * Shows all upcoming medicines across all paired parents.
+ *
+ * @returns {React.ReactElement} Upcoming stack navigator
+ */
+function UpcomingStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true,
+        headerBackTitleVisible: false,
+        headerTintColor: '#007AFF',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
+        animation: 'slide_from_right',
+        headerRight: () => <LogoutHeader />,
+      }}
+    >
+      <Stack.Screen
+        name={CaregiverScreens.UPCOMING}
+        component={CaregiverUpcomingScreen}
+        options={{
+          title: 'Upcoming Medicines',
+        }}
       />
     </Stack.Navigator>
   );
@@ -252,7 +326,9 @@ function ProfileStack() {
  * Bottom tab navigator for caregiver-specific screens.
  * Tabs:
  * 1. Home - Dashboard, parent list, medicine details, alarms
- * 2. Profile - User profile, notifications, settings
+ * 2. Upcoming - All upcoming medicines across all parents
+ * 3. Pairing - Pairing and relationship management
+ * 4. Profile - User profile, notifications, settings
  *
  * @returns {React.ReactElement} Caregiver navigator component
  */
@@ -285,6 +361,28 @@ function CaregiverNavigator() {
           tabBarIcon: ({ color, size }) => {
             const { Text } = require('react-native');
             return <Text style={{ fontSize: size, color }}>🏠</Text>;
+          },
+        }}
+      />
+      <Tab.Screen
+        name="UpcomingTab"
+        component={UpcomingStack}
+        options={{
+          tabBarLabel: 'Upcoming',
+          tabBarIcon: ({ color, size }) => {
+            const { Text } = require('react-native');
+            return <Text style={{ fontSize: size, color }}>📅</Text>;
+          },
+        }}
+      />
+      <Tab.Screen
+        name="PairingTab"
+        component={PairingStack}
+        options={{
+          tabBarLabel: 'Pairing',
+          tabBarIcon: ({ color, size }) => {
+            const { Text } = require('react-native');
+            return <Text style={{ fontSize: size, color }}>🔗</Text>;
           },
         }}
       />

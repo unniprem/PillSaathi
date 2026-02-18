@@ -214,16 +214,16 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 12: Upcoming Medicines Display**
     - **Validates: Requirements 5.1, 5.2, 7.1**
 
-- [ ] 12. Update medicine management to work within parent context
+- [x] 12. Update medicine management to work within parent context
 
-  - [ ] 12.1 Update MedicineFormScreen to accept parentId
+  - [x] 12.1 Update MedicineFormScreen to accept parentId
 
     - Ensure parentId is passed when navigating to form
     - Associate new medicines with the parentId
     - Preserve parentId when editing medicines
     - _Requirements: 4.2, 4.3_
 
-  - [ ] 12.2 Update navigation to MedicineFormScreen
+  - [x] 12.2 Update navigation to MedicineFormScreen
 
     - Pass parentId from ParentDetailScreen
     - Update all navigation calls to include parentId
@@ -241,23 +241,23 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
   - Test adding/editing medicines within parent context
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Restructure CaregiverNavigator to add Pairing and Upcoming tabs
+- [x] 14. Restructure CaregiverNavigator to add Pairing and Upcoming tabs
 
-  - [ ] 14.1 Create PairingStack in CaregiverNavigator
+  - [x] 14.1 Create PairingStack in CaregiverNavigator
 
     - Move CaregiverPairingScreen to new PairingStack
     - Add GenerateCodeScreen to PairingStack
     - Configure tab with appropriate icon and label
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ] 14.2 Create UpcomingStack in CaregiverNavigator
+  - [x] 14.2 Create UpcomingStack in CaregiverNavigator
 
     - Create new stack for upcoming medicines tab
     - Add CaregiverUpcomingScreen to stack
     - Configure tab with appropriate icon and label
     - _Requirements: 15.1_
 
-  - [ ] 14.3 Update CaregiverNavigator tab configuration
+  - [x] 14.3 Update CaregiverNavigator tab configuration
 
     - Add PairingTab to bottom navigation
     - Add UpcomingTab to bottom navigation
@@ -269,9 +269,9 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - Test tab navigation works correctly
     - _Requirements: 3.1, 3.2, 15.1_
 
-- [ ] 15. Implement CaregiverUpcomingScreen
+- [x] 15. Implement CaregiverUpcomingScreen
 
-  - [ ] 15.1 Create useAllUpcomingDoses hook
+  - [x] 15.1 Create useAllUpcomingDoses hook
 
     - Fetch all paired parents for caregiver
     - For each parent, fetch upcoming doses
@@ -279,14 +279,14 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - Include parent name (use alias if available)
     - _Requirements: 15.2_
 
-  - [ ] 15.2 Create UpcomingDoseCard component
+  - [x] 15.2 Create UpcomingDoseCard component
 
     - Display medicine name, scheduled time, dosage, and parent name
     - Handle tap to navigate to medicine details
     - Highlight overdue doses
     - _Requirements: 15.3_
 
-  - [ ] 15.3 Implement CaregiverUpcomingScreen
+  - [x] 15.3 Implement CaregiverUpcomingScreen
 
     - Use FlatList to display UpcomingDoseCard components
     - Show empty state if no upcoming doses
@@ -299,9 +299,9 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 25: Parent Name Display with Alias**
     - **Validates: Requirements 15.2, 15.3, 15.4, 16.2**
 
-- [ ] 16. Implement GenerateCodeScreen
+- [-] 16. Implement GenerateCodeScreen
 
-  - [ ] 16.1 Create GenerateCodeScreen component
+  - [-] 16.1 Create GenerateCodeScreen component
 
     - Add button to generate new invite code
     - Display generated code prominently
@@ -333,7 +333,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
   - Test navigation state is preserved when switching tabs
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 18. Redesign ParentHomeScreen to show medicines and upcoming doses
+- [~] 18. Redesign ParentHomeScreen to show medicines and upcoming doses
 
   - [ ] 18.1 Create useMyMedicines hook
 
@@ -363,7 +363,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 19: Overdue Medicine Highlighting**
     - **Validates: Requirements 10.1, 11.1, 11.2, 11.3, 11.4**
 
-- [ ] 19. Restructure ParentNavigator to add Upcoming tab
+- [~] 19. Restructure ParentNavigator to add Upcoming tab
 
   - [ ] 19.1 Create UpcomingStack in ParentNavigator
 
@@ -383,7 +383,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - Test tab navigation works correctly
     - _Requirements: 17.1_
 
-- [ ] 20. Implement ParentUpcomingScreen
+- [~] 20. Implement ParentUpcomingScreen
 
   - [ ] 20.1 Create useTodayDoses hook
 
@@ -413,7 +413,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 19: Overdue Medicine Highlighting**
     - **Validates: Requirements 17.2, 17.3, 17.4, 17.5**
 
-- [ ] 21. Implement navigation state persistence
+- [~] 21. Implement navigation state persistence
 
   - [ ] 21.1 Configure React Navigation state persistence
 
@@ -426,7 +426,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 20: Navigation Stack Preservation**
     - **Validates: Requirements 13.1, 13.2**
 
-- [ ] 22. Ensure consistent navigation patterns
+- [~] 22. Ensure consistent navigation patterns
 
   - [ ] 22.1 Audit all screen configurations for consistency
 
@@ -448,7 +448,7 @@ This implementation plan restructures the PillSathi app's navigation and UI for 
     - **Property 23: Header Styling Consistency**
     - **Validates: Requirements 14.1, 14.2, 14.4**
 
-- [ ] 23. Update navigation type definitions
+- [~] 23. Update navigation type definitions
 
   - Update `src/types/navigation.js` with new screens and parameters
   - Add ProfileSetupScreen, EditProfileScreen, ParentDetailScreen, GenerateCodeScreen

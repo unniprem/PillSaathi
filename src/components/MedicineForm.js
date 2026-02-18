@@ -291,10 +291,9 @@ const MedicineForm = ({
     setIsSubmitting(true);
 
     try {
-      const medicineData = {
+      // Base medicine data (common for create and update)
+      const baseMedicineData = {
         name: name.trim(),
-        parentId,
-        caregiverId,
         dosageAmount: parseFloat(dosageAmount),
         dosageUnit: dosageUnit.trim(),
         instructions: instructions.trim(),
@@ -310,9 +309,10 @@ const MedicineForm = ({
 
       if (medicineId) {
         // Edit mode: Update existing medicine and schedule
+        // Requirement 4.3: Preserve parentId when editing medicines
         await medicineService.updateMedicine(
           medicineId,
-          medicineData,
+          baseMedicineData,
           caregiverId,
         );
 
@@ -337,6 +337,13 @@ const MedicineForm = ({
         resultMedicineId = medicineId;
       } else {
         // Create mode: Create new medicine and schedule
+        // Requirement 4.2: Associate new medicines with the parentId
+        const medicineData = {
+          ...baseMedicineData,
+          parentId,
+          caregiverId,
+        };
+
         // Requirement 16.1: Write to Firestore before showing success
         resultMedicineId = await medicineService.createMedicine(medicineData);
 
