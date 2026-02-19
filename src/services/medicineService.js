@@ -14,6 +14,8 @@ import { retryOperation } from '../utils/retryHelper';
 import { validateMedicine } from '../models/Medicine';
 import offlineQueue from '../utils/offlineQueue';
 import { isNetworkError } from '../utils/errorHandler';
+import AlarmSchedulerService from './AlarmSchedulerService';
+import scheduleService from './scheduleService';
 
 /**
  * MedicineService class
@@ -141,7 +143,36 @@ class MedicineService {
 
       // Try to execute immediately
       try {
-        return await createOperation();
+        const medicineId = await createOperation();
+
+        // Schedule alarms if medicine is active and has a schedule (Requirement 1.1)
+        try {
+          const schedule = await scheduleService.getScheduleForMedicine(
+            medicineId,
+          );
+          if (schedule && schedule.times && schedule.times.length > 0) {
+            await AlarmSchedulerService.scheduleMedicineAlarms(
+              medicineId,
+              {
+                name: data.name.trim(),
+                dosageAmount: data.dosageAmount,
+                dosageUnit: data.dosageUnit.trim(),
+                instructions: data.instructions?.trim() || '',
+              },
+              schedule,
+            );
+            console.log('Alarms scheduled for new medicine:', medicineId);
+          }
+        } catch (alarmError) {
+          // Log alarm scheduling error but don't fail medicine creation
+          console.error(
+            'Failed to schedule alarms for medicine:',
+            medicineId,
+            alarmError,
+          );
+        }
+
+        return medicineId;
       } catch (error) {
         // If network error and offline queue enabled, queue the operation
         if (shouldUseQueue && isNetworkError(error)) {
@@ -256,6 +287,44 @@ class MedicineService {
           .collection(this.medicinesCollection)
           .doc(medicineId)
           .update(updateData);
+
+        // Reschedule alarms if medicine data changed and medicine is active (Requirement 1.2)
+        if (existingData.status === 'active') {
+          try {
+            const schedule = await scheduleService.getScheduleForMedicine(
+              medicineId,
+            );
+            if (schedule && schedule.times && schedule.times.length > 0) {
+              // Get updated medicine data for alarm scheduling
+              const updatedMedicine = {
+                name: data.name?.trim() || existingData.name,
+                dosageAmount: data.dosageAmount || existingData.dosageAmount,
+                dosageUnit: data.dosageUnit?.trim() || existingData.dosageUnit,
+                instructions:
+                  data.instructions !== undefined
+                    ? data.instructions.trim()
+                    : existingData.instructions || '',
+              };
+
+              await AlarmSchedulerService.rescheduleMedicineAlarms(
+                medicineId,
+                updatedMedicine,
+                schedule,
+              );
+              console.log(
+                'Alarms rescheduled for updated medicine:',
+                medicineId,
+              );
+            }
+          } catch (alarmError) {
+            // Log alarm rescheduling error but don't fail medicine update
+            console.error(
+              'Failed to reschedule alarms for medicine:',
+              medicineId,
+              alarmError,
+            );
+          }
+        }
       });
     } catch (error) {
       if (
@@ -322,6 +391,19 @@ class MedicineService {
           );
           error.code = 'unauthorized';
           throw error;
+        }
+
+        // Cancel alarms before deleting medicine (Requirement 1.3)
+        try {
+          await AlarmSchedulerService.cancelMedicineAlarms(medicineId);
+          console.log('Alarms cancelled for deleted medicine:', medicineId);
+        } catch (alarmError) {
+          // Log alarm cancellation error but don't fail medicine deletion
+          console.error(
+            'Failed to cancel alarms for medicine:',
+            medicineId,
+            alarmError,
+          );
         }
 
         // Delete medicine document
@@ -409,6 +491,46 @@ class MedicineService {
             status: newStatus,
             updatedAt: new Date(),
           });
+
+        // Handle alarm scheduling based on status change
+        try {
+          if (newStatus === 'inactive') {
+            // Cancel alarms when deactivating (Requirement 1.4)
+            await AlarmSchedulerService.cancelMedicineAlarms(medicineId);
+            console.log(
+              'Alarms cancelled for deactivated medicine:',
+              medicineId,
+            );
+          } else if (newStatus === 'active') {
+            // Recreate alarms when reactivating (Requirement 1.5)
+            const schedule = await scheduleService.getScheduleForMedicine(
+              medicineId,
+            );
+            if (schedule && schedule.times && schedule.times.length > 0) {
+              await AlarmSchedulerService.scheduleMedicineAlarms(
+                medicineId,
+                {
+                  name: existingData.name,
+                  dosageAmount: existingData.dosageAmount,
+                  dosageUnit: existingData.dosageUnit,
+                  instructions: existingData.instructions || '',
+                },
+                schedule,
+              );
+              console.log(
+                'Alarms scheduled for reactivated medicine:',
+                medicineId,
+              );
+            }
+          }
+        } catch (alarmError) {
+          // Log alarm error but don't fail status toggle
+          console.error(
+            'Failed to handle alarms for status change:',
+            medicineId,
+            alarmError,
+          );
+        }
 
         return newStatus;
       });
