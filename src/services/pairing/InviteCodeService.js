@@ -191,8 +191,18 @@ class InviteCodeService {
   async getActiveInviteCode(parentUid) {
     try {
       return await retryOperation(async () => {
+        console.log(
+          '[InviteCodeService] getActiveInviteCode called with parentUid:',
+          parentUid,
+        );
+
         // Query for active unexpired codes for this parent
         const now = new Date();
+        console.log(
+          '[InviteCodeService] Querying for codes with expiresAt >',
+          now,
+        );
+
         const querySnapshot = await this.firestore
           .collection(this.inviteCodesCollection)
           .where('parentUid', '==', parentUid)
@@ -200,14 +210,26 @@ class InviteCodeService {
           .limit(1)
           .get();
 
+        console.log(
+          '[InviteCodeService] Query completed. Empty:',
+          querySnapshot.empty,
+          'Size:',
+          querySnapshot.size,
+        );
+
         // If no active code exists, return null
         if (querySnapshot.empty) {
+          console.log(
+            '[InviteCodeService] No active code found, returning null',
+          );
           return null;
         }
 
         // Return the active code
         const codeDoc = querySnapshot.docs[0];
         const data = codeDoc.data();
+        console.log('[InviteCodeService] Found active code:', data.code);
+
         return {
           code: data.code,
           expiresAt: data.expiresAt.toDate(),
@@ -220,7 +242,14 @@ class InviteCodeService {
         message: error.message,
         code: error.code,
         stack: error.stack,
+        fullError: error,
       });
+
+      // Log the original error if it exists
+      if (error.originalError) {
+        console.error('Original error:', error.originalError);
+      }
+
       const mappedError = new Error('Failed to get active invite code');
       mappedError.code = 'invite-code-query-failed';
       mappedError.originalError = error;

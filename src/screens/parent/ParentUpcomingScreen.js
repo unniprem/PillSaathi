@@ -9,18 +9,22 @@
  * @format
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useTodayDoses from '../../hooks/useTodayDoses';
 import DoseCard from '../../components/DoseCard';
 import { ParentScreens } from '../../types/navigation';
+import { useAuth } from '../../contexts/AuthContext';
+import doseGenerationService from '../../services/doseGenerationService';
 
 /**
  * Parent Upcoming Screen Component
@@ -31,7 +35,9 @@ import { ParentScreens } from '../../types/navigation';
  */
 function ParentUpcomingScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const { doses, loading, error, markAsTaken } = useTodayDoses();
+  const [cleaningUp, setCleaningUp] = useState(false);
 
   /**
    * Handle dose card press - navigate to medicine details
@@ -53,6 +59,46 @@ function ParentUpcomingScreen() {
     } catch (err) {
       console.error('Error marking dose as taken:', err);
     }
+  };
+
+  /**
+   * Handle cleanup old doses
+   */
+  const handleCleanupOldDoses = () => {
+    Alert.alert(
+      'Clean Up Old Doses',
+      'This will delete dose records older than 30 days. This action cannot be undone. Continue?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clean Up',
+          style: 'destructive',
+          onPress: async () => {
+            setCleaningUp(true);
+            try {
+              const deletedCount = await doseGenerationService.cleanupOldDoses(
+                user.uid,
+              );
+              Alert.alert(
+                'Cleanup Complete',
+                `Successfully deleted ${deletedCount} old dose records.`,
+              );
+            } catch (err) {
+              console.error('Error cleaning up doses:', err);
+              Alert.alert(
+                'Cleanup Failed',
+                'Failed to clean up old doses. Please try again.',
+              );
+            } finally {
+              setCleaningUp(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   /**
@@ -115,6 +161,22 @@ function ParentUpcomingScreen() {
           doses.length === 0 ? styles.emptyListContainer : styles.listContainer
         }
       />
+      <View style={styles.cleanupButtonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.cleanupButton,
+            cleaningUp && styles.cleanupButtonDisabled,
+          ]}
+          onPress={handleCleanupOldDoses}
+          disabled={cleaningUp}
+        >
+          {cleaningUp ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.cleanupButtonText}>🗑️ Clean Up Old Doses</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -165,6 +227,28 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  cleanupButtonContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  cleanupButton: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cleanupButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  cleanupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

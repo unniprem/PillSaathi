@@ -20,9 +20,6 @@ import {
   Alert,
 } from 'react-native';
 import { usePairing } from '../../contexts/PairingContext';
-import { useAuth } from '../../contexts/AuthContext';
-import usePairedCaregivers from '../../hooks/usePairedCaregivers';
-import CaregiverCard from '../../components/CaregiverCard';
 
 /**
  * Generate Code Screen Component
@@ -39,13 +36,6 @@ import CaregiverCard from '../../components/CaregiverCard';
  */
 function GenerateCodeScreen() {
   const { inviteCode, loading, generateInviteCode } = usePairing();
-  const { user } = useAuth();
-  const {
-    caregivers,
-    loading: caregiversLoading,
-    error: caregiversError,
-    refetch: refetchCaregivers,
-  } = usePairedCaregivers(user?.uid);
   const [isGenerating, setIsGenerating] = useState(false);
 
   /**
@@ -123,55 +113,6 @@ function GenerateCodeScreen() {
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       )}
-
-      {/* Paired Caregivers Section - Requirement 9.1, 9.2, 9.3 */}
-      <View style={styles.caregiversSection}>
-        <Text style={styles.sectionTitle}>Paired Caregivers</Text>
-
-        {/* Caregivers Loading State */}
-        {caregiversLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#007AFF" />
-            <Text style={styles.loadingText}>Loading caregivers...</Text>
-          </View>
-        )}
-
-        {/* Caregivers Error State */}
-        {caregiversError && !caregiversLoading && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              Failed to load caregivers. Please try again.
-            </Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={refetchCaregivers}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Caregivers List - Requirement 9.1, 9.2 */}
-        {!caregiversLoading && !caregiversError && caregivers.length > 0 && (
-          <View style={styles.caregiversList}>
-            {caregivers.map(caregiver => (
-              <CaregiverCard key={caregiver.id} caregiver={caregiver} />
-            ))}
-          </View>
-        )}
-
-        {/* Empty State - No Caregivers - Requirement 9.3 */}
-        {!caregiversLoading && !caregiversError && caregivers.length === 0 && (
-          <View style={styles.emptyCaregiversState}>
-            <Text style={styles.emptyCaregiversIcon}>👥</Text>
-            <Text style={styles.emptyCaregiversTitle}>No Caregivers Yet</Text>
-            <Text style={styles.emptyCaregiversMessage}>
-              Share your invite code with caregivers to connect with them.
-              They'll appear here once they redeem the code.
-            </Text>
-          </View>
-        )}
-      </View>
 
       {/* Generate Button - Fixed at bottom */}
       <View style={styles.buttonContainer}>
@@ -305,71 +246,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: '#666666',
-  },
-  caregiversSection: {
-    margin: 16,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 16,
-  },
-  caregiversList: {
-    marginTop: 8,
-  },
-  emptyCaregiversState: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyCaregiversIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyCaregiversTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  emptyCaregiversMessage: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  errorContainer: {
-    padding: 16,
-    backgroundColor: '#FFF5F5',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#E53E3E',
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#E53E3E',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  retryButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#E53E3E',
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   buttonContainer: {
     position: 'absolute',

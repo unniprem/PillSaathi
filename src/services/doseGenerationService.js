@@ -226,6 +226,59 @@ class DoseGenerationService {
       throw error;
     }
   }
+
+  /**
+   * Clean up old doses (older than specified days) for a specific parent
+   * This should be called by parents to maintain their dose history
+   *
+   * @param {string} parentId - Parent user ID
+   * @param {number} daysToKeep - Number of days of history to keep (default: 30)
+   * @returns {Promise<number>} Number of doses deleted
+   */
+  async cleanupOldDoses(parentId, daysToKeep = 30) {
+    try {
+      console.log(
+        `Cleaning up doses older than ${daysToKeep} days for parent ${parentId}...`,
+      );
+
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+      const querySnapshot = await this.firestore
+        .collection('doses')
+        .where('parentId', '==', parentId)
+        .where('scheduledTime', '<', cutoffDate)
+        .get();
+
+      if (querySnapshot.empty) {
+        console.log('No old doses to clean up');
+        return 0;
+      }
+
+      // Delete in batches
+      const BATCH_SIZE = 500;
+      let totalDeleted = 0;
+
+      for (let i = 0; i < querySnapshot.docs.length; i += BATCH_SIZE) {
+        const batchDocs = querySnapshot.docs.slice(i, i + BATCH_SIZE);
+        const batch = this.firestore.batch();
+
+        batchDocs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        totalDeleted += batchDocs.length;
+        console.log(`Deleted ${totalDeleted} old doses so far...`);
+      }
+
+      console.log(`Successfully deleted ${totalDeleted} old doses`);
+      return totalDeleted;
+    } catch (error) {
+      console.error('Error cleaning up old doses:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

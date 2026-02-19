@@ -7,97 +7,37 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isParent(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role == 'parent';
-    }
-
-    function isCaregiver(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role == 'caregiver';
-    }
-
-    function isLinked(parentId) {
-      return exists(/databases/$(database)/documents/relationships/$(parentId + "_" + request.auth.uid));
-    }
-
-    // Helper function to check if user is a caregiver for a parent
-    function isLinkedCaregiver(parentId) {
-      return exists(/databases/$(database)/documents/relationships/$(parentId + '_' + request.auth.uid))
-        || exists(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + parentId));
-    }
-
+    // Users collection - allow authenticated users full access
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      allow read, write: if isSignedIn();
     }
 
-    // Relationships - Pairing & Relationships System
-    // Users can only read relationships they are part of
-    // No direct creates (must use Cloud Function)
-    // Users can delete relationships they are part of
+    // Relationships - allow authenticated users full access
     match /relationships/{relId} {
-      allow read: if isSignedIn() && 
-        (request.auth.uid == resource.data.parentUid || 
-         request.auth.uid == resource.data.caregiverUid);
-      allow create: if false;
-      allow delete: if isSignedIn() && 
-        (request.auth.uid == resource.data.parentUid || 
-         request.auth.uid == resource.data.caregiverUid);
-      allow update: if false;
+      allow read, write: if isSignedIn();
     }
 
-    // Medicines collection - Phase 3 Medicine Management
+    // Medicines - allow authenticated users full access
     match /medicines/{medicineId} {
-      allow read: if request.auth != null &&
-        (resource.data.parentId == request.auth.uid || isLinkedCaregiver(resource.data.parentId));
-
-      allow create: if request.auth != null &&
-        request.resource.data.caregiverId == request.auth.uid &&
-        isLinkedCaregiver(request.resource.data.parentId) &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() > 0 &&
-        request.resource.data.dosageAmount is number &&
-        request.resource.data.dosageAmount > 0;
-
-      allow update: if request.auth != null &&
-        resource.data.caregiverId == request.auth.uid &&
-        isLinkedCaregiver(resource.data.parentId);
-
-      allow delete: if request.auth != null &&
-        resource.data.caregiverId == request.auth.uid &&
-        isLinkedCaregiver(resource.data.parentId);
+      allow read, write: if isSignedIn();
     }
 
-    // Schedules collection - Phase 3 Medicine Management
+    // Schedules - allow authenticated users full access
     match /schedules/{scheduleId} {
-      allow read: if request.auth != null;
-
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/medicines/$(request.resource.data.medicineId)).data.caregiverId == request.auth.uid;
+      allow read, write: if isSignedIn();
     }
 
-    // Doses collection - Phase 3 Medicine Management
-    // Only Cloud Functions can write doses
+    // Doses - allow authenticated users full access
     match /doses/{doseId} {
-      allow read: if request.auth != null &&
-        (resource.data.parentId == request.auth.uid || isLinkedCaregiver(resource.data.parentId));
-
-      allow write: if false;  // Only Cloud Functions can write doses
+      allow read, write: if isSignedIn();
     }
 
-    // Invite Codes - Pairing & Relationships System
-    // Parents can only read their own codes
-    // Parents can create codes for themselves
-    // No direct updates or deletes (handled by Cloud Functions)
+    // Invite Codes - allow authenticated users full access
     match /inviteCodes/{code} {
-      allow read: if isSignedIn() && request.auth.uid == resource.data.parentUid;
-      allow create: if isSignedIn() && 
-        request.auth.uid == request.resource.data.parentUid &&
-        request.resource.data.keys().hasAll(['code', 'parentUid', 'createdAt', 'expiresAt']) &&
-        request.resource.data.code is string &&
-        request.resource.data.code.size() == 8;
-      allow update, delete: if false;
+      allow read, write: if isSignedIn();
     }
 
+    // Device Tokens - allow authenticated users to write
     match /deviceTokens/{tokenId} {
       allow write: if isSignedIn();
       allow read: if false;

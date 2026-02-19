@@ -10,12 +10,8 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import InviteCodeService from '../services/pairing/InviteCodeService';
 import RelationshipService from '../services/pairing/RelationshipService';
-import CloudFunctionsService from '../services/pairing/CloudFunctionsService';
-import DevPairingHelper from '../services/pairing/DevPairingHelper';
+import PairingService from '../services/pairing/PairingService';
 import { useAuth } from './AuthContext';
-
-// Use dev helper for local testing (set to false when Cloud Functions are deployed)
-const USE_DEV_HELPER = true; // TODO: Change to false after deploying Cloud Functions
 
 /**
  * Pairing state shape:
@@ -153,12 +149,7 @@ export const PairingProvider = ({ children }) => {
     setError(null);
 
     try {
-      // Use dev helper if Cloud Functions not available
-      if (USE_DEV_HELPER) {
-        await DevPairingHelper.redeemInviteCodeDev(code, user.uid);
-      } else {
-        await CloudFunctionsService.redeemInviteCode(code, user.uid);
-      }
+      await PairingService.redeemInviteCode(code, user.uid);
       // Refresh relationships to include the new one
       await refreshRelationships();
     } catch (err) {
@@ -205,14 +196,6 @@ export const PairingProvider = ({ children }) => {
       throw permError;
     }
 
-    if (!USE_DEV_HELPER && !CloudFunctionsService) {
-      const serviceError = new Error(
-        'Cloud Functions service not available. Please ensure @react-native-firebase/functions is installed.',
-      );
-      serviceError.code = 'service-unavailable';
-      throw serviceError;
-    }
-
     // Store previous state for rollback
     const previousRelationships = [...relationships];
 
@@ -225,12 +208,7 @@ export const PairingProvider = ({ children }) => {
     setError(null);
 
     try {
-      // Use dev helper if Cloud Functions not available
-      if (USE_DEV_HELPER) {
-        await DevPairingHelper.removeRelationshipDev(relationshipId, user.uid);
-      } else {
-        await CloudFunctionsService.removeRelationship(relationshipId);
-      }
+      await PairingService.removeRelationship(relationshipId);
 
       // Success - relationship removed
       // The real-time listener will update the state, but we've already updated optimistically
@@ -333,24 +311,25 @@ export const PairingProvider = ({ children }) => {
   /**
    * Load active invite code for parents on mount
    * Fetches the active invite code if user is a parent.
+   * DISABLED: This was causing permission errors. Parents can generate codes on demand.
    */
-  useEffect(() => {
-    const loadActiveInviteCode = async () => {
-      if (user && profile?.role === 'parent') {
-        try {
-          const activeCode = await InviteCodeService.getActiveInviteCode(
-            user.uid,
-          );
-          setInviteCode(activeCode);
-        } catch (err) {
-          console.error('Failed to load active invite code:', err);
-          // Don't set error state for this - it's not critical
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const loadActiveInviteCode = async () => {
+  //     if (user && profile?.role === 'parent') {
+  //       try {
+  //         const activeCode = await InviteCodeService.getActiveInviteCode(
+  //           user.uid,
+  //         );
+  //         setInviteCode(activeCode);
+  //       } catch (err) {
+  //         console.error('Failed to load active invite code:', err);
+  //         // Don't set error state for this - it's not critical
+  //       }
+  //     }
+  //   };
 
-    loadActiveInviteCode();
-  }, [user, profile]);
+  //   loadActiveInviteCode();
+  // }, [user, profile]);
 
   // Context value with methods
   const value = {

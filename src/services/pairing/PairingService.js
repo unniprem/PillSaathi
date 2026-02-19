@@ -1,44 +1,27 @@
 /**
- * CloudFunctionsService - Cloud Functions Integration Service
+ * PairingService - Direct Firestore Pairing Operations
  *
- * Provides client-side methods to call Firebase Cloud Functions for pairing operations.
- * Handles function invocation, error mapping, and response processing.
+ * Provides client-side methods for pairing operations directly with Firestore.
+ * Handles invite code redemption and relationship management.
  *
  * Requirements: 3.1, 3.5, 6.2, 9.2
- *
- * NOTE: This service requires @react-native-firebase/functions package.
- * Install it with: npm install @react-native-firebase/functions
  */
 
-import { getApp } from '@react-native-firebase/app';
+import firestore from '@react-native-firebase/firestore';
 import { retryOperation } from '../../utils/retryHelper';
 
 /**
- * CloudFunctionsService class
- * Provides methods for calling Cloud Functions
+ * PairingService class
+ * Provides methods for pairing operations
  */
-class CloudFunctionsService {
-  constructor(functionsInstance = null) {
-    if (functionsInstance) {
-      this.functions = functionsInstance;
-      return;
-    }
-
-    // Try to load functions module
-    try {
-      const functionsModule = require('@react-native-firebase/functions');
-      const getFunctions = functionsModule.getFunctions;
-      this.functions = getFunctions(getApp());
-    } catch (error) {
-      throw new Error(
-        'Firebase Functions package not installed. Install with: npm install @react-native-firebase/functions',
-      );
-    }
+class PairingService {
+  constructor() {
+    this.db = firestore();
   }
 
   /**
    * Redeem an invite code to create a relationship
-   * Calls the redeemInviteCode Cloud Function to validate the code and create a relationship.
+   * Validates the code and creates a relationship directly in Firestore.
    * Includes retry logic for network errors.
    *
    * Requirements: 3.1 - Redeem invite code
@@ -52,7 +35,7 @@ class CloudFunctionsService {
    *
    * @example
    * try {
-   *   const result = await cloudFunctionsService.redeemInviteCode('ABC12345', currentUser.uid);
+   *   const result = await pairingService.redeemInviteCode('ABC12345', currentUser.uid);
    *   console.log('Relationship created:', result.relationshipId);
    * } catch (error) {
    *   if (error.code === 'not-found') {
@@ -67,26 +50,103 @@ class CloudFunctionsService {
   async redeemInviteCode(code, caregiverUid) {
     try {
       return await retryOperation(async () => {
-        const functionsModule = require('@react-native-firebase/functions');
-        const httpsCallable = functionsModule.httpsCallable;
-        const redeemFunction = httpsCallable(
-          this.functions,
-          'redeemInviteCode',
-        );
-        const result = await redeemFunction({ code, caregiverUid });
+        // Validate code format
+        const codeUppercase = code.toUpperCase();
+        const codeFormatRegex = /^[A-Z0-9]{8}$/;
 
-        return result.data;
+        if (!codeFormatRegex.test(codeUppercase)) {
+          const error = new Error(
+            'Invalid code format. Code must be 8 alphanumeric characters',
+          );
+          error.code = 'invalid-argument';
+          throw error;
+        }
+
+        // Query for the invite code
+        const inviteCodesSnapshot = await this.db
+          .collection('inviteCodes')
+          .where('code', '==', codeUppercase)
+          .limit(1)
+          .get();
+
+        // Check if code exists
+        if (inviteCodesSnapshot.empty) {
+          const error = new Error(
+            'Invalid invite code. Please check the code and try again',
+          );
+          error.code = 'not-found';
+          throw error;
+        }
+
+        const inviteCodeDoc = inviteCodesSnapshot.docs[0];
+        const inviteCodeData = inviteCodeDoc.data();
+
+        // Check if code is expired
+        const now = firestore.Timestamp.now();
+        if (inviteCodeData.expiresAt <= now) {
+          const error = new Error(
+            'This invite code has expired. Please request a new code from the parent',
+          );
+          error.code = 'failed-precondition';
+          throw error;
+        }
+
+        // Check if code has already been used
+        if (inviteCodeData.used === true) {
+          const error = new Error(
+            'This invite code has already been used. Please request a new code from the parent',
+          );
+          error.code = 'failed-precondition';
+          throw error;
+        }
+
+        const { parentUid } = inviteCodeData;
+
+        // Check for existing relationship
+        const relationshipId = `${parentUid}_${caregiverUid}`;
+        const existingRelationship = await this.db
+          .collection('relationships')
+          .doc(relationshipId)
+          .get();
+
+        if (existingRelationship.exists) {
+          const error = new Error('You are already connected with this parent');
+          error.code = 'already-exists';
+          throw error;
+        }
+
+        // Create new relationship
+        await this.db.collection('relationships').doc(relationshipId).set({
+          parentUid,
+          caregiverUid,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          createdBy: caregiverUid,
+        });
+
+        // Mark the invite code as used
+        await inviteCodeDoc.ref.update({
+          used: true,
+          usedCount: firestore.FieldValue.increment(1),
+          usedAt: firestore.FieldValue.serverTimestamp(),
+          usedBy: caregiverUid,
+        });
+
+        return {
+          success: true,
+          relationshipId,
+          message: 'Relationship created successfully',
+        };
       });
     } catch (error) {
-      // Map Firebase function errors to user-friendly messages
-      const mappedError = this._mapFunctionError(error, 'redeem');
+      // Map errors to user-friendly messages
+      const mappedError = this._mapError(error, 'redeem');
       throw mappedError;
     }
   }
 
   /**
    * Remove a relationship between parent and caregiver
-   * Calls the removeRelationship Cloud Function to delete a relationship.
+   * Deletes the relationship directly from Firestore.
    * Includes retry logic for network errors.
    *
    * Requirements: 6.2 - Remove relationship
@@ -98,7 +158,7 @@ class CloudFunctionsService {
    *
    * @example
    * try {
-   *   await cloudFunctionsService.removeRelationship(relationshipId);
+   *   await pairingService.removeRelationship(relationshipId);
    *   console.log('Relationship removed successfully');
    * } catch (error) {
    *   if (error.code === 'permission-denied') {
@@ -111,33 +171,44 @@ class CloudFunctionsService {
   async removeRelationship(relationshipId) {
     try {
       return await retryOperation(async () => {
-        const functionsModule = require('@react-native-firebase/functions');
-        const httpsCallable = functionsModule.httpsCallable;
-        const removeFunction = httpsCallable(
-          this.functions,
-          'removeRelationship',
-        );
-        const result = await removeFunction({ relationshipId });
+        // Fetch relationship document
+        const relationshipDoc = await this.db
+          .collection('relationships')
+          .doc(relationshipId)
+          .get();
 
-        return result.data;
+        // Check if relationship exists
+        if (!relationshipDoc.exists) {
+          const error = new Error('Relationship not found');
+          error.code = 'not-found';
+          throw error;
+        }
+
+        // Delete relationship document
+        await relationshipDoc.ref.delete();
+
+        return {
+          success: true,
+          message: 'Relationship removed successfully',
+        };
       });
     } catch (error) {
-      // Map Firebase function errors to user-friendly messages
-      const mappedError = this._mapFunctionError(error, 'remove');
+      // Map errors to user-friendly messages
+      const mappedError = this._mapError(error, 'remove');
       throw mappedError;
     }
   }
 
   /**
-   * Map Cloud Function errors to user-friendly error objects
-   * Converts Firebase function error codes to application-specific error messages.
+   * Map Firestore errors to user-friendly error objects
+   * Converts Firebase error codes to application-specific error messages.
    *
    * @private
-   * @param {Error} error - Original error from Cloud Function
+   * @param {Error} error - Original error from Firestore
    * @param {string} operation - Operation type ('redeem' or 'remove')
    * @returns {Error} Mapped error with code and user-friendly message
    */
-  _mapFunctionError(error, operation) {
+  _mapError(error, operation) {
     const mappedError = new Error();
 
     // Extract error code from Firebase function error
@@ -220,15 +291,9 @@ class CloudFunctionsService {
 }
 
 // Export class for testing and custom instantiation
-export { CloudFunctionsService };
+export { PairingService };
 
-// Export singleton instance (will throw if functions package not installed)
-let defaultInstance;
-try {
-  defaultInstance = new CloudFunctionsService();
-} catch (error) {
-  console.warn('CloudFunctionsService: ', error.message);
-  defaultInstance = null;
-}
+// Export singleton instance
+const defaultInstance = new PairingService();
 
 export default defaultInstance;

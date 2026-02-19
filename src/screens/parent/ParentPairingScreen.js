@@ -9,7 +9,7 @@
  * @format
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import {
   Alert,
 } from 'react-native';
 import { usePairing } from '../../contexts/PairingContext';
+import { useAuth } from '../../contexts/AuthContext';
+import InviteCodeService from '../../services/pairing/InviteCodeService';
 import InviteCodeDisplay from '../../components/pairing/InviteCodeDisplay';
 import RelationshipCard from '../../components/pairing/RelationshipCard';
 
@@ -53,11 +55,51 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
     removeRelationship,
     refreshRelationships,
   } = usePairing();
+  const { user } = useAuth();
 
   // Local state
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localError, setLocalError] = useState(null);
+  const [localInviteCode, setLocalInviteCode] = useState(inviteCode);
+  const [isLoadingCode, setIsLoadingCode] = useState(false);
+
+  // Load active invite code when screen mounts
+  useEffect(() => {
+    const loadActiveCode = async () => {
+      if (user && !inviteCode && !isLoadingCode) {
+        setIsLoadingCode(true);
+        try {
+          const activeCode = await InviteCodeService.getActiveInviteCode(
+            user.uid,
+          );
+          if (activeCode) {
+            setLocalInviteCode(activeCode);
+          }
+        } catch (err) {
+          console.log(
+            '[ParentPairingScreen] No active code found or error loading:',
+            err.message,
+          );
+          // Silently fail - user can generate a new code
+        } finally {
+          setIsLoadingCode(false);
+        }
+      }
+    };
+
+    loadActiveCode();
+  }, [user, inviteCode, isLoadingCode]);
+
+  // Update local invite code when context updates
+  useEffect(() => {
+    if (inviteCode) {
+      setLocalInviteCode(inviteCode);
+    }
+  }, [inviteCode]);
+
+  // Use local or context invite code
+  const displayInviteCode = localInviteCode || inviteCode;
 
   /**
    * Handle generate invite code button press
@@ -146,7 +188,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
    */
   const handleRetry = () => {
     setLocalError(null);
-    if (!inviteCode) {
+    if (!displayInviteCode) {
       handleGenerateCode();
     } else {
       handleRefresh();
@@ -224,7 +266,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         </Text>
 
         {/* Loading State */}
-        {loading && !inviteCode && !isGenerating && (
+        {(loading || isLoadingCode) && !displayInviteCode && !isGenerating && (
           <View
             style={styles.loadingContainer}
             accessibilityRole="progressbar"
@@ -236,7 +278,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         )}
 
         {/* Generate Button - Show when no active code */}
-        {!loading && !inviteCode && !isGenerating && (
+        {!loading && !isLoadingCode && !displayInviteCode && !isGenerating && (
           <View style={styles.generateContainer}>
             <Text
               style={styles.generateMessage}
@@ -275,10 +317,10 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         )}
 
         {/* Invite Code Display - Show when code exists */}
-        {inviteCode && !isGenerating && (
+        {displayInviteCode && !isGenerating && (
           <InviteCodeDisplay
-            code={inviteCode.code}
-            expiresAt={inviteCode.expiresAt}
+            code={displayInviteCode.code}
+            expiresAt={displayInviteCode.expiresAt}
             onRegenerate={handleRegenerateCode}
             loading={isGenerating}
           />

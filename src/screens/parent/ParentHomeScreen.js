@@ -17,6 +17,7 @@ import {
   ScrollView,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ParentScreens } from '../../types/navigation';
@@ -66,6 +67,13 @@ function ParentHomeScreen() {
     navigation.navigate(ParentScreens.MEDICINE_DETAILS, {
       medicineId: dose.medicineId,
     });
+  };
+
+  /**
+   * Navigate to pairing screen
+   */
+  const handleManageCaregivers = () => {
+    navigation.navigate(ParentScreens.PAIRING);
   };
 
   /**
@@ -160,6 +168,26 @@ function ParentHomeScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Manage Caregivers Button */}
+      <View style={styles.headerSection}>
+        <TouchableOpacity
+          style={styles.manageCaregiverButton}
+          onPress={handleManageCaregivers}
+          accessibilityRole="button"
+          accessibilityLabel="Manage caregivers"
+          accessibilityHint="Navigate to caregiver management screen"
+        >
+          <Text style={styles.manageCaregiverIcon}>👥</Text>
+          <View style={styles.manageCaregiverTextContainer}>
+            <Text style={styles.manageCaregiverTitle}>Manage Caregivers</Text>
+            <Text style={styles.manageCaregiverSubtitle}>
+              Generate invite codes and view connected caregivers
+            </Text>
+          </View>
+          <Text style={styles.manageCaregiverArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Upcoming Medicines Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Upcoming Medicines</Text>
@@ -180,6 +208,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  headerSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  manageCaregiverButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  manageCaregiverIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  manageCaregiverTextContainer: {
+    flex: 1,
+  },
+  manageCaregiverTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  manageCaregiverSubtitle: {
+    fontSize: 13,
+    color: '#666666',
+    lineHeight: 18,
+  },
+  manageCaregiverArrow: {
+    fontSize: 28,
+    color: '#007AFF',
+    fontWeight: '300',
   },
   section: {
     marginTop: 20,
