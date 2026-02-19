@@ -172,6 +172,7 @@ function HomeStack() {
         component={EditMedicineScreen}
         options={{
           title: 'Edit Medicine',
+          presentation: 'modal',
         }}
       />
       <Stack.Screen

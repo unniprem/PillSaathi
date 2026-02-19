@@ -21,7 +21,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import useAllUpcomingDoses from '../../hooks/useAllUpcomingDoses';
 import UpcomingDoseCard from '../../components/UpcomingDoseCard';
-import { CaregiverScreens } from '../../navigation/screenNames';
+import { CaregiverScreens } from '../../types/navigation';
 
 /**
  * Empty State Component
@@ -89,12 +89,15 @@ function CaregiverUpcomingScreen() {
 
   /**
    * Handle dose card press
-   * Navigate to medicine details screen
+   * Navigate to medicine details screen in HomeTab
    */
   const handleDosePress = dose => {
-    navigation.navigate(CaregiverScreens.MEDICINE_DETAILS, {
-      medicineId: dose.medicineId,
-      parentId: dose.parentId,
+    navigation.navigate('HomeTab', {
+      screen: CaregiverScreens.MEDICINE_DETAILS,
+      params: {
+        medicineId: dose.medicineId,
+        parentId: dose.parentId,
+      },
     });
   };
 

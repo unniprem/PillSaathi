@@ -28,10 +28,10 @@ import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
 import ParentDetailScreen from '../screens/caregiver/ParentDetailScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
+import MedicineDetailsScreen from '../screens/shared/MedicineDetailsScreen';
 import LogoutHeader from '../components/LogoutHeader';
 // import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 // import ParentListScreen from '../screens/caregiver/ParentListScreen';
-// import MedicineDetailsScreen from '../screens/caregiver/MedicineDetailsScreen';
 // import AlarmScreen from '../screens/caregiver/AlarmScreen';
 // import NotificationsScreen from '../screens/caregiver/NotificationsScreen';
 // import SettingsScreen from '../screens/caregiver/SettingsScreen';
@@ -56,16 +56,6 @@ const ParentListScreen = () => {
       <Text style={styles.placeholderSubtext}>
         List of parents you care for
       </Text>
-    </View>
-  );
-};
-
-const MedicineDetailsScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Medicine Details</Text>
-      <Text style={styles.placeholderSubtext}>View medicine information</Text>
     </View>
   );
 };

@@ -6,6 +6,11 @@
  */
 
 const functions = require('firebase-functions');
+const {
+  onDocumentCreated,
+  onDocumentUpdated,
+} = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 
 // Initialize Firebase Admin SDK
@@ -293,21 +298,20 @@ exports.removeRelationship = functions.https.onCall(async (data, context) => {
  *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.4, 9.5
  *
- * @param {Object} snapshot - Firestore document snapshot of the created schedule
- * @param {Object} context - Event context with document path and other metadata
+ * @param {Object} event - Firestore event with document snapshot
  * @returns {Promise<void>}
  */
-exports.onScheduleCreate = functions.firestore
-  .document('schedules/{scheduleId}')
-  .onCreate(async (snapshot, context) => {
+exports.onScheduleCreate = onDocumentCreated(
+  'schedules/{scheduleId}',
+  async event => {
     const {
       generateDosesForSchedule,
       writeDosesInBatches,
     } = require('./generateDoses');
 
     try {
-      const scheduleId = context.params.scheduleId;
-      const scheduleData = snapshot.data();
+      const scheduleId = event.params.scheduleId;
+      const scheduleData = event.data.data();
 
       console.log(`Schedule created: ${scheduleId}, generating doses...`);
 
@@ -359,12 +363,13 @@ exports.onScheduleCreate = functions.firestore
       );
     } catch (error) {
       console.error(
-        `Error generating doses for schedule ${context.params.scheduleId}:`,
+        `Error generating doses for schedule ${event.params.scheduleId}:`,
         error,
       );
       // Don't throw - we don't want to retry indefinitely
     }
-  });
+  },
+);
 
 /**
  * onScheduleUpdate - Firestore Trigger
@@ -374,21 +379,20 @@ exports.onScheduleCreate = functions.firestore
  *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.4, 9.5
  *
- * @param {Object} change - Firestore document change with before and after snapshots
- * @param {Object} context - Event context with document path and other metadata
+ * @param {Object} event - Firestore event with before and after snapshots
  * @returns {Promise<void>}
  */
-exports.onScheduleUpdate = functions.firestore
-  .document('schedules/{scheduleId}')
-  .onUpdate(async (change, context) => {
+exports.onScheduleUpdate = onDocumentUpdated(
+  'schedules/{scheduleId}',
+  async event => {
     const {
       generateDosesForSchedule,
       writeDosesInBatches,
     } = require('./generateDoses');
 
     try {
-      const scheduleId = context.params.scheduleId;
-      const scheduleData = change.after.data();
+      const scheduleId = event.params.scheduleId;
+      const scheduleData = event.data.after.data();
 
       console.log(`Schedule updated: ${scheduleId}, regenerating doses...`);
 
@@ -460,12 +464,13 @@ exports.onScheduleUpdate = functions.firestore
       );
     } catch (error) {
       console.error(
-        `Error regenerating doses for schedule ${context.params.scheduleId}:`,
+        `Error regenerating doses for schedule ${event.params.scheduleId}:`,
         error,
       );
       // Don't throw - we don't want to retry indefinitely
     }
-  });
+  },
+);
 
 /**
  * scheduledCleanupOldDoses - Scheduled Cloud Function
@@ -476,41 +481,24 @@ exports.onScheduleUpdate = functions.firestore
  * Requirements: 6.5 - Delete old doses while preserving recent historical records
  *
  * @returns {Promise<void>}
- *
- * Note: This function requires Cloud Scheduler to be set up with the schedule:
- * - Schedule: "0 2 * * *" (runs daily at 2:00 AM)
- * - Timezone: Your preferred timezone (e.g., "America/New_York")
- *
- * To deploy with Cloud Scheduler, use:
- * firebase deploy --only functions:scheduledCleanupOldDoses
- *
- * Then set up the schedule in Google Cloud Console or using gcloud CLI:
- * gcloud scheduler jobs create pubsub cleanup-old-doses \
- *   --schedule="0 2 * * *" \
- *   --topic=firebase-schedule-scheduledCleanupOldDoses \
- *   --message-body='{}' \
- *   --time-zone="America/New_York"
  */
-exports.scheduledCleanupOldDoses = functions.pubsub
-  .schedule('0 2 * * *') // Run daily at 2:00 AM
-  .timeZone('UTC') // Use UTC timezone
-  .onRun(async _context => {
-    const { cleanupOldDoses } = require('./cleanupOldDoses');
+exports.scheduledCleanupOldDoses = onSchedule('0 2 * * *', async event => {
+  const { cleanupOldDoses } = require('./cleanupOldDoses');
 
-    try {
-      console.log('Starting scheduled dose cleanup...');
+  try {
+    console.log('Starting scheduled dose cleanup...');
 
-      const deletedCount = await cleanupOldDoses(admin.firestore());
+    const deletedCount = await cleanupOldDoses(admin.firestore());
 
-      console.log(
-        `Scheduled cleanup completed successfully. Deleted ${deletedCount} old doses.`,
-      );
+    console.log(
+      `Scheduled cleanup completed successfully. Deleted ${deletedCount} old doses.`,
+    );
 
-      return null;
-    } catch (error) {
-      console.error('Error during scheduled dose cleanup:', error);
-      // Don't throw - we don't want the function to be marked as failed
-      // The error is logged for monitoring
-      return null;
-    }
-  });
+    return null;
+  } catch (error) {
+    console.error('Error during scheduled dose cleanup:', error);
+    // Don't throw - we don't want the function to be marked as failed
+    // The error is logged for monitoring
+    return null;
+  }
+});

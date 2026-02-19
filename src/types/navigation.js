@@ -68,6 +68,7 @@ export const ParentScreens = {
   MEDICINE_LIST: 'MedicineList',
   MEDICINE_VIEW: 'ParentMedicineView',
   UPCOMING_DOSES: 'UpcomingDoses',
+  PARENT_UPCOMING: 'ParentUpcoming',
   ADD_MEDICINE: 'AddMedicine',
   EDIT_MEDICINE: 'EditMedicine',
   CAREGIVER_MANAGEMENT: 'CaregiverManagement',
@@ -132,6 +133,7 @@ export const CaregiverScreens = {
  * @property {undefined} MedicineList - Medicine list screen (no params)
  * @property {undefined} ParentMedicineView - Parent medicine view screen (no params)
  * @property {undefined} UpcomingDoses - Upcoming doses screen (no params)
+ * @property {undefined} ParentUpcoming - Parent upcoming medicines screen (today's doses) (no params)
  * @property {undefined} AddMedicine - Add medicine screen (no params)
  * @property {Object} EditMedicine - Edit medicine screen
  * @property {string} EditMedicine.medicineId - ID of medicine to edit
@@ -140,6 +142,14 @@ export const CaregiverScreens = {
  * @property {undefined} ParentPairing - Parent pairing screen (no params)
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
+ */
+
+/**
+ * Parent Tab Navigator param list
+ * @typedef {Object} ParentTabParamList
+ * @property {undefined} HomeTab - Home tab (contains HomeStack)
+ * @property {undefined} UpcomingTab - Upcoming medicines tab (contains UpcomingStack)
+ * @property {undefined} ProfileTab - Profile tab (contains ProfileStack)
  */
 
 /**
@@ -167,6 +177,15 @@ export const CaregiverScreens = {
  * @property {undefined} CaregiverUpcoming - Caregiver upcoming medicines screen (no params)
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
+ */
+
+/**
+ * Caregiver Tab Navigator param list
+ * @typedef {Object} CaregiverTabParamList
+ * @property {undefined} HomeTab - Home tab (contains HomeStack)
+ * @property {undefined} UpcomingTab - Upcoming medicines tab (contains UpcomingStack)
+ * @property {undefined} PairingTab - Pairing tab (contains PairingStack)
+ * @property {undefined} ProfileTab - Profile tab (contains ProfileStack)
  */
 
 // ============================================================================

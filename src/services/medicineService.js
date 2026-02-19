@@ -523,6 +523,56 @@ class MedicineService {
       throw mappedError;
     }
   }
+
+  /**
+   * Get a single medicine by ID
+   * Fetches a specific medicine document by its ID.
+   *
+   * Requirements: 6.2 - Display medicine details
+   *
+   * @param {string} medicineId - Medicine document ID
+   * @returns {Promise<Object>} Medicine object with all fields
+   * @throws {Error} If medicine not found or query fails
+   *
+   * @example
+   * try {
+   *   const medicine = await medicineService.getMedicineById('med123');
+   *   console.log('Medicine:', medicine.name, medicine.dosageAmount, medicine.dosageUnit);
+   * } catch (error) {
+   *   console.error('Failed to get medicine:', error.message);
+   * }
+   */
+  async getMedicineById(medicineId) {
+    try {
+      return await retryOperation(async () => {
+        const docSnapshot = await this.firestore
+          .collection(this.medicinesCollection)
+          .doc(medicineId)
+          .get();
+
+        if (!docSnapshot.exists) {
+          const error = new Error('Medicine not found');
+          error.code = 'medicine-not-found';
+          throw error;
+        }
+
+        return {
+          id: docSnapshot.id,
+          ...docSnapshot.data(),
+          createdAt: docSnapshot.data().createdAt?.toDate() || null,
+          updatedAt: docSnapshot.data().updatedAt?.toDate() || null,
+        };
+      });
+    } catch (error) {
+      if (error.code === 'medicine-not-found') {
+        throw error;
+      }
+      const mappedError = new Error('Failed to get medicine');
+      mappedError.code = 'medicine-query-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
 }
 
 // Export singleton instance

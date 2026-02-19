@@ -12,6 +12,7 @@ import { getFirestore } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
 import { retryOperation } from '../utils/retryHelper';
 import { validateSchedule } from '../models/Schedule';
+import doseGenerationService from './doseGenerationService';
 
 /**
  * ScheduleService class
@@ -144,6 +145,18 @@ class ScheduleService {
           .collection(this.schedulesCollection)
           .add(scheduleRecord);
 
+        // Generate doses for this schedule
+        try {
+          await doseGenerationService.onScheduleCreated(
+            docRef.id,
+            scheduleRecord,
+            medicineId,
+          );
+        } catch (doseError) {
+          console.error('Error generating doses:', doseError);
+          // Don't fail the schedule creation if dose generation fails
+        }
+
         return docRef.id;
       });
     } catch (error) {
@@ -265,6 +278,22 @@ class ScheduleService {
           .collection(this.schedulesCollection)
           .doc(scheduleId)
           .update(updateData);
+
+        // Regenerate doses for this schedule
+        try {
+          const finalScheduleData = {
+            ...existingData,
+            ...updateData,
+          };
+          await doseGenerationService.onScheduleUpdated(
+            scheduleId,
+            finalScheduleData,
+            existingData.medicineId,
+          );
+        } catch (doseError) {
+          console.error('Error regenerating doses:', doseError);
+          // Don't fail the schedule update if dose generation fails
+        }
       });
     } catch (error) {
       if (

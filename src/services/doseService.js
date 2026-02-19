@@ -51,6 +51,9 @@ class DoseService {
         const now = new Date();
         const futureTime = new Date(now.getTime() + hours * 60 * 60 * 1000);
 
+        console.log('Querying doses for parentId:', parentId);
+        console.log('Time window:', now, 'to', futureTime);
+
         // Query doses within the time window
         const querySnapshot = await this.firestore
           .collection(this.dosesCollection)
@@ -59,6 +62,8 @@ class DoseService {
           .where('scheduledTime', '<=', futureTime)
           .orderBy('scheduledTime', 'asc') // Requirement 12.3: Sort by time
           .get();
+
+        console.log('Query returned', querySnapshot.size, 'doses');
 
         if (querySnapshot.empty) {
           return [];
@@ -72,6 +77,7 @@ class DoseService {
         }));
       });
     } catch (error) {
+      console.error('Detailed error in getUpcomingDoses:', error);
       const mappedError = new Error('Failed to get upcoming doses');
       mappedError.code = 'doses-query-failed';
       mappedError.originalError = error;
@@ -108,6 +114,10 @@ class DoseService {
         const endOfDay = new Date(date);
         endOfDay.setHours(23, 59, 59, 999);
 
+        console.log('Querying doses for date:', date);
+        console.log('ParentId:', parentId);
+        console.log('Time range:', startOfDay, 'to', endOfDay);
+
         // Query doses for the date
         const querySnapshot = await this.firestore
           .collection(this.dosesCollection)
@@ -116,6 +126,8 @@ class DoseService {
           .where('scheduledTime', '<=', endOfDay)
           .orderBy('scheduledTime', 'asc')
           .get();
+
+        console.log('Query returned', querySnapshot.size, 'doses for today');
 
         if (querySnapshot.empty) {
           return [];
@@ -129,6 +141,7 @@ class DoseService {
         }));
       });
     } catch (error) {
+      console.error('Detailed error in getDosesForDate:', error);
       const mappedError = new Error('Failed to get doses for date');
       mappedError.code = 'doses-date-query-failed';
       mappedError.originalError = error;
