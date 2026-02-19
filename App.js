@@ -13,6 +13,8 @@ import { initializeFirebase } from './src/config/firebase';
 import { testNavigationPersistence } from './src/utils/navigationPersistence';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { PairingProvider } from './src/contexts/PairingContext';
+import { ParentPairingProvider } from './src/contexts/ParentPairingContext';
+import { CaregiverPairingProvider } from './src/contexts/CaregiverPairingContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
 /**
@@ -79,10 +81,16 @@ function App() {
   return (
     <AuthProvider>
       <PairingProvider>
-        <SafeAreaProvider>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-          <RootNavigator />
-        </SafeAreaProvider>
+        <ParentPairingProvider>
+          <CaregiverPairingProvider>
+            <SafeAreaProvider>
+              <StatusBar
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+              />
+              <RootNavigator />
+            </SafeAreaProvider>
+          </CaregiverPairingProvider>
+        </ParentPairingProvider>
       </PairingProvider>
     </AuthProvider>
   );

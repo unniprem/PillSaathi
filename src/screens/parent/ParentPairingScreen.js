@@ -21,8 +21,8 @@ import {
   Alert,
 } from 'react-native';
 import { usePairing } from '../../contexts/PairingContext';
+import { useParentPairing } from '../../contexts/ParentPairingContext';
 import { useAuth } from '../../contexts/AuthContext';
-import InviteCodeService from '../../services/pairing/InviteCodeService';
 import InviteCodeDisplay from '../../components/pairing/InviteCodeDisplay';
 import RelationshipCard from '../../components/pairing/RelationshipCard';
 
@@ -47,59 +47,31 @@ import RelationshipCard from '../../components/pairing/RelationshipCard';
  */
 const ParentPairingScreen = ({ navigation: _navigation }) => {
   const {
-    inviteCode,
     relationships,
-    loading,
-    error,
-    generateInviteCode,
+    loading: relationshipsLoading,
     removeRelationship,
     refreshRelationships,
   } = usePairing();
+  const {
+    inviteCode,
+    loading: codeLoading,
+    error: codeError,
+    generateInviteCode,
+    loadActiveInviteCode,
+  } = useParentPairing();
   const { user } = useAuth();
 
   // Local state
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [localError, setLocalError] = useState(null);
-  const [localInviteCode, setLocalInviteCode] = useState(inviteCode);
-  const [isLoadingCode, setIsLoadingCode] = useState(false);
 
   // Load active invite code when screen mounts
   useEffect(() => {
-    const loadActiveCode = async () => {
-      if (user && !inviteCode && !isLoadingCode) {
-        setIsLoadingCode(true);
-        try {
-          const activeCode = await InviteCodeService.getActiveInviteCode(
-            user.uid,
-          );
-          if (activeCode) {
-            setLocalInviteCode(activeCode);
-          }
-        } catch (err) {
-          console.log(
-            '[ParentPairingScreen] No active code found or error loading:',
-            err.message,
-          );
-          // Silently fail - user can generate a new code
-        } finally {
-          setIsLoadingCode(false);
-        }
-      }
-    };
+    loadActiveInviteCode();
+  }, []);
 
-    loadActiveCode();
-  }, [user, inviteCode, isLoadingCode]);
-
-  // Update local invite code when context updates
-  useEffect(() => {
-    if (inviteCode) {
-      setLocalInviteCode(inviteCode);
-    }
-  }, [inviteCode]);
-
-  // Use local or context invite code
-  const displayInviteCode = localInviteCode || inviteCode;
+  // Use invite code from context
+  const displayInviteCode = inviteCode;
 
   /**
    * Handle generate invite code button press
@@ -109,7 +81,6 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
    */
   const handleGenerateCode = async () => {
     setIsGenerating(true);
-    setLocalError(null);
 
     try {
       await generateInviteCode();
@@ -121,7 +92,6 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
       );
     } catch (err) {
       // Requirements: 9.4 - Display error with retry option
-      setLocalError(err.message || 'Failed to generate invite code');
       Alert.alert(
         'Error',
         err.message || 'Failed to generate invite code. Please try again.',
@@ -171,12 +141,11 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
    */
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    setLocalError(null);
 
     try {
       await refreshRelationships();
     } catch (err) {
-      setLocalError(err.message || 'Failed to refresh relationships');
+      Alert.alert('Error', err.message || 'Failed to refresh relationships');
     } finally {
       setIsRefreshing(false);
     }
@@ -187,7 +156,6 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
    * Requirements: 9.4 - Retry option for errors
    */
   const handleRetry = () => {
-    setLocalError(null);
     if (!displayInviteCode) {
       handleGenerateCode();
     } else {
@@ -199,7 +167,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
   const caregivers = relationships || [];
 
   // Determine display error
-  const displayError = localError || error;
+  const displayError = codeError;
 
   return (
     <ScrollView
@@ -244,11 +212,11 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={handleRetry}
-            disabled={loading || isGenerating}
+            disabled={codeLoading || isGenerating}
             accessibilityRole="button"
             accessibilityLabel="Retry"
             accessibilityHint="Try the operation again"
-            accessibilityState={{ disabled: loading || isGenerating }}
+            accessibilityState={{ disabled: codeLoading || isGenerating }}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -266,7 +234,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         </Text>
 
         {/* Loading State */}
-        {(loading || isLoadingCode) && !displayInviteCode && !isGenerating && (
+        {codeLoading && !displayInviteCode && !isGenerating && (
           <View
             style={styles.loadingContainer}
             accessibilityRole="progressbar"
@@ -278,7 +246,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         )}
 
         {/* Generate Button - Show when no active code */}
-        {!loading && !isLoadingCode && !displayInviteCode && !isGenerating && (
+        {!codeLoading && !displayInviteCode && !isGenerating && (
           <View style={styles.generateContainer}>
             <Text
               style={styles.generateMessage}
@@ -338,7 +306,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         </Text>
 
         {/* Loading State */}
-        {loading && caregivers.length === 0 && (
+        {relationshipsLoading && caregivers.length === 0 && (
           <View
             style={styles.loadingContainer}
             accessibilityRole="progressbar"
@@ -350,7 +318,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
         )}
 
         {/* Empty State - No caregivers */}
-        {!loading && caregivers.length === 0 && (
+        {!relationshipsLoading && caregivers.length === 0 && (
           <View
             style={styles.emptyContainer}
             accessibilityRole="text"
@@ -382,7 +350,7 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
                 userPhone={relationship.caregiverPhone || ''}
                 createdAt={relationship.createdAt}
                 onRemove={null}
-                loading={loading}
+                loading={relationshipsLoading}
                 userRole="Caregiver"
                 showRemoveButton={false}
               />

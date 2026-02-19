@@ -1,14 +1,15 @@
 /**
- * PairingContext - Pairing & Relationships State Management
+ * PairingContext - Relationships State Management
  *
- * Provides pairing and relationship state and methods throughout the app using React Context.
- * Manages invite code generation, redemption, relationship viewing, and real-time updates.
+ * Provides relationship state and methods throughout the app using React Context.
+ * Manages relationship viewing and removal with real-time updates.
  *
- * Requirements: 1.1, 3.5, 4.1, 4.3, 5.1, 5.3, 6.2, 6.3, 9.1, 9.3
+ * Note: Invite code generation/redemption moved to role-specific contexts:
+ * - ParentPairingContext for parents
+ * - CaregiverPairingContext for caregivers
  */
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import InviteCodeService from '../services/pairing/InviteCodeService';
 import RelationshipService from '../services/pairing/RelationshipService';
 import PairingService from '../services/pairing/PairingService';
 import { useAuth } from './AuthContext';
@@ -16,12 +17,6 @@ import { useAuth } from './AuthContext';
 /**
  * Pairing state shape:
  * {
- *   inviteCode: {
- *     code: string,
- *     expiresAt: Date,
- *     createdAt: Date,
- *     parentUid: string
- *   } | null,
  *   relationships: Array<{
  *     id: string,
  *     parentUid: string,
@@ -42,27 +37,11 @@ const PairingContext = createContext(null);
 
 /**
  * PairingProvider Component
- * Wraps the app and provides pairing state and methods to all children
- *
- * Requirements: 1.1 - Manage invite code state
- * Requirements: 4.1 - Manage relationships state
- * Requirements: 5.1 - Provide relationship data via context
- *
- * @param {Object} props
- * @param {React.ReactNode} props.children - Child components
- * @returns {JSX.Element}
- *
- * @example
- * <AuthProvider>
- *   <PairingProvider>
- *     <App />
- *   </PairingProvider>
- * </AuthProvider>
+ * Wraps the app and provides relationship state and methods to all children
  */
 export const PairingProvider = ({ children }) => {
   const { user, profile } = useAuth();
 
-  const [inviteCode, setInviteCode] = useState(null);
   const [relationships, setRelationships] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -190,16 +169,10 @@ export const PairingProvider = ({ children }) => {
       throw authError;
     }
 
-    if (profile?.role !== 'caregiver') {
-      const permError = new Error('Only caregivers can remove relationships');
-      permError.code = 'permission-denied';
-      throw permError;
-    }
-
     // Store previous state for rollback
     const previousRelationships = [...relationships];
 
-    // Optimistically update UI - remove relationship immediately
+    // Optimistically update UI
     setRelationships(prev =>
       prev.filter(relationship => relationship.id !== relationshipId),
     );
@@ -209,11 +182,8 @@ export const PairingProvider = ({ children }) => {
 
     try {
       await PairingService.removeRelationship(relationshipId);
-
-      // Success - relationship removed
-      // The real-time listener will update the state, but we've already updated optimistically
     } catch (err) {
-      // Rollback on error - restore previous state
+      // Rollback on error
       setRelationships(previousRelationships);
       setError(err.message);
       throw err;
@@ -224,21 +194,6 @@ export const PairingProvider = ({ children }) => {
 
   /**
    * Refresh relationships list
-   * Manually fetches the latest relationships from Firestore.
-   * Updates relationships state.
-   *
-   * Requirements: 9.1 - Manual refresh capability
-   *
-   * @returns {Promise<void>}
-   * @throws {Error} If refresh fails
-   *
-   * @example
-   * try {
-   *   await refreshRelationships();
-   *   console.log('Relationships refreshed');
-   * } catch (error) {
-   *   console.error('Failed to refresh relationships:', error.message);
-   * }
    */
   const refreshRelationships = async () => {
     if (!user || !profile) {
@@ -264,12 +219,6 @@ export const PairingProvider = ({ children }) => {
 
   /**
    * Set up real-time listeners for relationships
-   * Subscribes to relationship changes when user is authenticated.
-   * Cleans up listeners on unmount or when user changes.
-   *
-   * Requirements: 4.3 - Update display in real-time
-   * Requirements: 5.3 - Real-time listener for relationships
-   * Requirements: 6.3 - Update both users' lists when relationship removed
    */
   useEffect(() => {
     let unsubscribe = null;
@@ -297,7 +246,6 @@ export const PairingProvider = ({ children }) => {
     } else {
       // Clear relationships if user is not authenticated
       setRelationships([]);
-      setInviteCode(null);
     }
 
     // Cleanup function
@@ -308,37 +256,11 @@ export const PairingProvider = ({ children }) => {
     };
   }, [user, profile]);
 
-  /**
-   * Load active invite code for parents on mount
-   * Fetches the active invite code if user is a parent.
-   * DISABLED: This was causing permission errors. Parents can generate codes on demand.
-   */
-  // useEffect(() => {
-  //   const loadActiveInviteCode = async () => {
-  //     if (user && profile?.role === 'parent') {
-  //       try {
-  //         const activeCode = await InviteCodeService.getActiveInviteCode(
-  //           user.uid,
-  //         );
-  //         setInviteCode(activeCode);
-  //       } catch (err) {
-  //         console.error('Failed to load active invite code:', err);
-  //         // Don't set error state for this - it's not critical
-  //       }
-  //     }
-  //   };
-
-  //   loadActiveInviteCode();
-  // }, [user, profile]);
-
   // Context value with methods
   const value = {
-    inviteCode,
     relationships,
     loading,
     error,
-    generateInviteCode,
-    redeemInviteCode,
     removeRelationship,
     refreshRelationships,
   };
@@ -351,12 +273,6 @@ export const PairingProvider = ({ children }) => {
 /**
  * usePairing Hook
  * Custom hook to access pairing context
- *
- * @returns {Object} Pairing context value
- * @throws {Error} If used outside PairingProvider
- *
- * @example
- * const { inviteCode, relationships, loading, generateInviteCode, redeemInviteCode } = usePairing();
  */
 export const usePairing = () => {
   const context = useContext(PairingContext);
