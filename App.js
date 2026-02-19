@@ -17,6 +17,7 @@ import { ParentPairingProvider } from './src/contexts/ParentPairingContext';
 import { CaregiverPairingProvider } from './src/contexts/CaregiverPairingContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import doseGenerationService from './src/services/doseGenerationService';
+import alarmInitializer from './src/services/alarmInitializer';
 
 /**
  * Auto Cleanup Component
@@ -105,6 +106,17 @@ function App() {
 
         // Test navigation state persistence
         await testNavigationPersistence();
+
+        // Initialize alarm system
+        // eslint-disable-next-line no-console
+        console.log('\n🔔 Initializing alarm system...\n');
+        const alarmInitialized = await alarmInitializer.initialize();
+        if (alarmInitialized) {
+          // eslint-disable-next-line no-console
+          console.log('\n✅ Alarm system initialized successfully!\n');
+        } else {
+          console.error('\n❌ Alarm system initialization failed!\n');
+        }
       } catch (error) {
         console.error('\n❌ App initialization error:', error);
       }

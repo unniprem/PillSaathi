@@ -6,7 +6,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
 
 ## Tasks
 
-- [ ] 1. Set up Notifee and alarm infrastructure
+- [x] 1. Set up Notifee and alarm infrastructure
 
   - Install and configure Notifee library for React Native
   - Set up notification permissions handling
