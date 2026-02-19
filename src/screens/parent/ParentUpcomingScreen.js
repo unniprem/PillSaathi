@@ -1,15 +1,14 @@
 /**
- * Parent Upcoming Screen
+ * Parent Medicines Screen
  *
- * Displays all upcoming medicines for the current day (midnight to midnight).
- * Shows medicine name, scheduled time, and dosage.
- * Highlights overdue doses.
- * Provides quick action to mark doses as taken.
+ * Displays all medicines for the parent (active and inactive).
+ * Shows medicine name, dosage, status, and schedule.
+ * Provides navigation to detailed medicine view.
  *
  * @format
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,122 +16,203 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import useTodayDoses from '../../hooks/useTodayDoses';
-import DoseCard from '../../components/DoseCard';
 import { ParentScreens } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import doseGenerationService from '../../services/doseGenerationService';
+import medicineService from '../../services/medicineService';
+import scheduleService from '../../services/scheduleService';
 
 /**
- * Parent Upcoming Screen Component
+ * Format schedule times for display
+ */
+function formatScheduleTimes(times) {
+  if (!times || times.length === 0) {
+    return 'No schedule';
+  }
+
+  return times
+    .map(time => {
+      const [hours, minutes] = time.split(':').map(Number);
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    })
+    .join(', ');
+}
+
+/**
+ * Parent Medicines Screen Component
  *
- * Shows all medicines scheduled for today with quick actions.
+ * Shows all medicines (active and inactive) for the parent.
  *
- * @returns {React.ReactElement} Parent upcoming screen
+ * @returns {React.ReactElement} Parent medicines screen
  */
 function ParentUpcomingScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { doses, loading, error, markAsTaken } = useTodayDoses();
-  const [cleaningUp, setCleaningUp] = useState(false);
+  const [medicines, setMedicines] = useState([]);
+  const [schedules, setSchedules] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   /**
-   * Handle dose card press - navigate to medicine details
-   * @param {Object} dose - Dose object
+   * Load all medicines for the parent
    */
-  const handleDosePress = dose => {
-    navigation.navigate(ParentScreens.MEDICINE_VIEW, {
-      medicineId: dose.medicineId,
+  const loadMedicines = async (isRefreshing = false) => {
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (!isRefreshing) {
+        setLoading(true);
+      }
+      setError(null);
+
+      // Load ALL medicines (active and inactive)
+      const medicinesList = await medicineService.getMedicinesForParent(
+        user.uid,
+      );
+      setMedicines(medicinesList);
+
+      // Load schedules for each medicine
+      const schedulesMap = {};
+      await Promise.all(
+        medicinesList.map(async medicine => {
+          try {
+            const schedule = await scheduleService.getScheduleForMedicine(
+              medicine.id,
+            );
+            if (schedule) {
+              schedulesMap[medicine.id] = schedule;
+            }
+          } catch (err) {
+            console.error(`Error loading schedule for ${medicine.id}:`, err);
+          }
+        }),
+      );
+      setSchedules(schedulesMap);
+    } catch (err) {
+      console.error('Error loading medicines:', err);
+      setError('Failed to load medicines');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMedicines();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
+  /**
+   * Handle refresh
+   */
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadMedicines(true);
+  };
+
+  /**
+   * Handle medicine card press
+   */
+  const handleMedicinePress = medicine => {
+    // Navigate to medicine detail screen
+    navigation.navigate(ParentScreens.MEDICINE_DETAILS, {
+      medicineId: medicine.id,
     });
   };
 
   /**
-   * Handle mark as taken action
-   * @param {string} doseId - Dose ID
+   * Render medicine card
    */
-  const handleMarkAsTaken = async doseId => {
-    try {
-      await markAsTaken(doseId);
-    } catch (err) {
-      console.error('Error marking dose as taken:', err);
-    }
-  };
+  const renderMedicineCard = ({ item }) => {
+    const schedule = schedules[item.id];
+    const isActive = item.status === 'active';
 
-  /**
-   * Handle cleanup old doses
-   */
-  const handleCleanupOldDoses = () => {
-    Alert.alert(
-      'Clean Up Old Doses',
-      'This will delete dose records older than 30 days. This action cannot be undone. Continue?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clean Up',
-          style: 'destructive',
-          onPress: async () => {
-            setCleaningUp(true);
-            try {
-              const deletedCount = await doseGenerationService.cleanupOldDoses(
-                user.uid,
-              );
-              Alert.alert(
-                'Cleanup Complete',
-                `Successfully deleted ${deletedCount} old dose records.`,
-              );
-            } catch (err) {
-              console.error('Error cleaning up doses:', err);
-              Alert.alert(
-                'Cleanup Failed',
-                'Failed to clean up old doses. Please try again.',
-              );
-            } finally {
-              setCleaningUp(false);
-            }
-          },
-        },
-      ],
+    return (
+      <TouchableOpacity
+        style={[styles.medicineCard, !isActive && styles.inactiveMedicineCard]}
+        onPress={() => handleMedicinePress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.medicineName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              isActive ? styles.activeBadge : styles.inactiveBadge,
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {isActive ? 'Active' : 'Inactive'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Dosage:</Text>
+            <Text style={styles.infoValue}>
+              {item.dosageAmount} {item.dosageUnit}
+            </Text>
+          </View>
+
+          {schedule && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Schedule:</Text>
+              <Text style={styles.infoValue}>
+                {formatScheduleTimes(schedule.times)}
+              </Text>
+            </View>
+          )}
+
+          {item.instructions && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Instructions:</Text>
+              <Text style={styles.infoValue} numberOfLines={2}>
+                {item.instructions}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardFooter}>
+          <Text style={styles.viewDetailsText}>View Details ›</Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
   /**
-   * Render empty state when no doses today
+   * Render empty state
    */
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📅</Text>
-      <Text style={styles.emptyTitle}>No Medicines Today</Text>
+      <Text style={styles.emptyIcon}>💊</Text>
+      <Text style={styles.emptyTitle}>No Medicines</Text>
       <Text style={styles.emptySubtitle}>
-        You don't have any medicines scheduled for today.
+        You don't have any medicines yet. Ask your caregiver to add medicines
+        for you.
       </Text>
-    </View>
-  );
-
-  /**
-   * Render error state
-   */
-  const renderErrorState = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>⚠️</Text>
-      <Text style={styles.emptyTitle}>Error Loading Doses</Text>
-      <Text style={styles.emptySubtitle}>{error}</Text>
     </View>
   );
 
   /**
    * Render loading state
    */
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading today's medicines...</Text>
+        <Text style={styles.loadingText}>Loading medicines...</Text>
       </View>
     );
   }
@@ -141,42 +221,35 @@ function ParentUpcomingScreen() {
    * Render error state
    */
   if (error) {
-    return renderErrorState();
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>⚠️</Text>
+        <Text style={styles.emptyTitle}>Error Loading Medicines</Text>
+        <Text style={styles.emptySubtitle}>{error}</Text>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={doses}
+        data={medicines}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <DoseCard
-            dose={item}
-            onPress={() => handleDosePress(item)}
-            onMarkTaken={() => handleMarkAsTaken(item.id)}
-          />
-        )}
+        renderItem={renderMedicineCard}
         ListEmptyComponent={renderEmptyState}
         contentContainerStyle={
-          doses.length === 0 ? styles.emptyListContainer : styles.listContainer
+          medicines.length === 0
+            ? styles.emptyListContainer
+            : styles.listContainer
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#007AFF"
+          />
         }
       />
-      <View style={styles.cleanupButtonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.cleanupButton,
-            cleaningUp && styles.cleanupButtonDisabled,
-          ]}
-          onPress={handleCleanupOldDoses}
-          disabled={cleaningUp}
-        >
-          {cleaningUp ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.cleanupButtonText}>🗑️ Clean Up Old Doses</Text>
-          )}
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -199,6 +272,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
+    paddingBottom: 24,
   },
   emptyListContainer: {
     flexGrow: 1,
@@ -228,27 +302,85 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  cleanupButtonContainer: {
-    padding: 16,
+  medicineCard: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
   },
-  cleanupButton: {
-    backgroundColor: '#FF3B30',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+  inactiveMedicineCard: {
+    opacity: 0.7,
+    backgroundColor: '#F9F9F9',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  cleanupButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  cleanupButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  medicineName: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#333333',
+    flex: 1,
+    marginRight: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  activeBadge: {
+    backgroundColor: '#34C759',
+  },
+  inactiveBadge: {
+    backgroundColor: '#8E8E93',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  cardBody: {
+    padding: 16,
+    paddingTop: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666666',
+    marginRight: 8,
+    minWidth: 90,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#333333',
+    flex: 1,
+  },
+  cardFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    alignItems: 'flex-end',
+  },
+  viewDetailsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });
 

@@ -148,6 +148,142 @@ class DoseService {
       throw mappedError;
     }
   }
+
+  /**
+   * Mark a dose as taken
+   * Updates the dose status to 'taken' and records the time it was taken.
+   *
+   * @param {string} doseId - Dose document ID
+   * @returns {Promise<void>}
+   * @throws {Error} If update fails
+   *
+   * @example
+   * try {
+   *   await doseService.markDoseAsTaken('dose123');
+   *   console.log('Dose marked as taken');
+   * } catch (error) {
+   *   console.error('Failed to mark dose as taken:', error.message);
+   * }
+   */
+  async markDoseAsTaken(doseId) {
+    try {
+      return await retryOperation(async () => {
+        await this.firestore
+          .collection(this.dosesCollection)
+          .doc(doseId)
+          .update({
+            status: 'taken',
+            takenAt: new Date(),
+            updatedAt: new Date(),
+          });
+      });
+    } catch (error) {
+      console.error('Error marking dose as taken:', error);
+      const mappedError = new Error('Failed to mark dose as taken');
+      mappedError.code = 'dose-update-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+
+  /**
+   * Mark a dose as taken
+   * Updates the dose status to 'taken' and records the time it was taken.
+   *
+   * @param {string} doseId - Dose document ID
+   * @returns {Promise<void>}
+   * @throws {Error} If update fails
+   *
+   * @example
+   * try {
+   *   await doseService.markDoseAsTaken('dose123');
+   *   console.log('Dose marked as taken');
+   * } catch (error) {
+   *   console.error('Failed to mark dose as taken:', error.message);
+   * }
+   */
+  async markDoseAsTaken(doseId) {
+    try {
+      return await retryOperation(async () => {
+        await this.firestore
+          .collection(this.dosesCollection)
+          .doc(doseId)
+          .update({
+            status: 'taken',
+            takenAt: new Date(),
+            updatedAt: new Date(),
+          });
+      });
+    } catch (error) {
+      console.error('Error marking dose as taken:', error);
+      const mappedError = new Error('Failed to mark dose as taken');
+      mappedError.code = 'dose-update-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+
+  /**
+   * Get doses for a date range
+   * Queries all doses scheduled within a date range.
+   *
+   * @param {string} parentId - Parent's Firebase Auth UID
+   * @param {Date} startDate - Start date
+   * @param {Date} endDate - End date
+   * @returns {Promise<Array<Object>>} Array of dose objects sorted by scheduledTime
+   * @throws {Error} If query fails
+   *
+   * @example
+   * try {
+   *   const startDate = new Date('2024-01-01');
+   *   const endDate = new Date('2024-01-07');
+   *   const doses = await doseService.getDosesForDateRange('parent123', startDate, endDate);
+   *   console.log(`Found ${doses.length} doses in range`);
+   * } catch (error) {
+   *   console.error('Failed to get doses for date range:', error.message);
+   * }
+   */
+  async getDosesForDateRange(parentId, startDate, endDate) {
+    try {
+      return await retryOperation(async () => {
+        console.log('Querying doses for date range:', startDate, 'to', endDate);
+        console.log('ParentId:', parentId);
+
+        // Query doses for the date range
+        const querySnapshot = await this.firestore
+          .collection(this.dosesCollection)
+          .where('parentId', '==', parentId)
+          .where('scheduledTime', '>=', startDate)
+          .where('scheduledTime', '<=', endDate)
+          .orderBy('scheduledTime', 'desc')
+          .get();
+
+        console.log(
+          'Query returned',
+          querySnapshot.size,
+          'doses for date range',
+        );
+
+        if (querySnapshot.empty) {
+          return [];
+        }
+
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          scheduledTime: doc.data().scheduledTime?.toDate() || null,
+          takenAt: doc.data().takenAt?.toDate() || null,
+          createdAt: doc.data().createdAt?.toDate() || null,
+        }));
+      });
+    } catch (error) {
+      console.error('Detailed error in getDosesForDateRange:', error);
+      const mappedError = new Error('Failed to get doses for date range');
+      mappedError.code = 'doses-range-query-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
 }
 
 // Export singleton instance

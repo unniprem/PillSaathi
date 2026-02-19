@@ -23,6 +23,7 @@ import { CaregiverScreens } from '../types/navigation';
 import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
 import CaregiverUpcomingScreen from '../screens/caregiver/CaregiverUpcomingScreen';
+import CaregiverDoseHistoryScreen from '../screens/caregiver/CaregiverDoseHistoryScreen';
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
 import ParentDetailScreen from '../screens/caregiver/ParentDetailScreen';
@@ -211,10 +212,10 @@ function PairingStack() {
 /**
  * Upcoming Stack Navigator
  *
- * Stack navigator for upcoming medicines tab.
- * Shows all upcoming medicines across all paired parents.
+ * Stack navigator for dose history tab.
+ * Shows all doses (taken and missed) across all paired parents.
  *
- * @returns {React.ReactElement} Upcoming stack navigator
+ * @returns {React.ReactElement} Dose history stack navigator
  */
 function UpcomingStack() {
   return (
@@ -235,9 +236,9 @@ function UpcomingStack() {
     >
       <Stack.Screen
         name={CaregiverScreens.UPCOMING}
-        component={CaregiverUpcomingScreen}
+        component={CaregiverDoseHistoryScreen}
         options={{
-          title: 'Upcoming Medicines',
+          title: 'Dose History',
         }}
       />
     </Stack.Navigator>
@@ -350,10 +351,10 @@ function CaregiverNavigator() {
         name="UpcomingTab"
         component={UpcomingStack}
         options={{
-          tabBarLabel: 'Upcoming',
+          tabBarLabel: 'History',
           tabBarIcon: ({ color, size }) => {
             const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>📅</Text>;
+            return <Text style={{ fontSize: size, color }}>📊</Text>;
           },
         }}
       />

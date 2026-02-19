@@ -11,11 +11,46 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { logEnvTest } from './src/utils/envTest';
 import { initializeFirebase } from './src/config/firebase';
 import { testNavigationPersistence } from './src/utils/navigationPersistence';
-import { AuthProvider } from './src/contexts/AuthContext';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { PairingProvider } from './src/contexts/PairingContext';
 import { ParentPairingProvider } from './src/contexts/ParentPairingContext';
 import { CaregiverPairingProvider } from './src/contexts/CaregiverPairingContext';
 import RootNavigator from './src/navigation/RootNavigator';
+import doseGenerationService from './src/services/doseGenerationService';
+
+/**
+ * Auto Cleanup Component
+ * Runs dose cleanup every 4 hours for authenticated parents
+ */
+function AutoCleanup() {
+  const { user, profile } = useAuth();
+
+  useEffect(() => {
+    if (!user || profile?.role !== 'parent') {
+      return;
+    }
+
+    // Run cleanup immediately on mount
+    const runCleanup = async () => {
+      try {
+        console.log('Running automatic dose cleanup...');
+        await doseGenerationService.cleanupOldDoses(user.uid);
+        console.log('Automatic dose cleanup completed');
+      } catch (error) {
+        console.error('Auto cleanup error:', error);
+      }
+    };
+
+    runCleanup();
+
+    // Set up interval to run every 4 hours (4 * 60 * 60 * 1000 ms)
+    const intervalId = setInterval(runCleanup, 4 * 60 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [user, profile]);
+
+  return null;
+}
 
 /**
  * Main App Component
@@ -87,6 +122,7 @@ function App() {
               <StatusBar
                 barStyle={isDarkMode ? 'light-content' : 'dark-content'}
               />
+              <AutoCleanup />
               <RootNavigator />
             </SafeAreaProvider>
           </CaregiverPairingProvider>

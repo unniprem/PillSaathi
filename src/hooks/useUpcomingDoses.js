@@ -63,10 +63,12 @@ export function useUpcomingDoses(parentId, hours = 24) {
 
       // Mark overdue doses (Requirement 11.1)
       const now = new Date();
-      const dosesWithOverdueFlag = upcomingDoses.map(dose => ({
-        ...dose,
-        isOverdue: dose.scheduledTime && dose.scheduledTime < now,
-      }));
+      const dosesWithOverdueFlag = upcomingDoses
+        .filter(dose => dose.status !== 'taken') // Filter out taken doses
+        .map(dose => ({
+          ...dose,
+          isOverdue: dose.scheduledTime && dose.scheduledTime < now,
+        }));
 
       setDoses(dosesWithOverdueFlag);
     } catch (err) {

@@ -61,6 +61,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "parentId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledTime",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "doses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "scheduleId",
           "order": "ASCENDING"
         },

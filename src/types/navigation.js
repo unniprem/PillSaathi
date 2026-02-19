@@ -67,6 +67,7 @@ export const ParentScreens = {
   EDIT_PROFILE: 'EditProfile',
   MEDICINE_LIST: 'MedicineList',
   MEDICINE_VIEW: 'ParentMedicineView',
+  MEDICINE_DETAILS: 'ParentMedicineDetails',
   UPCOMING_DOSES: 'UpcomingDoses',
   PARENT_UPCOMING: 'ParentUpcoming',
   ADD_MEDICINE: 'AddMedicine',

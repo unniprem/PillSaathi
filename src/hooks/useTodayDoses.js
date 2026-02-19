@@ -69,10 +69,12 @@ export function useTodayDoses() {
 
       // Mark overdue doses (Requirements 17.4, 17.5)
       const now = new Date();
-      const dosesWithOverdueFlag = todayDoses.map(dose => ({
-        ...dose,
-        isOverdue: dose.scheduledTime && dose.scheduledTime < now,
-      }));
+      const dosesWithOverdueFlag = todayDoses
+        .filter(dose => dose.status !== 'taken') // Filter out taken doses
+        .map(dose => ({
+          ...dose,
+          isOverdue: dose.scheduledTime && dose.scheduledTime < now,
+        }));
 
       setDoses(dosesWithOverdueFlag);
     } catch (err) {
@@ -90,25 +92,6 @@ export function useTodayDoses() {
     setRefetchTrigger(prev => prev + 1);
   };
 
-  /**
-   * Mark a dose as taken
-   * This is a placeholder for the actual implementation
-   * which would update the dose status in Firestore
-   *
-   * @param {string} doseId - Dose ID to mark as taken
-   */
-  const markAsTaken = async doseId => {
-    try {
-      // TODO: Implement actual dose status update in Firestore
-      // For now, just refetch to update the UI
-      console.log('Marking dose as taken:', doseId);
-      refetch();
-    } catch (err) {
-      console.error('Error marking dose as taken:', err);
-      throw err;
-    }
-  };
-
   // Fetch doses when user changes or refetch is triggered
   useEffect(() => {
     fetchTodayDoses();
@@ -120,7 +103,6 @@ export function useTodayDoses() {
     loading,
     error,
     refetch,
-    markAsTaken,
   };
 }
 

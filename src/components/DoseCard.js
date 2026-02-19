@@ -101,7 +101,7 @@ function DoseCard({ dose, onPress, onMarkTaken }) {
             </Text>
             {dose.isOverdue && (
               <View style={styles.overdueBadge}>
-                <Text style={styles.overdueBadgeText}>OVERDUE</Text>
+                <Text style={styles.overdueBadgeText}>MISSED</Text>
               </View>
             )}
           </View>
@@ -126,7 +126,7 @@ function DoseCard({ dose, onPress, onMarkTaken }) {
               accessibilityLabel="Mark as taken"
               accessibilityHint="Double tap to mark this dose as taken"
             >
-              <Text style={styles.markTakenText}>✓</Text>
+              <Text style={styles.markTakenText}>Taken</Text>
             </TouchableOpacity>
           )}
           <Text style={styles.arrowIcon}>›</Text>
@@ -221,16 +221,17 @@ const styles = StyleSheet.create({
   },
   markTakenButton: {
     backgroundColor: '#34C759',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    minHeight: 36,
   },
   markTakenText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   arrowIcon: {

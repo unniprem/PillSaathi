@@ -2,7 +2,7 @@
  * Parent Home Screen
  *
  * Main dashboard for parent users.
- * Displays upcoming medicines and all medicines list.
+ * Displays upcoming medicines for the next 4 hours.
  *
  * Requirements: 10.1, 10.2, 10.3, 11.1, 11.2
  *
@@ -22,17 +22,15 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { ParentScreens } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import useMyMedicines from '../../hooks/useMyMedicines';
 import useUpcomingDoses from '../../hooks/useUpcomingDoses';
-import MedicineCard from '../../components/MedicineCard';
 import DoseCard from '../../components/DoseCard';
+import doseService from '../../services/doseService';
 
 /**
  * Parent Home Screen Component
  *
  * Displays:
- * - Upcoming Medicines section (next 24 hours) - Requirements 11.1, 11.2
- * - All Medicines section - Requirements 10.1, 10.2, 10.3
+ * - Upcoming Medicines section (next 4 hours) - Requirements 11.1, 11.2
  *
  * @returns {React.ReactElement} Parent home screen component
  */
@@ -40,32 +38,22 @@ function ParentHomeScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
 
-  // Fetch medicines and upcoming doses
-  const {
-    medicines,
-    loading: medicinesLoading,
-    error: medicinesError,
-  } = useMyMedicines(user?.uid);
-
+  // Fetch upcoming doses for next 4 hours
   const {
     doses,
     loading: dosesLoading,
     error: dosesError,
-  } = useUpcomingDoses(user?.uid, 24);
-
-  /**
-   * Navigate to medicine details
-   */
-  const handleMedicinePress = medicineId => {
-    navigation.navigate(ParentScreens.MEDICINE_DETAILS, { medicineId });
-  };
+    refetch,
+  } = useUpcomingDoses(user?.uid, 4);
 
   /**
    * Navigate to medicine details from dose
    */
   const handleDosePress = dose => {
-    navigation.navigate(ParentScreens.MEDICINE_DETAILS, {
-      medicineId: dose.medicineId,
+    // Navigate to medicine view in HomeTab stack
+    navigation.navigate('HomeTab', {
+      screen: ParentScreens.MEDICINE_VIEW,
+      params: { userId: user?.uid },
     });
   };
 
@@ -73,7 +61,21 @@ function ParentHomeScreen() {
    * Navigate to pairing screen
    */
   const handleManageCaregivers = () => {
-    navigation.navigate(ParentScreens.PAIRING);
+    navigation.navigate('ManageTab', {
+      screen: ParentScreens.PAIRING,
+    });
+  };
+
+  /**
+   * Handle mark as taken
+   */
+  const handleMarkAsTaken = async doseId => {
+    try {
+      await doseService.markDoseAsTaken(doseId);
+      refetch();
+    } catch (err) {
+      console.error('Error marking dose as taken:', err);
+    }
   };
 
   /**
@@ -101,8 +103,11 @@ function ParentHomeScreen() {
     if (doses.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            No upcoming medicines in the next 24 hours
+          <Text style={styles.emptyIcon}>✅</Text>
+          <Text style={styles.emptyText}>No medicines in the next 4 hours</Text>
+          <Text style={styles.emptySubtext}>
+            You're all caught up! Check the Medicines tab for your full
+            schedule.
           </Text>
         </View>
       );
@@ -112,52 +117,10 @@ function ParentHomeScreen() {
       <FlatList
         data={doses}
         renderItem={({ item }) => (
-          <DoseCard dose={item} onPress={() => handleDosePress(item)} />
-        )}
-        keyExtractor={item => item.id}
-        scrollEnabled={false}
-      />
-    );
-  };
-
-  /**
-   * Render all medicines section
-   */
-  const renderMedicinesSection = () => {
-    if (medicinesLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#007AFF" />
-        </View>
-      );
-    }
-
-    if (medicinesError) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Failed to load medicines</Text>
-        </View>
-      );
-    }
-
-    if (medicines.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No medicines added yet</Text>
-          <Text style={styles.emptySubtext}>
-            Ask your caregiver to add medicines for you
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <FlatList
-        data={medicines}
-        renderItem={({ item }) => (
-          <MedicineCard
-            medicine={item}
-            onPress={() => handleMedicinePress(item.id)}
+          <DoseCard
+            dose={item}
+            onPress={() => handleDosePress(item)}
+            onMarkTaken={() => handleMarkAsTaken(item.id)}
           />
         )}
         keyExtractor={item => item.id}
@@ -168,37 +131,11 @@ function ParentHomeScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Manage Caregivers Button */}
-      <View style={styles.headerSection}>
-        <TouchableOpacity
-          style={styles.manageCaregiverButton}
-          onPress={handleManageCaregivers}
-          accessibilityRole="button"
-          accessibilityLabel="Manage caregivers"
-          accessibilityHint="Navigate to caregiver management screen"
-        >
-          <Text style={styles.manageCaregiverIcon}>👥</Text>
-          <View style={styles.manageCaregiverTextContainer}>
-            <Text style={styles.manageCaregiverTitle}>Manage Caregivers</Text>
-            <Text style={styles.manageCaregiverSubtitle}>
-              Generate invite codes and view connected caregivers
-            </Text>
-          </View>
-          <Text style={styles.manageCaregiverArrow}>›</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Upcoming Medicines Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Upcoming Medicines</Text>
-        <Text style={styles.sectionSubtitle}>Next 24 hours</Text>
+        <Text style={styles.sectionSubtitle}>Next 4 hours</Text>
         {renderUpcomingSection()}
-      </View>
-
-      {/* All Medicines Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>All Medicines</Text>
-        {renderMedicinesSection()}
       </View>
     </ScrollView>
   );
@@ -208,46 +145,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-  },
-  headerSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  manageCaregiverButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  manageCaregiverIcon: {
-    fontSize: 32,
-    marginRight: 12,
-  },
-  manageCaregiverTextContainer: {
-    flex: 1,
-  },
-  manageCaregiverTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 4,
-  },
-  manageCaregiverSubtitle: {
-    fontSize: 13,
-    color: '#666666',
-    lineHeight: 18,
-  },
-  manageCaregiverArrow: {
-    fontSize: 28,
-    color: '#007AFF',
-    fontWeight: '300',
   },
   section: {
     marginTop: 20,
@@ -279,6 +176,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 12,
     marginTop: 8,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 16,
