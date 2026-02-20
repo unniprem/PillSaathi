@@ -9,16 +9,42 @@
 
 import { getFirestore } from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { retryOperation } from '../utils/retryHelper';
 import AlarmSchedulerService from './AlarmSchedulerService';
-
-const OFFLINE_QUEUE_KEY = '@pillsathi:offline_dose_actions';
+import OfflineQueueService from './OfflineQueueService';
 
 class DoseTrackerService {
   constructor(firestoreInstance = null) {
     this.firestore = firestoreInstance || getFirestore(getApp());
     this.dosesCollection = 'doses';
+    this.initialized = false;
+  }
+
+  /**
+   * Initialize the DoseTrackerService
+   * Sets up offline queue monitoring and auto-sync
+   *
+   * Requirements: 8.6 - Trigger sync when connectivity restored
+   *
+   * @returns {Promise<void>}
+   */
+  async initialize() {
+    if (this.initialized) {
+      return;
+    }
+
+    try {
+      // Initialize offline queue service with sync callback
+      await OfflineQueueService.initialize(async () => {
+        // Auto-sync when connectivity is restored
+        await this.syncOfflineActions();
+      });
+
+      this.initialized = true;
+      console.log('DoseTrackerService initialized with offline support');
+    } catch (error) {
+      console.error('Failed to initialize DoseTrackerService:', error);
+    }
   }
 
   /**
@@ -185,26 +211,167 @@ class DoseTrackerService {
 
   /**
    * Queue offline action for later sync
+   * Delegates to OfflineQueueService
+   *
+   * Requirements: 8.2 - Queue offline actions
    *
    * @param {Object} action - Action to queue
-   * @returns {Promise<void>}
+   * @returns {Promise<string>} Action ID
    */
   async queueOfflineAction(action) {
+    return OfflineQueueService.queueOfflineAction(action);
+  }
+
+  /**
+   * Sync offline actions to Firestore
+   * Processes queued actions when connectivity is restored
+   * Preserves original timestamps during sync
+   *
+   * Requirements: 4.8 - Sync offline actions when connectivity restored
+   * Requirements: 8.3 - Sync all offline actions to Firestore
+   * Requirements: 8.4 - Preserve original timestamps during sync
+   *
+   * @returns {Promise<number>} Number of actions synced successfully
+   */
+  async syncOfflineActions() {
     try {
-      const queueJson = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-      const queue = queueJson ? JSON.parse(queueJson) : { actions: [] };
+      // Check if we're online
+      if (!OfflineQueueService.isOnline()) {
+        console.log('Cannot sync offline actions: device is offline');
+        return 0;
+      }
 
-      queue.actions.push({
-        id: `${Date.now()}_${Math.random()}`,
-        ...action,
-        retryCount: 0,
-      });
+      // Get offline queue
+      const queue = await OfflineQueueService.getQueue();
 
-      await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-      console.log('Action queued for offline sync:', action.type);
+      if (queue.actions.length === 0) {
+        console.log('No offline actions to sync');
+        return 0;
+      }
+
+      console.log(`Syncing ${queue.actions.length} offline actions...`);
+
+      let syncedCount = 0;
+      const failedActions = [];
+
+      // Process each action
+      for (const action of queue.actions) {
+        try {
+          await this.processOfflineAction(action);
+
+          // Remove successfully synced action from queue
+          await OfflineQueueService.removeAction(action.id);
+          syncedCount++;
+
+          console.log('Successfully synced action:', action.id);
+        } catch (error) {
+          console.error('Failed to sync action:', action.id, error);
+
+          // Increment retry count
+          const newRetryCount = (action.retryCount || 0) + 1;
+
+          // If retry count exceeds threshold, log and skip
+          if (newRetryCount >= 5) {
+            console.error(
+              'Action exceeded max retries, removing from queue:',
+              action.id,
+            );
+            await OfflineQueueService.removeAction(action.id);
+          } else {
+            // Update retry count for next sync attempt
+            await OfflineQueueService.updateRetryCount(
+              action.id,
+              newRetryCount,
+            );
+            failedActions.push(action);
+          }
+        }
+      }
+
+      if (failedActions.length > 0) {
+        console.log(
+          `Sync complete: ${syncedCount} succeeded, ${failedActions.length} failed`,
+        );
+      } else {
+        console.log(
+          `Sync complete: ${syncedCount} actions synced successfully`,
+        );
+      }
+
+      return syncedCount;
     } catch (error) {
-      console.error('Failed to queue offline action:', error);
+      console.error('Error syncing offline actions:', error);
+      throw new Error('Failed to sync offline actions');
     }
+  }
+
+  /**
+   * Process a single offline action
+   * Applies the action to Firestore with original timestamp preserved
+   * Uses Firestore transactions for atomic updates and conflict resolution
+   *
+   * Requirements: 8.4 - Preserve original timestamps during sync
+   * Requirements: 8.5 - Apply parent's action as authoritative in conflicts
+   *
+   * @param {Object} action - Action to process
+   * @returns {Promise<void>}
+   * @private
+   */
+  async processOfflineAction(action) {
+    const { type, doseId, timestamp, data } = action;
+
+    console.log('Processing offline action:', { type, doseId, timestamp });
+
+    // Use Firestore transaction for atomic updates (Requirement 8.5)
+    await this.firestore.runTransaction(async transaction => {
+      const doseRef = this.firestore
+        .collection(this.dosesCollection)
+        .doc(doseId);
+      const doseDoc = await transaction.get(doseRef);
+
+      if (!doseDoc.exists) {
+        throw new Error(`Dose not found: ${doseId}`);
+      }
+
+      // Prepare update data based on action type
+      let updateData = {};
+
+      switch (type) {
+        case 'mark_taken':
+          // Parent's action is authoritative (Requirement 8.5)
+          // Even if dose was already updated, apply parent's action
+          updateData = {
+            status: 'taken',
+            takenAt: timestamp, // Use original timestamp (Requirement 8.4)
+            updatedAt: new Date(),
+          };
+          console.log(
+            'Applying parent action: mark as taken with timestamp',
+            timestamp,
+          );
+          break;
+
+        case 'mark_skipped':
+          // Parent's action is authoritative (Requirement 8.5)
+          updateData = {
+            status: 'skipped',
+            skippedReason: data.reason || null,
+            updatedAt: new Date(),
+          };
+          console.log('Applying parent action: mark as skipped');
+          break;
+
+        default:
+          throw new Error(`Unknown offline action type: ${type}`);
+      }
+
+      // Apply update within transaction
+      transaction.update(doseRef, updateData);
+
+      console.log('Transaction update prepared for dose:', doseId);
+    });
+
+    console.log('Successfully processed offline action:', action.id);
   }
 
   /**
@@ -316,6 +483,215 @@ class DoseTrackerService {
       console.error('Error snoozing dose:', error);
       const mappedError = new Error('Failed to snooze dose');
       mappedError.code = 'dose-snooze-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+  /**
+   * Get dose history for a medicine
+   * Supports date range filtering, status filtering, sorting, and pagination
+   *
+   * Requirements: 6.1 - Display doses in reverse chronological order
+   * Requirements: 6.5 - Support filtering by date range
+   * Requirements: 6.6 - Support filtering by status
+   * Requirements: 10.7 - Support querying doses by date range and status
+   *
+   * @param {string} medicineId - Medicine ID
+   * @param {Date} startDate - Start date for history
+   * @param {Date} endDate - End date for history
+   * @param {Array<string>} statusFilter - Optional status filter (e.g., ['taken', 'missed'])
+   * @param {number} limit - Optional limit for pagination (default: 50)
+   * @param {Object} lastDoc - Optional last document for pagination
+   * @returns {Promise<{doses: Array<Object>, lastDoc: Object}>} Dose records and last document for pagination
+   * @throws {Error} If query fails
+   */
+  async getDoseHistory(
+    medicineId,
+    startDate,
+    endDate,
+    statusFilter = null,
+    limit = 50,
+    lastDoc = null,
+  ) {
+    try {
+      console.log('Querying dose history:', {
+        medicineId,
+        startDate,
+        endDate,
+        statusFilter,
+        limit,
+      });
+
+      // Build query with medicineId filter
+      let query = this.firestore
+        .collection(this.dosesCollection)
+        .where('medicineId', '==', medicineId);
+
+      // Add date range filter (Requirement 6.5, 10.7)
+      if (startDate) {
+        query = query.where('scheduledTime', '>=', startDate);
+      }
+      if (endDate) {
+        query = query.where('scheduledTime', '<=', endDate);
+      }
+
+      // Add status filter if provided (Requirement 6.6, 10.7)
+      if (statusFilter && statusFilter.length > 0) {
+        query = query.where('status', 'in', statusFilter);
+      }
+
+      // Sort by scheduledTime descending (Requirement 6.1)
+      query = query.orderBy('scheduledTime', 'desc');
+
+      // Add pagination
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
+      }
+      query = query.limit(limit);
+
+      // Execute query
+      const snapshot = await query.get();
+
+      const doses = [];
+      snapshot.forEach(doc => {
+        doses.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      console.log(`Retrieved ${doses.length} dose records`);
+
+      return {
+        doses,
+        lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
+      };
+    } catch (error) {
+      console.error('Error querying dose history:', error);
+      const mappedError = new Error('Failed to query dose history');
+      mappedError.code = 'dose-query-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+
+  /**
+   * Get today's doses for a medicine
+   * Filters by medicine and parent ID for current date
+   *
+   * Requirements: 7.1 - Get doses for current date
+   *
+   * @param {string} medicineId - Medicine ID
+   * @param {string} parentId - Parent ID
+   * @returns {Promise<Array<Object>>} Array of today's doses
+   * @throws {Error} If query fails
+   */
+  async getTodaysDoses(medicineId, parentId) {
+    try {
+      // Calculate today's date range (00:00:00 to 23:59:59 local time)
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      console.log("Querying today's doses:", {
+        medicineId,
+        parentId,
+        startOfDay,
+        endOfDay,
+      });
+
+      // Build query
+      const query = this.firestore
+        .collection(this.dosesCollection)
+        .where('medicineId', '==', medicineId)
+        .where('parentId', '==', parentId)
+        .where('scheduledTime', '>=', startOfDay)
+        .where('scheduledTime', '<=', endOfDay)
+        .orderBy('scheduledTime', 'asc');
+
+      // Execute query
+      const snapshot = await query.get();
+
+      const doses = [];
+      snapshot.forEach(doc => {
+        doses.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      console.log(`Retrieved ${doses.length} doses for today`);
+
+      return doses;
+    } catch (error) {
+      console.error("Error querying today's doses:", error);
+      const mappedError = new Error("Failed to query today's doses");
+      mappedError.code = 'dose-query-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+
+  /**
+   * Calculate adherence percentage for a medicine
+   * Counts taken doses vs total doses in date range
+   *
+   * Requirements: 6.7 - Calculate and display adherence percentage
+   *
+   * @param {string} medicineId - Medicine ID
+   * @param {Date} startDate - Start date
+   * @param {Date} endDate - End date
+   * @returns {Promise<number>} Adherence percentage (0-100)
+   * @throws {Error} If calculation fails
+   */
+  async calculateAdherence(medicineId, startDate, endDate) {
+    try {
+      console.log('Calculating adherence:', {
+        medicineId,
+        startDate,
+        endDate,
+      });
+
+      // Query all doses in date range
+      const query = this.firestore
+        .collection(this.dosesCollection)
+        .where('medicineId', '==', medicineId)
+        .where('scheduledTime', '>=', startDate)
+        .where('scheduledTime', '<=', endDate);
+
+      const snapshot = await query.get();
+
+      if (snapshot.empty) {
+        console.log('No doses found for adherence calculation');
+        return 0;
+      }
+
+      // Count total doses and taken doses
+      let totalDoses = 0;
+      let takenDoses = 0;
+
+      snapshot.forEach(doc => {
+        const dose = doc.data();
+        totalDoses++;
+        if (dose.status === 'taken') {
+          takenDoses++;
+        }
+      });
+
+      // Calculate adherence percentage
+      const adherence = totalDoses > 0 ? (takenDoses / totalDoses) * 100 : 0;
+
+      console.log(
+        `Adherence: ${takenDoses}/${totalDoses} = ${adherence.toFixed(2)}%`,
+      );
+
+      return adherence;
+    } catch (error) {
+      console.error('Error calculating adherence:', error);
+      const mappedError = new Error('Failed to calculate adherence');
+      mappedError.code = 'adherence-calculation-failed';
       mappedError.originalError = error;
       throw mappedError;
     }
