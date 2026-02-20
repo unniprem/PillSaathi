@@ -15,9 +15,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
   - Set up AsyncStorage for alarm metadata persistence
   - _Requirements: 2.1, 2.2, 2.3, 2.7_
 
-- [ ] 2. Implement AlarmSchedulerService core functionality
+- [x] 2. Implement AlarmSchedulerService core functionality
 
-  - [ ] 2.1 Create AlarmSchedulerService class with alarm scheduling logic
+  - [x] 2.1 Create AlarmSchedulerService class with alarm scheduling logic
 
     - Implement `scheduleMedicineAlarms()` to create alarms for 7-day window
     - Implement alarm time calculation from schedule data
@@ -29,7 +29,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 1: Alarm creation completeness**
     - **Validates: Requirements 1.1, 1.6**
 
-  - [ ] 2.3 Implement alarm cancellation methods
+  - [x] 2.3 Implement alarm cancellation methods
 
     - Implement `cancelMedicineAlarms()` to remove all alarms for a medicine
     - Retrieve alarm IDs from AsyncStorage and cancel with Notifee
@@ -41,7 +41,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 2: Alarm cancellation completeness**
     - **Validates: Requirements 1.3, 1.4**
 
-  - [ ] 2.5 Implement alarm rescheduling logic
+  - [x] 2.5 Implement alarm rescheduling logic
 
     - Implement `rescheduleMedicineAlarms()` to update alarms when schedule changes
     - Cancel existing alarms and create new ones atomically
@@ -51,9 +51,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 3: Alarm rescheduling consistency**
     - **Validates: Requirements 1.2, 1.5**
 
-- [ ] 3. Implement alarm recovery and verification
+- [x] 3. Implement alarm recovery and verification
 
-  - [ ] 3.1 Create alarm verification and recovery logic
+  - [x] 3.1 Create alarm verification and recovery logic
 
     - Implement `verifyAndRestoreAlarms()` to check for missing alarms on app launch
     - Query active medicines and their schedules
@@ -66,7 +66,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 5: Alarm recovery on app launch**
     - **Validates: Requirements 1.7**
 
-  - [ ] 3.3 Implement timezone change handling
+  - [x] 3.3 Implement timezone change handling
 
     - Implement `handleTimezoneChange()` to adjust alarms when timezone changes
     - Detect timezone changes using device timezone API
@@ -83,9 +83,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
   - Verify alarms trigger at correct times
   - Ensure all tests pass, ask the user if questions arise
 
-- [ ] 5. Integrate alarm scheduling with MedicineService
+- [x] 5. Integrate alarm scheduling with MedicineService
 
-  - [ ] 5.1 Add alarm scheduling hooks to medicine CRUD operations
+  - [x] 5.1 Add alarm scheduling hooks to medicine CRUD operations
 
     - Call `scheduleMedicineAlarms()` after medicine creation
     - Call `rescheduleMedicineAlarms()` after medicine update
@@ -99,9 +99,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - Test alarm cancellation on medicine deletion
     - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 6. Implement DoseTrackerService core functionality
+- [x] 6. Implement DoseTrackerService core functionality
 
-  - [ ] 6.1 Create DoseTrackerService class with dose status management
+  - [x] 6.1 Create DoseTrackerService class with dose status management
 
     - Implement `markDoseAsTaken()` to update dose status to "taken"
     - Implement `markDoseAsSkipped()` to update dose status to "skipped"
@@ -114,7 +114,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 12: Dose status transition to skipped**
     - **Validates: Requirements 4.1, 4.2, 4.4**
 
-  - [ ] 6.3 Implement dose record creation logic
+  - [x] 6.3 Implement dose record creation logic
 
     - Ensure dose records include all required fields
     - Validate dose data structure before Firestore write
@@ -125,7 +125,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 14: Dose record structure completeness**
     - **Validates: Requirements 10.2**
 
-  - [ ] 6.5 Implement snooze functionality
+  - [x] 6.5 Implement snooze functionality
 
     - Implement `snoozeDose()` to reschedule alarm for 10 minutes later
     - Calculate new alarm time and schedule with Notifee
@@ -135,9 +135,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 9: Snooze time calculation**
     - **Validates: Requirements 4.3**
 
-- [ ] 7. Implement dose query and history functions
+- [x] 7. Implement dose query and history functions
 
-  - [ ] 7.1 Create dose history query methods
+  - [x] 7.1 Create dose history query methods
 
     - Implement `getDoseHistory()` with date range and status filtering
     - Implement sorting by scheduledTime descending
@@ -151,7 +151,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 21: Status filter correctness**
     - **Validates: Requirements 6.1, 6.5, 6.6**
 
-  - [ ] 7.3 Implement today's doses query
+  - [x] 7.3 Implement today's doses query
 
     - Implement `getTodaysDoses()` to get doses for current date
     - Filter by medicine and parent ID
@@ -162,7 +162,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 22: Today's doses query correctness**
     - **Validates: Requirements 7.1**
 
-  - [ ] 7.5 Implement adherence calculation
+  - [x] 7.5 Implement adherence calculation
 
     - Implement `calculateAdherence()` to compute adherence percentage
     - Count taken doses vs total doses in date range
@@ -178,9 +178,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
   - Verify dose history queries return correct data
   - Ensure all tests pass, ask the user if questions arise
 
-- [ ] 9. Implement offline support
+- [x] 9. Implement offline support
 
-  - [ ] 9.1 Create offline action queue system
+  - [x] 9.1 Create offline action queue system
 
     - Implement offline queue storage in AsyncStorage
     - Implement `queueOfflineAction()` to store actions when offline
@@ -192,7 +192,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 16: Offline action queueing**
     - **Validates: Requirements 8.2**
 
-  - [ ] 9.3 Implement offline sync logic
+  - [x] 9.3 Implement offline sync logic
 
     - Implement `syncOfflineActions()` to process queued actions
     - Preserve original timestamps during sync
@@ -204,7 +204,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 17: Offline sync round-trip**
     - **Validates: Requirements 4.8, 8.3, 8.4**
 
-  - [ ] 9.5 Implement conflict resolution
+  - [x] 9.5 Implement conflict resolution
 
     - Use Firestore transactions for atomic updates
     - Apply parent's action as authoritative in conflicts
@@ -215,15 +215,15 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 18: Conflict resolution authority**
     - **Validates: Requirements 8.5**
 
-  - [ ] 9.7 Add connectivity monitoring
+  - [x] 9.7 Add connectivity monitoring
     - Listen for network state changes
     - Trigger sync when connectivity restored
     - Display connectivity indicator in UI
     - _Requirements: 8.6_
 
-- [ ] 10. Implement Full-Screen Alarm UI
+- [x] 10. Implement Full-Screen Alarm UI
 
-  - [ ] 10.1 Create FullScreenAlarmScreen component
+  - [x] 10.1 Create FullScreenAlarmScreen component
 
     - Design layout with large touch targets for elderly users
     - Display medicine name, dosage, time, and instructions
@@ -231,7 +231,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - Use high contrast colors and large fonts
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
 
-  - [ ] 10.2 Wire alarm triggers to FullScreenAlarmScreen
+  - [x] 10.2 Wire alarm triggers to FullScreenAlarmScreen
 
     - Configure Notifee to open FullScreenAlarmScreen on alarm trigger
     - Pass medicine and dose data to screen via navigation params
@@ -249,9 +249,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - Test "Snooze" button calls snoozeDose
     - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 11. Implement Parent Medicine Detail Screen enhancements
+- [x] 11. Implement Parent Medicine Detail Screen enhancements
 
-  - [ ] 11.1 Add today's doses display to ParentMedicineDetailScreen
+  - [x] 11.1 Add today's doses display to ParentMedicineDetailScreen
 
     - Query and display today's doses for the medicine
     - Show scheduled time and current status for each dose
@@ -263,7 +263,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 24: Dose status display logic**
     - **Validates: Requirements 7.3**
 
-  - [ ] 11.3 Add manual dose marking functionality
+  - [x] 11.3 Add manual dose marking functionality
 
     - Allow marking past doses as taken from detail screen
     - Prevent marking future doses as taken
@@ -273,9 +273,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 15: Future dose marking prevention**
     - **Validates: Requirements 7.6**
 
-- [ ] 12. Implement Caregiver Dose History Screen
+- [x] 12. Implement Caregiver Dose History Screen
 
-  - [ ] 12.1 Create CaregiverDoseHistoryScreen component
+  - [x] 12.1 Create CaregiverDoseHistoryScreen component
 
     - Display dose history in reverse chronological order
     - Show scheduled time, actual time taken, and status
@@ -284,7 +284,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - Display adherence percentage for selected period
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-  - [ ] 12.2 Add real-time listeners for dose updates
+  - [x] 12.2 Add real-time listeners for dose updates
 
     - Set up Firestore listeners for dose collection
     - Update UI when dose status changes
@@ -297,9 +297,9 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - Test adherence calculation display
     - _Requirements: 6.5, 6.6, 6.7_
 
-- [ ] 13. Implement logging and debugging tools
+- [x] 13. Implement logging and debugging tools
 
-  - [ ] 13.1 Add comprehensive logging to AlarmSchedulerService
+  - [x] 13.1 Add comprehensive logging to AlarmSchedulerService
 
     - Log all alarm scheduling operations with timestamps
     - Log all alarm trigger events
@@ -313,22 +313,22 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
     - **Property 27: Error retry behavior**
     - **Validates: Requirements 9.1, 9.2, 9.5**
 
-  - [ ] 13.3 Create debugging utility methods
+  - [x] 13.3 Create debugging utility methods
     - Implement `getAllScheduledAlarms()` for debugging
     - Implement `verifyAlarmIntegrity()` for diagnostics
     - Implement `manualRescheduleAll()` for testing
     - _Requirements: 9.3, 9.4, 9.7_
 
-- [ ] 14. Add error handling and edge cases
+- [x] 14. Add error handling and edge cases
 
-  - [ ] 14.1 Implement permission handling
+  - [x] 14.1 Implement permission handling
 
     - Request notification permissions on first use
     - Handle permission denial gracefully
     - Guide user to settings if permissions denied
     - _Requirements: 2.7_
 
-  - [ ] 14.2 Implement error handling for Firestore operations
+  - [x] 14.2 Implement error handling for Firestore operations
 
     - Add retry logic with exponential backoff
     - Queue failed operations for offline sync
@@ -349,7 +349,7 @@ This implementation plan breaks down the alarm scheduling and dose tracking syst
   - Test alarm reliability: close app → verify alarm still triggers
   - Ensure all tests pass, ask the user if questions arise
 
-- [ ] 16. Create Firestore indexes
+- [x] 16. Create Firestore indexes
   - Create composite indexes for dose queries
   - Index: parentId (ASC) + scheduledTime (ASC)
   - Index: parentId (ASC) + scheduledTime (DESC)
