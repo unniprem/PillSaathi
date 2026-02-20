@@ -69,6 +69,36 @@ jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => jest.fn()),
 }));
 
+// Mock Notifee
+jest.mock('@notifee/react-native', () => ({
+  __esModule: true,
+  default: {
+    createChannel: jest.fn(() => Promise.resolve('channel-id')),
+    displayNotification: jest.fn(() => Promise.resolve('notification-id')),
+    createTriggerNotification: jest.fn(() =>
+      Promise.resolve('notification-id'),
+    ),
+    cancelNotification: jest.fn(() => Promise.resolve()),
+    cancelAllNotifications: jest.fn(() => Promise.resolve()),
+    getTriggerNotifications: jest.fn(() => Promise.resolve([])),
+    requestPermission: jest.fn(() =>
+      Promise.resolve({ authorizationStatus: 1 }),
+    ),
+    getNotificationSettings: jest.fn(() =>
+      Promise.resolve({ authorizationStatus: 1 }),
+    ),
+  },
+  TriggerType: {
+    TIMESTAMP: 0,
+  },
+  AndroidImportance: {
+    HIGH: 4,
+  },
+  AndroidCategory: {
+    ALARM: 'alarm',
+  },
+}));
+
 // Suppress console warnings in tests (optional)
 global.console = {
   ...console,

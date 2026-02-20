@@ -27,6 +27,7 @@ import UpcomingDoses from '../screens/parent/UpcomingDoses';
 import ParentUpcomingScreen from '../screens/parent/ParentUpcomingScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import LogoutHeader from '../components/LogoutHeader';
+import FullScreenAlarmScreen from '../screens/parent/FullScreenAlarmScreen';
 // import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
 // import MedicineListScreen from '../screens/parent/MedicineListScreen';
 // import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
@@ -375,7 +376,7 @@ function ManageStack() {
  *
  * @returns {React.ReactElement} Parent navigator component
  */
-function ParentNavigator() {
+function ParentTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -441,6 +442,37 @@ function ParentNavigator() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+/**
+ * Parent Navigator with Modal Screens
+ *
+ * Wraps the tab navigator with modal screens like FullScreenAlarm.
+ * This allows the alarm screen to appear over all other screens.
+ *
+ * Requirements: 2.1, 3.9
+ *
+ * @returns {React.ReactElement} Parent navigator with modals
+ */
+function ParentNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="ParentTabs" component={ParentTabNavigator} />
+      <Stack.Screen
+        name={ParentScreens.FULL_SCREEN_ALARM}
+        component={FullScreenAlarmScreen}
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'fade',
+          gestureEnabled: false,
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 

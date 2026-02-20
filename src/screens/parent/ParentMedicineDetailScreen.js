@@ -22,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import medicineService from '../../services/medicineService';
 import scheduleService from '../../services/scheduleService';
 import doseService from '../../services/doseService';
+import doseTrackerService from '../../services/DoseTrackerService';
 
 /**
  * Format time for display
@@ -74,6 +75,61 @@ function formatScheduleTimes(times) {
 }
 
 /**
+ * Get dose display status
+ * Implements "upcoming" vs "overdue" logic per Requirements 7.3
+ */
+function getDoseDisplayStatus(dose) {
+  const now = new Date();
+  const scheduledTime = dose.scheduledTime;
+
+  // If already taken, skipped, or missed, show actual status
+  if (dose.status === 'taken') {
+    return {
+      text: 'Taken',
+      color: '#34C759',
+      bgColor: '#E8F5E9',
+      isActionable: false,
+    };
+  }
+
+  if (dose.status === 'skipped') {
+    return {
+      text: 'Skipped',
+      color: '#8E8E93',
+      bgColor: '#F0F0F0',
+      isActionable: false,
+    };
+  }
+
+  if (dose.status === 'missed') {
+    return {
+      text: 'Missed',
+      color: '#FF3B30',
+      bgColor: '#FFEBEE',
+      isActionable: false,
+    };
+  }
+
+  // For scheduled doses, determine if upcoming or overdue
+  if (scheduledTime > now) {
+    return {
+      text: 'Upcoming',
+      color: '#007AFF',
+      bgColor: '#E3F2FD',
+      isActionable: false,
+    };
+  } else {
+    // Overdue (scheduled time has passed but not taken)
+    return {
+      text: 'Overdue',
+      color: '#FF9500',
+      bgColor: '#FFF3E0',
+      isActionable: true,
+    };
+  }
+}
+
+/**
  * Parent Medicine Detail Screen Component
  */
 function ParentMedicineDetailScreen({ route }) {
@@ -82,6 +138,7 @@ function ParentMedicineDetailScreen({ route }) {
   const [medicine, setMedicine] = useState(null);
   const [schedule, setSchedule] = useState(null);
   const [doses, setDoses] = useState([]);
+  const [todaysDoses, setTodaysDoses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -119,6 +176,14 @@ function ParentMedicineDetailScreen({ route }) {
         medicineId,
       );
       setSchedule(scheduleData);
+
+      // Load today's doses using DoseTrackerService
+      await doseTrackerService.initialize();
+      const todaysDosesList = await doseTrackerService.getTodaysDoses(
+        medicineId,
+        user.uid,
+      );
+      setTodaysDoses(todaysDosesList);
 
       // Load doses for the next 7 days
       const sevenDaysFromNow = new Date();
@@ -163,10 +228,22 @@ function ParentMedicineDetailScreen({ route }) {
 
   /**
    * Handle mark as taken
+   * Validates that dose is not in the future (Requirement 7.6)
    */
-  const handleMarkAsTaken = async doseId => {
+  const handleMarkAsTaken = async dose => {
     try {
-      await doseService.markDoseAsTaken(doseId);
+      const now = new Date();
+
+      // Prevent marking future doses as taken (Requirement 7.6)
+      if (dose.scheduledTime > now) {
+        Alert.alert(
+          'Cannot Mark Future Dose',
+          'You cannot mark a dose as taken before its scheduled time.',
+        );
+        return;
+      }
+
+      await doseTrackerService.markDoseAsTaken(dose.id);
       loadMedicineDetails(true);
       Alert.alert('Success', 'Dose marked as taken');
     } catch (err) {
@@ -176,49 +253,34 @@ function ParentMedicineDetailScreen({ route }) {
   };
 
   /**
-   * Render dose item
+   * Render dose item with proper status display
+   * Implements Requirements 7.1, 7.2, 7.3
    */
   const renderDoseItem = dose => {
-    const now = new Date();
-    const isMissed = dose.scheduledTime < now && dose.status !== 'taken';
-    const isTaken = dose.status === 'taken';
-    const isPending = dose.scheduledTime >= now && dose.status !== 'taken';
-
-    let statusColor = '#8E8E93';
-    let statusText = 'Pending';
-    let statusBgColor = '#F0F0F0';
-
-    if (isTaken) {
-      statusColor = '#34C759';
-      statusText = 'Taken';
-      statusBgColor = '#E8F5E9';
-    } else if (isMissed) {
-      statusColor = '#FF3B30';
-      statusText = 'Missed';
-      statusBgColor = '#FFEBEE';
-    } else if (isPending) {
-      statusColor = '#FF9500';
-      statusText = 'Pending';
-      statusBgColor = '#FFF3E0';
-    }
+    const displayStatus = getDoseDisplayStatus(dose);
 
     return (
       <View
         key={dose.id}
-        style={[styles.doseItem, { backgroundColor: statusBgColor }]}
+        style={[styles.doseItem, { backgroundColor: displayStatus.bgColor }]}
       >
         <View style={styles.doseInfo}>
           <Text style={styles.doseDate}>{formatDate(dose.scheduledTime)}</Text>
           <Text style={styles.doseTime}>{formatTime(dose.scheduledTime)}</Text>
         </View>
         <View style={styles.doseStatus}>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusText}>{statusText}</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: displayStatus.color },
+            ]}
+          >
+            <Text style={styles.statusText}>{displayStatus.text}</Text>
           </View>
-          {isPending && (
+          {displayStatus.isActionable && (
             <TouchableOpacity
               style={styles.takenButton}
-              onPress={() => handleMarkAsTaken(dose.id)}
+              onPress={() => handleMarkAsTaken(dose)}
             >
               <Text style={styles.takenButtonText}>Mark Taken</Text>
             </TouchableOpacity>
@@ -328,6 +390,22 @@ function ParentMedicineDetailScreen({ route }) {
             </>
           )}
         </View>
+      </View>
+
+      {/* Today's Doses Section - Requirements 7.1, 7.2, 7.3 */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Today's Doses</Text>
+        {todaysDoses.length === 0 ? (
+          <View style={styles.emptyDoses}>
+            <Text style={styles.emptyDosesText}>
+              No doses scheduled for today
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.dosesList}>
+            {todaysDoses.map(dose => renderDoseItem(dose))}
+          </View>
+        )}
       </View>
 
       {/* Doses Section */}

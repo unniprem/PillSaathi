@@ -77,6 +77,7 @@ export const ParentScreens = {
   PAIRING: 'ParentPairing',
   NOTIFICATIONS: 'Notifications',
   SETTINGS: 'Settings',
+  FULL_SCREEN_ALARM: 'FullScreenAlarm',
 };
 
 /**

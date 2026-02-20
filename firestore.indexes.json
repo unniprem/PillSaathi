@@ -83,6 +83,52 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "doses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "medicineId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledTime",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "doses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "medicineId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledTime",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "doses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "medicineId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledTime",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

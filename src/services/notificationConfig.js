@@ -73,6 +73,8 @@ class NotificationConfigService {
   /**
    * Request notification permissions
    * Handles both iOS and Android permission flows
+   * Requirements: 2.7 - Request notification permissions on first use
+   * Requirements: 2.7 - Handle permission denial gracefully
    */
   async requestPermissions() {
     try {
@@ -85,13 +87,21 @@ class NotificationConfigService {
 
       if (settings.authorizationStatus === AuthorizationStatus.DENIED) {
         console.warn('Notification permissions denied');
+        // Requirements: 2.7 - Guide user to settings if permissions denied
         this.showPermissionDeniedAlert();
         return false;
       }
 
+      // Provisional or not determined
+      console.warn(
+        'Notification permissions not fully granted:',
+        settings.authorizationStatus,
+      );
       return false;
     } catch (error) {
       console.error('Failed to request permissions:', error);
+      // Handle permission request failure gracefully
+      this.showPermissionErrorAlert(error);
       return false;
     }
   }
@@ -112,6 +122,7 @@ class NotificationConfigService {
   /**
    * Show alert when permissions are denied
    * Guides user to settings to enable permissions
+   * Requirements: 2.7 - Guide user to settings if permissions denied
    */
   showPermissionDeniedAlert() {
     Alert.alert(
@@ -120,6 +131,27 @@ class NotificationConfigService {
       [
         {
           text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Open Settings',
+          onPress: () => this.openSettings(),
+        },
+      ],
+    );
+  }
+
+  /**
+   * Show alert when permission request fails
+   * Requirements: 2.7 - Handle permission denial gracefully
+   */
+  showPermissionErrorAlert(error) {
+    Alert.alert(
+      'Permission Error',
+      `Unable to request notification permissions: ${error.message}. Please try again or enable notifications manually in your device settings.`,
+      [
+        {
+          text: 'OK',
           style: 'cancel',
         },
         {
@@ -146,6 +178,7 @@ class NotificationConfigService {
   /**
    * Request battery optimization exemption (Android only)
    * Critical for alarm reliability
+   * Requirements: 2.7 - Request battery optimization exemption
    */
   async requestBatteryOptimizationExemption() {
     if (Platform.OS !== 'android') {
@@ -162,13 +195,28 @@ class NotificationConfigService {
           'To ensure medicine alarms work reliably, please disable battery optimization for PillSaathi.',
           [
             {
-              text: 'Cancel',
+              text: 'Not Now',
               style: 'cancel',
+              onPress: () => {
+                console.log('User declined battery optimization exemption');
+              },
             },
             {
               text: 'Open Settings',
               onPress: async () => {
-                await notifee.openBatteryOptimizationSettings();
+                try {
+                  await notifee.openBatteryOptimizationSettings();
+                } catch (error) {
+                  console.error(
+                    'Failed to open battery optimization settings:',
+                    error,
+                  );
+                  Alert.alert(
+                    'Error',
+                    'Unable to open battery optimization settings. Please navigate to Settings > Apps > PillSaathi > Battery manually.',
+                    [{ text: 'OK' }],
+                  );
+                }
               },
             },
           ],
@@ -179,7 +227,8 @@ class NotificationConfigService {
       return true;
     } catch (error) {
       console.error('Failed to check battery optimization:', error);
-      return false;
+      // Don't block the flow if we can't check battery optimization
+      return true;
     }
   }
 

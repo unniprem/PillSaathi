@@ -317,7 +317,7 @@ describe('DoseTrackerService', () => {
 
       await expect(
         DoseTrackerService.snoozeDose(doseId, medicineId),
-      ).rejects.toThrow('Failed to snooze dose');
+      ).rejects.toThrow('The dose record was not found');
     });
   });
 
@@ -536,7 +536,7 @@ describe('DoseTrackerService', () => {
 
       await expect(
         DoseTrackerService.getDoseHistory('med123', new Date(), new Date()),
-      ).rejects.toThrow('Failed to query dose history');
+      ).rejects.toThrow('retrieve dose history');
     });
   });
 
@@ -640,7 +640,7 @@ describe('DoseTrackerService', () => {
 
       await expect(
         DoseTrackerService.getTodaysDoses('med123', 'parent123'),
-      ).rejects.toThrow("Failed to query today's doses");
+      ).rejects.toThrow("retrieve today's doses");
     });
   });
 

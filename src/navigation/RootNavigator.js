@@ -38,6 +38,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootScreens } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { requiresProfileSetup } from '../utils/profileUtils';
+import notificationHandler from '../services/notificationHandler';
 
 // Import navigators
 import AuthNavigator from './AuthNavigator';
@@ -108,6 +109,13 @@ function RootNavigator() {
       restoreState();
     }
   }, [isReady]);
+
+  // Set navigation reference for notification handler
+  useEffect(() => {
+    if (navigationRef.current) {
+      notificationHandler.setNavigationRef(navigationRef);
+    }
+  }, []);
 
   // Don't render until we've restored navigation state
   if (!isReady) {

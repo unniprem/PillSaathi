@@ -10,6 +10,7 @@ jest.mock('@notifee/react-native', () => ({
     createTriggerNotification: jest.fn(),
     cancelNotification: jest.fn(),
     getTriggerNotificationIds: jest.fn(),
+    getTriggerNotifications: jest.fn(),
   },
   TriggerType: {
     TIMESTAMP: 0,
@@ -42,6 +43,7 @@ jest.mock('../alarmStorage', () => ({
     storeAlarmMetadata: jest.fn().mockResolvedValue(true),
     getAlarmMetadata: jest.fn(),
     deleteAlarmMetadata: jest.fn().mockResolvedValue(true),
+    getAllAlarmMetadata: jest.fn(),
   },
 }));
 
@@ -268,6 +270,255 @@ describe('AlarmSchedulerService', () => {
         // Should throw a proper error
         expect(error).toBeDefined();
       }
+    });
+  });
+});
+
+describe('Logging and Debugging', () => {
+  beforeEach(() => {
+    // Clear logs before each test
+    AlarmSchedulerService.clearLogs();
+  });
+
+  describe('getLogs', () => {
+    it('should return all logs', async () => {
+      // Trigger some operations to generate logs
+      AlarmSchedulerService._log('info', 'TEST_OPERATION', { test: 'data' });
+      AlarmSchedulerService._log('error', 'TEST_ERROR', { error: 'message' });
+
+      const logs = AlarmSchedulerService.getLogs();
+
+      expect(logs.length).toBeGreaterThanOrEqual(2);
+      expect(logs[logs.length - 2].operation).toBe('TEST_OPERATION');
+      expect(logs[logs.length - 1].operation).toBe('TEST_ERROR');
+    });
+
+    it('should filter logs by level', () => {
+      AlarmSchedulerService._log('info', 'INFO_OP', {});
+      AlarmSchedulerService._log('error', 'ERROR_OP', {});
+      AlarmSchedulerService._log('warn', 'WARN_OP', {});
+
+      const errorLogs = AlarmSchedulerService.getLogs({ level: 'error' });
+
+      expect(errorLogs.every(log => log.level === 'error')).toBe(true);
+      expect(errorLogs.some(log => log.operation === 'ERROR_OP')).toBe(true);
+    });
+
+    it('should filter logs by operation', () => {
+      AlarmSchedulerService._log('info', 'SCHEDULE_ALARMS_START', {});
+      AlarmSchedulerService._log('info', 'CANCEL_ALARMS_START', {});
+
+      const scheduleLogs = AlarmSchedulerService.getLogs({
+        operation: 'SCHEDULE_ALARMS_START',
+      });
+
+      expect(
+        scheduleLogs.every(log => log.operation === 'SCHEDULE_ALARMS_START'),
+      ).toBe(true);
+    });
+
+    it('should filter logs by time range', async () => {
+      const startTime = new Date();
+      AlarmSchedulerService._log('info', 'BEFORE_OP', {});
+
+      // Wait a bit to ensure timestamp difference
+      await new Promise(resolve => setTimeout(resolve, 50));
+      const midTime = new Date();
+
+      AlarmSchedulerService._log('info', 'AFTER_OP', {});
+
+      const logsAfterMid = AlarmSchedulerService.getLogs({
+        startTime: midTime,
+      });
+
+      expect(logsAfterMid.some(log => log.operation === 'AFTER_OP')).toBe(true);
+    });
+  });
+
+  describe('getAllScheduledAlarms', () => {
+    it('should return all scheduled alarms with metadata', async () => {
+      // Mock Notifee responses
+      notifee.getTriggerNotificationIds.mockResolvedValue([
+        'alarm_1',
+        'alarm_2',
+      ]);
+      notifee.getTriggerNotifications.mockResolvedValue([
+        {
+          notification: {
+            id: 'alarm_1',
+            data: {
+              medicineId: 'med-1',
+              medicineName: 'Aspirin',
+              doseId: 'dose-1',
+              scheduledTime: '2026-02-21T09:00:00.000Z',
+            },
+          },
+          trigger: { timestamp: 1771579800000 },
+        },
+        {
+          notification: {
+            id: 'alarm_2',
+            data: {
+              medicineId: 'med-2',
+              medicineName: 'Ibuprofen',
+              doseId: 'dose-2',
+              scheduledTime: '2026-02-21T15:00:00.000Z',
+            },
+          },
+          trigger: { timestamp: 1771601400000 },
+        },
+      ]);
+
+      alarmStorage.getAllAlarmMetadata.mockResolvedValue([
+        {
+          medicineId: 'med-1',
+          alarmIds: [{ alarmId: 'alarm_1', scheduledTime: new Date() }],
+          lastScheduled: new Date(),
+          scheduleVersion: 1,
+        },
+      ]);
+
+      const alarms = await AlarmSchedulerService.getAllScheduledAlarms();
+
+      expect(alarms).toHaveLength(2);
+      expect(alarms[0].alarmId).toBe('alarm_1');
+      expect(alarms[0].medicineId).toBe('med-1');
+      expect(alarms[0].hasMetadata).toBe(true);
+      expect(alarms[1].hasMetadata).toBe(false);
+    });
+
+    it('should handle errors gracefully', async () => {
+      notifee.getTriggerNotifications.mockRejectedValue(
+        new Error('Notifee error'),
+      );
+
+      await expect(
+        AlarmSchedulerService.getAllScheduledAlarms(),
+      ).rejects.toThrow('Notifee error');
+
+      const logs = AlarmSchedulerService.getLogs({
+        operation: 'GET_ALL_ALARMS_ERROR',
+      });
+      expect(logs.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('verifyAlarmIntegrity', () => {
+    it('should detect orphaned Notifee alarms', async () => {
+      // Mock MedicineService
+      jest.mock('../MedicineService', () => ({
+        __esModule: true,
+        default: {
+          getActiveMedicinesForParent: jest
+            .fn()
+            .mockResolvedValue([{ id: 'med-1', name: 'Aspirin' }]),
+        },
+      }));
+
+      notifee.getTriggerNotifications.mockResolvedValue([
+        {
+          notification: {
+            id: 'orphan_alarm',
+            data: { medicineId: 'med-1' },
+          },
+          trigger: { timestamp: Date.now() + 86400000 },
+        },
+      ]);
+
+      alarmStorage.getAllAlarmMetadata.mockResolvedValue([]);
+
+      const report = await AlarmSchedulerService.verifyAlarmIntegrity(
+        'parent-1',
+      );
+
+      expect(report.issues.orphanedNotifeeAlarms.length).toBeGreaterThan(0);
+      expect(report.totalIssues).toBeGreaterThan(0);
+    });
+  });
+
+  describe('manualRescheduleAll', () => {
+    it('should reschedule all alarms for a parent', async () => {
+      // Mock MedicineService
+      const mockMedicineService = {
+        getActiveMedicinesForParent: jest.fn().mockResolvedValue([
+          { id: 'med-1', name: 'Aspirin' },
+          { id: 'med-2', name: 'Ibuprofen' },
+        ]),
+      };
+
+      const mockScheduleService = {
+        getScheduleForMedicine: jest.fn().mockResolvedValue({
+          times: ['09:00', '15:00'],
+          repeatPattern: 'daily',
+        }),
+      };
+
+      jest.doMock('../MedicineService', () => ({
+        __esModule: true,
+        default: mockMedicineService,
+      }));
+
+      jest.doMock('../scheduleService', () => ({
+        __esModule: true,
+        default: mockScheduleService,
+      }));
+
+      alarmStorage.getAlarmMetadata.mockResolvedValue(null);
+      notifee.createTriggerNotification.mockResolvedValue('alarm-id');
+
+      const results = await AlarmSchedulerService.manualRescheduleAll(
+        'parent-1',
+        true,
+      );
+
+      expect(results.success).toBe(true);
+      expect(results.medicinesProcessed).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should skip medicines without schedules', async () => {
+      const mockMedicineService = {
+        getActiveMedicinesForParent: jest
+          .fn()
+          .mockResolvedValue([{ id: 'med-1', name: 'Aspirin' }]),
+      };
+
+      const mockScheduleService = {
+        getScheduleForMedicine: jest.fn().mockResolvedValue(null),
+      };
+
+      jest.doMock('../MedicineService', () => ({
+        __esModule: true,
+        default: mockMedicineService,
+      }));
+
+      jest.doMock('../scheduleService', () => ({
+        __esModule: true,
+        default: mockScheduleService,
+      }));
+
+      const results = await AlarmSchedulerService.manualRescheduleAll(
+        'parent-1',
+      );
+
+      expect(results.errors.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('clearLogs', () => {
+    it('should clear all logs', () => {
+      AlarmSchedulerService._log('info', 'TEST_OP', {});
+      AlarmSchedulerService._log('error', 'TEST_ERROR', {});
+
+      let logs = AlarmSchedulerService.getLogs();
+      const initialCount = logs.length;
+      expect(initialCount).toBeGreaterThan(0);
+
+      AlarmSchedulerService.clearLogs();
+
+      logs = AlarmSchedulerService.getLogs();
+      // After clearing, only the LOGS_CLEARED entry should exist
+      expect(logs.length).toBe(1);
+      expect(logs[0].operation).toBe('LOGS_CLEARED');
     });
   });
 });

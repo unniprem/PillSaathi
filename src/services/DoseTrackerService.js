@@ -93,6 +93,7 @@ class DoseTrackerService {
    * Requirements: 4.1 - Update dose status to "taken" with timestamp
    * Requirements: 4.4 - Record actual time taken
    * Requirements: 4.6 - Create dose record in Firestore
+   * Requirements: 4.8 - Queue failed operations for offline sync
    *
    * @param {string} doseId - Dose document ID
    * @param {Date} takenAt - Time dose was taken (defaults to now)
@@ -101,26 +102,41 @@ class DoseTrackerService {
    */
   async markDoseAsTaken(doseId, takenAt = new Date()) {
     try {
-      return await retryOperation(async () => {
-        const updateData = {
-          status: 'taken',
-          takenAt,
-          updatedAt: new Date(),
-        };
+      // Requirements: 4.6, 4.8 - Add retry logic with exponential backoff
+      return await retryOperation(
+        async () => {
+          const updateData = {
+            status: 'taken',
+            takenAt,
+            updatedAt: new Date(),
+          };
 
-        console.log('Marking dose as taken:', doseId, 'at', takenAt);
+          console.log('Marking dose as taken:', doseId, 'at', takenAt);
 
-        await this.firestore
-          .collection(this.dosesCollection)
-          .doc(doseId)
-          .update(updateData);
+          await this.firestore
+            .collection(this.dosesCollection)
+            .doc(doseId)
+            .update(updateData);
 
-        console.log('Dose marked as taken successfully:', doseId);
-      });
+          console.log('Dose marked as taken successfully:', doseId);
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 10000,
+          onRetry: (attempt, error) => {
+            console.log(
+              `Retrying markDoseAsTaken (attempt ${attempt}) after error:`,
+              error.message,
+            );
+          },
+        },
+      );
     } catch (error) {
       console.error('Error marking dose as taken:', error);
 
       // Queue for offline sync if network error
+      // Requirements: 4.8 - Queue failed operations for offline sync
       if (this.isNetworkError(error)) {
         await this.queueOfflineAction({
           type: 'mark_taken',
@@ -129,12 +145,12 @@ class DoseTrackerService {
           data: { takenAt },
         });
         console.log('Dose action queued for offline sync');
+        // Don't throw error - operation queued successfully
         return;
       }
 
-      const mappedError = new Error('Failed to mark dose as taken');
-      mappedError.code = 'dose-update-failed';
-      mappedError.originalError = error;
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(error, 'mark dose as taken');
       throw mappedError;
     }
   }
@@ -145,6 +161,7 @@ class DoseTrackerService {
    *
    * Requirements: 4.2 - Update dose status to "skipped" with timestamp
    * Requirements: 4.6 - Create dose record in Firestore
+   * Requirements: 4.8 - Queue failed operations for offline sync
    *
    * @param {string} doseId - Dose document ID
    * @param {string} reason - Optional reason for skipping
@@ -153,29 +170,44 @@ class DoseTrackerService {
    */
   async markDoseAsSkipped(doseId, reason = null) {
     try {
-      return await retryOperation(async () => {
-        const updateData = {
-          status: 'skipped',
-          updatedAt: new Date(),
-        };
+      // Requirements: 4.6, 4.8 - Add retry logic with exponential backoff
+      return await retryOperation(
+        async () => {
+          const updateData = {
+            status: 'skipped',
+            updatedAt: new Date(),
+          };
 
-        if (reason) {
-          updateData.skippedReason = reason;
-        }
+          if (reason) {
+            updateData.skippedReason = reason;
+          }
 
-        console.log('Marking dose as skipped:', doseId);
+          console.log('Marking dose as skipped:', doseId);
 
-        await this.firestore
-          .collection(this.dosesCollection)
-          .doc(doseId)
-          .update(updateData);
+          await this.firestore
+            .collection(this.dosesCollection)
+            .doc(doseId)
+            .update(updateData);
 
-        console.log('Dose marked as skipped successfully:', doseId);
-      });
+          console.log('Dose marked as skipped successfully:', doseId);
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 10000,
+          onRetry: (attempt, error) => {
+            console.log(
+              `Retrying markDoseAsSkipped (attempt ${attempt}) after error:`,
+              error.message,
+            );
+          },
+        },
+      );
     } catch (error) {
       console.error('Error marking dose as skipped:', error);
 
       // Queue for offline sync if network error
+      // Requirements: 4.8 - Queue failed operations for offline sync
       if (this.isNetworkError(error)) {
         await this.queueOfflineAction({
           type: 'mark_skipped',
@@ -184,12 +216,12 @@ class DoseTrackerService {
           data: { reason },
         });
         console.log('Dose action queued for offline sync');
+        // Don't throw error - operation queued successfully
         return;
       }
 
-      const mappedError = new Error('Failed to mark dose as skipped');
-      mappedError.code = 'dose-update-failed';
-      mappedError.originalError = error;
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(error, 'mark dose as skipped');
       throw mappedError;
     }
   }
@@ -207,6 +239,72 @@ class DoseTrackerService {
       error.message?.includes('network') ||
       error.message?.includes('offline')
     );
+  }
+
+  /**
+   * Map Firestore error to user-friendly error message
+   * Requirements: 4.6 - Display user-friendly error messages
+   *
+   * @param {Error} error - Original error
+   * @param {string} operation - Operation that failed (e.g., 'mark dose as taken')
+   * @returns {Error} Mapped error with user-friendly message
+   */
+  mapFirestoreError(error, operation) {
+    const mappedError = new Error();
+    mappedError.originalError = error;
+
+    // Map common Firestore error codes to user-friendly messages
+    switch (error.code) {
+      case 'permission-denied':
+        mappedError.message = `You don't have permission to ${operation}. Please check your account settings.`;
+        mappedError.code = 'permission-denied';
+        break;
+
+      case 'not-found':
+        mappedError.message = `The dose record was not found. It may have been deleted.`;
+        mappedError.code = 'not-found';
+        break;
+
+      case 'unavailable':
+      case 'network-request-failed':
+        mappedError.message = `Unable to ${operation} due to network issues. Please check your internet connection and try again.`;
+        mappedError.code = 'network-error';
+        break;
+
+      case 'deadline-exceeded':
+      case 'timeout':
+        mappedError.message = `The request to ${operation} timed out. Please try again.`;
+        mappedError.code = 'timeout';
+        break;
+
+      case 'resource-exhausted':
+        mappedError.message = `Too many requests. Please wait a moment and try again.`;
+        mappedError.code = 'rate-limited';
+        break;
+
+      case 'unauthenticated':
+        mappedError.message = `You need to sign in again to ${operation}.`;
+        mappedError.code = 'unauthenticated';
+        break;
+
+      case 'invalid-argument':
+        mappedError.message = `Invalid data provided. Please try again or contact support.`;
+        mappedError.code = 'invalid-argument';
+        break;
+
+      case 'already-exists':
+        mappedError.message = `This dose record already exists.`;
+        mappedError.code = 'already-exists';
+        break;
+
+      default:
+        // Generic error message for unknown errors
+        mappedError.message = `Failed to ${operation}. Please try again later.`;
+        mappedError.code = 'unknown-error';
+        break;
+    }
+
+    return mappedError;
   }
 
   /**
@@ -380,6 +478,8 @@ class DoseTrackerService {
    *
    * Requirements: 10.2 - Dose record structure completeness
    * Requirements: 10.5 - Store alarm identifiers with dose records
+   * Requirements: 4.6 - Add retry logic with exponential backoff
+   * Requirements: 4.8 - Queue failed operations for offline sync
    *
    * @param {Object} doseData - Dose data to create
    * @param {string} doseData.medicineId - Medicine ID
@@ -418,18 +518,33 @@ class DoseTrackerService {
 
       console.log('Creating dose record:', doseRecord);
 
-      // Create dose document in Firestore
-      const docRef = await this.firestore
-        .collection(this.dosesCollection)
-        .add(doseRecord);
+      // Requirements: 4.6, 4.8 - Add retry logic with exponential backoff
+      const docRef = await retryOperation(
+        async () => {
+          return this.firestore
+            .collection(this.dosesCollection)
+            .add(doseRecord);
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 10000,
+          onRetry: (attempt, error) => {
+            console.log(
+              `Retrying createDoseRecord (attempt ${attempt}) after error:`,
+              error.message,
+            );
+          },
+        },
+      );
 
       console.log('Dose record created successfully:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error('Error creating dose record:', error);
-      const mappedError = new Error('Failed to create dose record');
-      mappedError.code = 'dose-creation-failed';
-      mappedError.originalError = error;
+
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(error, 'create dose record');
       throw mappedError;
     }
   }
@@ -460,7 +575,9 @@ class DoseTrackerService {
         .get();
 
       if (!doseDoc.exists) {
-        throw new Error('Dose not found');
+        const error = new Error('Dose not found');
+        error.code = 'not-found';
+        throw error;
       }
 
       const doseData = doseDoc.data();
@@ -481,9 +598,9 @@ class DoseTrackerService {
       console.log('Dose snoozed successfully until:', snoozeTime);
     } catch (error) {
       console.error('Error snoozing dose:', error);
-      const mappedError = new Error('Failed to snooze dose');
-      mappedError.code = 'dose-snooze-failed';
-      mappedError.originalError = error;
+
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(error, 'snooze dose');
       throw mappedError;
     }
   }
@@ -568,9 +685,12 @@ class DoseTrackerService {
       };
     } catch (error) {
       console.error('Error querying dose history:', error);
-      const mappedError = new Error('Failed to query dose history');
-      mappedError.code = 'dose-query-failed';
-      mappedError.originalError = error;
+
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(
+        error,
+        'retrieve dose history',
+      );
       throw mappedError;
     }
   }
@@ -627,9 +747,12 @@ class DoseTrackerService {
       return doses;
     } catch (error) {
       console.error("Error querying today's doses:", error);
-      const mappedError = new Error("Failed to query today's doses");
-      mappedError.code = 'dose-query-failed';
-      mappedError.originalError = error;
+
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(
+        error,
+        "retrieve today's doses",
+      );
       throw mappedError;
     }
   }
@@ -690,9 +813,9 @@ class DoseTrackerService {
       return adherence;
     } catch (error) {
       console.error('Error calculating adherence:', error);
-      const mappedError = new Error('Failed to calculate adherence');
-      mappedError.code = 'adherence-calculation-failed';
-      mappedError.originalError = error;
+
+      // Requirements: 4.6 - Display user-friendly error messages
+      const mappedError = this.mapFirestoreError(error, 'calculate adherence');
       throw mappedError;
     }
   }

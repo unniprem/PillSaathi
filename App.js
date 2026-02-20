@@ -18,6 +18,7 @@ import { CaregiverPairingProvider } from './src/contexts/CaregiverPairingContext
 import RootNavigator from './src/navigation/RootNavigator';
 import doseGenerationService from './src/services/doseGenerationService';
 import alarmInitializer from './src/services/alarmInitializer';
+import notificationHandler from './src/services/notificationHandler';
 
 /**
  * Auto Cleanup Component
@@ -117,6 +118,13 @@ function App() {
         } else {
           console.error('\n❌ Alarm system initialization failed!\n');
         }
+
+        // Initialize notification handlers
+        // eslint-disable-next-line no-console
+        console.log('\n📬 Initializing notification handlers...\n');
+        notificationHandler.initialize();
+        // eslint-disable-next-line no-console
+        console.log('\n✅ Notification handlers initialized successfully!\n');
       } catch (error) {
         console.error('\n❌ App initialization error:', error);
       }
