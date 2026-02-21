@@ -50,6 +50,13 @@ function CaregiverHomeScreen() {
   };
 
   /**
+   * Navigate to adherence dashboard
+   */
+  const handleAdherenceDashboard = () => {
+    navigation.navigate(CaregiverScreens.ADHERENCE_DASHBOARD);
+  };
+
+  /**
    * Render loading state
    */
   if (loading) {
@@ -103,6 +110,14 @@ function CaregiverHomeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          style={styles.adherenceButton}
+          onPress={handleAdherenceDashboard}
+        >
+          <Text style={styles.adherenceButtonText}>📊 View Adherence</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         data={parents}
         renderItem={renderParentCard}
@@ -122,6 +137,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  headerContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  adherenceButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  adherenceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   centerContainer: {
     flex: 1,

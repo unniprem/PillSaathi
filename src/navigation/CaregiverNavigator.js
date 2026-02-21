@@ -27,6 +27,7 @@ import CaregiverDoseHistoryScreen from '../screens/caregiver/CaregiverDoseHistor
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
 import ParentDetailScreen from '../screens/caregiver/ParentDetailScreen';
+import AdherenceDashboardScreen from '../screens/caregiver/AdherenceDashboardScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import MedicineDetailsScreen from '../screens/shared/MedicineDetailsScreen';
 import LogoutHeader from '../components/LogoutHeader';
@@ -168,6 +169,13 @@ function HomeStack() {
           title: route.params?.medicineId ? 'Edit Medicine' : 'Add Medicine',
           presentation: 'modal',
         })}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.ADHERENCE_DASHBOARD}
+        component={AdherenceDashboardScreen}
+        options={{
+          title: 'Adherence Dashboard',
+        }}
       />
     </Stack.Navigator>
   );

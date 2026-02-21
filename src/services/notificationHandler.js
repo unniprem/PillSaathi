@@ -489,9 +489,14 @@ class NotificationHandlerService {
         // Update badge count (increment by 1)
         const currentBadge = await notifee.getBadgeCount();
         await notifee.setBadgeCount(currentBadge + 1);
+        console.log('Badge count updated:', currentBadge + 1);
       } else {
         // App is in background - notification already displayed by FCM
-        console.log('App in background, FCM notification already displayed');
+        // Update badge count for background notification
+        console.log('App in background, updating badge count');
+        const currentBadge = await notifee.getBadgeCount();
+        await notifee.setBadgeCount(currentBadge + 1);
+        console.log('Badge count updated (background):', currentBadge + 1);
       }
     } catch (error) {
       console.error('Failed to handle missed dose notification:', error);
@@ -533,6 +538,7 @@ class NotificationHandlerService {
   /**
    * Navigate to missed dose screen
    * Opens caregiver dose history screen with the missed dose highlighted
+   * Clears badge count when user views the notification
    *
    * Requirements: Phase 5 - Navigate to dose history or adherence dashboard
    *
@@ -564,6 +570,7 @@ class NotificationHandlerService {
         });
 
         // Clear badge count when user views the notification
+        // This indicates the user has acknowledged the missed dose alerts
         notifee.setBadgeCount(0);
         console.log('Navigation successful, badge count cleared');
       } else {

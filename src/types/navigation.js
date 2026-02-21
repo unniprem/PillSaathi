@@ -100,6 +100,7 @@ export const CaregiverScreens = {
   UPCOMING: 'CaregiverUpcoming',
   NOTIFICATIONS: 'Notifications',
   SETTINGS: 'Settings',
+  ADHERENCE_DASHBOARD: 'AdherenceDashboard',
 };
 
 // ============================================================================
@@ -179,6 +180,7 @@ export const CaregiverScreens = {
  * @property {undefined} CaregiverUpcoming - Caregiver upcoming medicines screen (no params)
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
+ * @property {undefined} AdherenceDashboard - Adherence dashboard screen (no params)
  */
 
 /**

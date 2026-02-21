@@ -150,10 +150,10 @@ Approach: Cloud Functions + Cloud Scheduler
 #### Task 5.4.1: Update FCM message handler
 
 - [x] Add handler for "missed_dose" notification type in App.js
-- [-] Extract doseId, parentId, medicineId from data
-- [~] Navigate to dose history or adherence dashboard
-- [~] Show in-app alert if app is open
-- [~] Update badge count
+- [x] Extract doseId, parentId, medicineId from data
+- [x] Navigate to dose history or adherence dashboard
+- [x] Show in-app alert if app is open
+- [x] Update badge count
 - [ ] Test on Android
 - [ ] Test on iOS
 
@@ -181,31 +181,31 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.5.1: Create AdherenceDashboard screen
 
-- [~] Create src/screens/caregiver/AdherenceDashboardScreen.js
-- [~] Add to caregiver navigation stack
-- [~] Add navigation from caregiver home
-- [~] Basic layout with header
-- [~] Add to navigation types
+- [x] Create src/screens/caregiver/AdherenceDashboardScreen.js
+- [x] Add to caregiver navigation stack
+- [x] Add navigation from caregiver home
+- [x] Basic layout with header
+- [x] Add to navigation types
 
 #### Task 5.5.2: Implement parent selector
 
-- [~] Dropdown/picker for multiple parents
-- [~] Default to first parent
-- [~] Update data when parent changes
-- [~] Show parent name and photo
-- [~] Handle single parent case
+- [x] Dropdown/picker for multiple parents
+- [x] Default to first parent
+- [x] Update data when parent changes
+- [x] Show parent name and photo
+- [x] Handle single parent case
 
 #### Task 5.5.3: Implement time period selector
 
-- [~] Segmented control: 7 days, 30 days, All time
-- [~] Calculate date range based on selection
-- [~] Update data when period changes
-- [~] Default to 7 days
-- [~] Style selector
+- [x] Segmented control: 7 days, 30 days, All time
+- [x] Calculate date range based on selection
+- [x] Update data when period changes
+- [x] Default to 7 days
+- [x] Style selector
 
 #### Task 5.5.4: Build adherence summary card
 
-- [~] Large percentage display (e.g., "85%")
+- [-] Large percentage display (e.g., "85%")
 - [~] Color coding (green >80%, yellow 60-80%, red <60%)
 - [~] Breakdown: X taken, Y missed, Z snoozed
 - [~] Total doses scheduled
@@ -253,36 +253,36 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.6.2: Implement filters
 
-- [ ] Parent filter (if multiple parents)
-- [ ] Medicine filter (dropdown of all medicines)
-- [ ] Date range picker
-- [ ] Clear filters button
-- [ ] Apply filters to query
-- [ ] Style filters
+- [~] Parent filter (if multiple parents)
+- [~] Medicine filter (dropdown of all medicines)
+- [~] Date range picker
+- [~] Clear filters button
+- [~] Apply filters to query
+- [~] Style filters
 
 #### Task 5.6.3: Build missed doses list
 
-- [ ] FlatList of missed doses
-- [ ] Each item shows: medicine name, scheduled time, missed time
-- [ ] Show "X hours ago" relative time
-- [ ] Sort by most recent first
-- [ ] Pagination (load more on scroll)
+- [~] FlatList of missed doses
+- [~] Each item shows: medicine name, scheduled time, missed time
+- [~] Show "X hours ago" relative time
+- [~] Sort by most recent first
+- [~] Pagination (load more on scroll)
 - [ ] Pull to refresh
 - [ ] Style list items
 
 #### Task 5.6.4: Add empty state
 
-- [ ] Show when no missed doses
-- [ ] Positive message ("Great adherence!")
-- [ ] Illustration or icon
-- [ ] Style empty state
+- [~] Show when no missed doses
+- [~] Positive message ("Great adherence!")
+- [~] Illustration or icon
+- [~] Style empty state
 
 #### Task 5.6.5: Add dose detail navigation
 
-- [ ] Tap dose to see full details
-- [ ] Show medicine info, schedule, history
-- [ ] Back button to return to list
-- [ ] Test navigation
+- [~] Tap dose to see full details
+- [~] Show medicine info, schedule, history
+- [~] Back button to return to list
+- [~] Test navigation
 
 **Acceptance:**
 
