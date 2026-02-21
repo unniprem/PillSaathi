@@ -13,6 +13,7 @@ import { Platform, Linking, Alert } from 'react-native';
 class NotificationConfigService {
   constructor() {
     this.channelId = 'medicine-alarms';
+    this.missedDosesChannelId = 'missed-doses';
     this.initialized = false;
   }
 
@@ -26,9 +27,10 @@ class NotificationConfigService {
     }
 
     try {
-      // Create Android notification channel
+      // Create Android notification channels
       if (Platform.OS === 'android') {
         await this.createAlarmChannel();
+        await this.createMissedDosesChannel();
       }
 
       // Request permissions
@@ -66,6 +68,34 @@ class NotificationConfigService {
       return true;
     } catch (error) {
       console.error('Failed to create alarm channel:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Create Android notification channel for missed dose alerts
+   * Configures high importance for caregiver notifications
+   * Requirements: Phase 5 - Missed dose escalation
+   */
+  async createMissedDosesChannel() {
+    try {
+      await notifee.createChannel({
+        id: this.missedDosesChannelId,
+        name: 'Missed Dose Alerts',
+        description: 'Notifications when a parent misses a scheduled dose',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        vibration: true,
+        vibrationPattern: [300, 300, 300, 300],
+        lights: true,
+        lightColor: '#FF9500',
+        badge: true,
+      });
+
+      console.log('Missed doses channel created successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to create missed doses channel:', error);
       return false;
     }
   }
@@ -237,6 +267,14 @@ class NotificationConfigService {
    */
   getChannelId() {
     return this.channelId;
+  }
+
+  /**
+   * Get the missed doses channel ID
+   * Requirements: Phase 5 - Missed dose escalation
+   */
+  getMissedDosesChannelId() {
+    return this.missedDosesChannelId;
   }
 
   /**

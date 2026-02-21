@@ -2,14 +2,16 @@
  * Notification Handler Service
  * Handles Notifee foreground and background event listeners
  * Routes alarm notifications to FullScreenAlarmScreen
+ * Handles FCM notifications for missed doses
  *
- * Requirements: 2.1, 3.9
+ * Requirements: 2.1, 3.9, Phase 5 Escalation
  *
  * @format
  */
 
 import notifee, { EventType, TriggerType } from '@notifee/react-native';
-import { ParentScreens } from '../types/navigation';
+import messaging from '@react-native-firebase/messaging';
+import { ParentScreens, CaregiverScreens } from '../types/navigation';
 import AlarmSchedulerService from './AlarmSchedulerService';
 
 class NotificationHandlerService {
@@ -30,9 +32,10 @@ class NotificationHandlerService {
 
   /**
    * Initialize notification event handlers
-   * Sets up foreground and background event listeners
+   * Sets up foreground and background event listeners for both Notifee and FCM
    *
    * Requirements: 2.1 - Trigger full-screen alarm when dose time arrives
+   * Requirements: Phase 5 - Handle missed dose FCM notifications
    */
   initialize() {
     if (this.isInitialized) {
@@ -40,18 +43,49 @@ class NotificationHandlerService {
       return;
     }
 
-    // Handle foreground events (app is open)
+    // Handle foreground events (app is open) - Notifee
     notifee.onForegroundEvent(({ type, detail }) => {
       this.handleNotificationEvent(type, detail);
     });
 
-    // Handle background events (app is closed/background)
+    // Handle background events (app is closed/background) - Notifee
     notifee.onBackgroundEvent(async ({ type, detail }) => {
       this.handleNotificationEvent(type, detail);
     });
 
+    // Handle FCM foreground messages (app is open)
+    messaging().onMessage(async remoteMessage => {
+      console.log('FCM foreground message received:', remoteMessage);
+      this.handleFCMMessage(remoteMessage, true);
+    });
+
+    // Handle FCM background messages (app is closed/background)
+    messaging().setBackgroundMessageHandler(async remoteMessage => {
+      console.log('FCM background message received:', remoteMessage);
+      this.handleFCMMessage(remoteMessage, false);
+    });
+
+    // Handle notification opened app (user tapped notification)
+    messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('Notification opened app:', remoteMessage);
+      this.handleFCMNotificationTap(remoteMessage);
+    });
+
+    // Check if app was opened from a notification (killed state)
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log(
+            'App opened from notification (killed state):',
+            remoteMessage,
+          );
+          this.handleFCMNotificationTap(remoteMessage);
+        }
+      });
+
     this.isInitialized = true;
-    console.log('Notification handlers initialized');
+    console.log('Notification handlers initialized (Notifee + FCM)');
   }
 
   /**
@@ -339,6 +373,179 @@ class NotificationHandlerService {
     });
     console.log('Alarm dismissed without action:', notification.id);
     // Dose status remains "scheduled" - no action needed
+  }
+
+  /**
+   * Handle FCM message (foreground or background)
+   * Routes to appropriate handler based on notification type
+   *
+   * Requirements: Phase 5 - Handle missed dose notifications
+   *
+   * @param {Object} remoteMessage - FCM remote message
+   * @param {boolean} isForeground - Whether app is in foreground
+   */
+  async handleFCMMessage(remoteMessage, isForeground) {
+    try {
+      const { notification, data } = remoteMessage;
+
+      console.log('FCM message data:', data);
+      console.log('FCM notification:', notification);
+
+      // Handle different notification types
+      const notificationType = data?.type;
+
+      switch (notificationType) {
+        case 'missed_dose':
+          await this.handleMissedDoseNotification(remoteMessage, isForeground);
+          break;
+
+        default:
+          console.log('Unknown FCM notification type:', notificationType);
+          break;
+      }
+    } catch (error) {
+      console.error('Failed to handle FCM message:', error);
+    }
+  }
+
+  /**
+   * Handle missed dose FCM notification
+   * Shows in-app alert if app is open, otherwise displays notification
+   *
+   * Requirements: Phase 5 - Missed dose escalation
+   *
+   * @param {Object} remoteMessage - FCM remote message
+   * @param {boolean} isForeground - Whether app is in foreground
+   */
+  async handleMissedDoseNotification(remoteMessage, isForeground) {
+    try {
+      const { notification, data } = remoteMessage;
+      const { doseId, parentId, medicineId, scheduledTime } = data;
+
+      console.log('Handling missed dose notification:', {
+        doseId,
+        parentId,
+        medicineId,
+        scheduledTime,
+        isForeground,
+      });
+
+      if (isForeground) {
+        // App is open - show in-app alert
+        console.log('Showing in-app alert for missed dose');
+
+        // Display a local notification using Notifee for in-app visibility
+        await notifee.displayNotification({
+          title: notification?.title || 'Missed Dose Alert',
+          body: notification?.body || 'A dose was missed',
+          data: {
+            type: 'missed_dose',
+            doseId,
+            parentId,
+            medicineId,
+            scheduledTime,
+          },
+          android: {
+            channelId: 'missed-doses',
+            pressAction: {
+              id: 'default',
+            },
+            importance: notifee.AndroidImportance.HIGH,
+          },
+          ios: {
+            sound: 'default',
+            foregroundPresentationOptions: {
+              alert: true,
+              badge: true,
+              sound: true,
+            },
+          },
+        });
+
+        // Update badge count (increment by 1)
+        const currentBadge = await notifee.getBadgeCount();
+        await notifee.setBadgeCount(currentBadge + 1);
+      } else {
+        // App is in background - notification already displayed by FCM
+        console.log('App in background, FCM notification already displayed');
+      }
+    } catch (error) {
+      console.error('Failed to handle missed dose notification:', error);
+    }
+  }
+
+  /**
+   * Handle FCM notification tap
+   * Navigates to appropriate screen based on notification type
+   *
+   * Requirements: Phase 5 - Navigate to dose history or adherence dashboard
+   *
+   * @param {Object} remoteMessage - FCM remote message
+   */
+  handleFCMNotificationTap(remoteMessage) {
+    try {
+      const { data } = remoteMessage;
+      const notificationType = data?.type;
+
+      console.log('FCM notification tapped:', {
+        type: notificationType,
+        data,
+      });
+
+      switch (notificationType) {
+        case 'missed_dose':
+          this.navigateToMissedDose(data);
+          break;
+
+        default:
+          console.log('Unknown notification type tapped:', notificationType);
+          break;
+      }
+    } catch (error) {
+      console.error('Failed to handle FCM notification tap:', error);
+    }
+  }
+
+  /**
+   * Navigate to missed dose screen
+   * Opens caregiver dose history screen
+   *
+   * Requirements: Phase 5 - Navigate to dose history
+   *
+   * @param {Object} data - Notification data
+   */
+  navigateToMissedDose(data) {
+    try {
+      const { doseId, parentId, medicineId, scheduledTime } = data;
+
+      console.log('Navigating to missed dose:', {
+        doseId,
+        parentId,
+        medicineId,
+        scheduledTime,
+      });
+
+      // Navigate to caregiver dose history screen (mapped to UPCOMING screen)
+      if (this.navigationRef?.current) {
+        this.navigationRef.current.navigate('Caregiver', {
+          screen: CaregiverScreens.UPCOMING,
+          params: {
+            parentId,
+            medicineId,
+            highlightDoseId: doseId,
+          },
+        });
+
+        // Clear badge count when user views the notification
+        notifee.setBadgeCount(0);
+      } else {
+        console.warn(
+          'Navigation ref not available, cannot navigate to dose history',
+        );
+      }
+    } catch (error) {
+      console.error('Failed to navigate to missed dose:', error);
+    }
   }
 
   /**

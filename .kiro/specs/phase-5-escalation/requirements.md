@@ -1,23 +1,24 @@
 # Phase 5: Escalation - Requirements
 
-Version: 1.0
+Version: 2.0
 Date: 2026-02-21
-Status: Planning
+Status: Ready for Implementation
+Approach: Cloud Functions + Cloud Scheduler
 
 ---
 
 ## Overview
 
-Phase 5 implements the escalation system that detects missed doses and alerts caregivers when parents don't take their medicine on time. This is implemented entirely client-side using Firestore real-time listeners and local background tasks.
+Phase 5 implements a reliable, enterprise-grade escalation system using Cloud Functions and Cloud Scheduler. This ensures missed doses are detected within 5 minutes and caregivers are notified immediately via Firebase Cloud Messaging (FCM).
 
 ---
 
 ## Goals
 
 1. Detect missed doses automatically (30 minutes after scheduled time)
-2. Notify all caregivers when a dose is missed via Firestore updates
+2. Notify all caregivers when a dose is missed via FCM push notifications
 3. Provide adherence visibility for caregivers
-4. Ensure reliable and timely escalation without Cloud Functions
+4. Ensure 99.95% uptime and < 5 minute detection latency
 
 ---
 
@@ -25,30 +26,30 @@ Phase 5 implements the escalation system that detects missed doses and alerts ca
 
 - Phase 4 completed (dose tracking working)
 - FCM configured for all users
-- Dose collection properly structured
-- Background task handling configured (React Native background tasks)
+- Device tokens registered in deviceTokens collection
+- Firebase Blaze plan enabled
+- Cloud Functions and Cloud Scheduler APIs enabled
 
 ---
 
 ## Core Features
 
-### 1. Missed Dose Detection
+### 1. Missed Dose Detection (Cloud Function)
 
 **Requirements:**
 
-- Parent app checks doses periodically using background tasks
+- Cloud Function runs every 5 minutes (triggered by Cloud Scheduler)
 - Checks all doses with status "pending" or "snoozed"
 - Marks dose as "missed" if 30+ minutes past scheduledTime
-- Updates dose document with missedAt timestamp
-- Firestore update triggers real-time notifications to caregivers
+- Updates dose document with missedAt and escalatedAt timestamps
+- Triggers FCM notifications to all caregivers
 
-**Implementation Approach:**
+**Implementation:**
 
-- Use React Native background fetch/headless tasks
-- Schedule periodic checks (every 5-15 minutes)
-- Query local doses and check against current time
-- Update Firestore when dose becomes overdue
-- Caregivers listen to dose changes via Firestore snapshots
+- Function: `scheduledDoseCheck`
+- Trigger: Cloud Scheduler (cron: `*/5 * * * *`)
+- Runtime: Node.js 18
+- Region: us-central1
 
 **Business Rules:**
 
@@ -56,32 +57,37 @@ Phase 5 implements the escalation system that detects missed doses and alerts ca
 - Only active medicines are checked
 - Archived/deleted medicines are ignored
 - Already taken/missed doses are skipped
-- Works even when parent app is in background
+- Processes all users in single execution
 
-### 2. Caregiver Notifications
+### 2. Caregiver Notifications (FCM)
 
 **Requirements:**
 
-- Caregivers listen to dose status changes via Firestore
-- When dose status changes to "missed", trigger local notification
+- Push notifications sent to all caregivers linked to parent
 - Notification includes: parent name, medicine name, scheduled time
 - Notification opens app to dose history
-- Works via Firestore real-time listeners + local notifications
+- Retry logic for failed deliveries
+- Logging of all notification attempts
 
 **Implementation:**
 
-- Caregiver app has Firestore listener on doses collection
-- Filter: doses for their parents with status changes
-- When status becomes "missed", show local notification
-- Use Notifee for local notifications (same as alarms)
-- Store notification in local state to prevent duplicates
+- Function: `sendMissedDoseNotification`
+- Called by: `scheduledDoseCheck`
+- Delivery: FCM multicast
+- Logging: escalationLogs collection
 
 **Notification Content:**
 
 ```
 Title: "Missed Dose Alert"
 Body: "[Parent Name] missed [Medicine Name] at [Time]"
-Data: { type: "missed_dose", doseId, parentId, medicineId }
+Data: {
+  type: "missed_dose",
+  doseId,
+  parentId,
+  medicineId,
+  scheduledTime
+}
 ```
 
 ### 3. Adherence Dashboard
@@ -116,116 +122,87 @@ Data: { type: "missed_dose", doseId, parentId, medicineId }
 
 ## Technical Implementation
 
-### Parent App: Background Dose Checker
+### Cloud Function: scheduledDoseCheck
 
-**Location:** src/services/missedDoseChecker.js
+**File:** `functions/src/scheduledDoseCheck.js`
 
-**Trigger:** Background task (every 10-15 minutes)
-
-**Setup:**
-
-- Use react-native-background-fetch or similar
-- Register background task on app start
-- Task runs even when app is closed/background
-- Android: Use WorkManager
-- iOS: Use Background Fetch
+**Trigger:** Cloud Scheduler (every 5 minutes)
 
 **Logic:**
 
 ```javascript
-1. Query local doses where:
+1. Query doses where:
    - status IN ['pending', 'snoozed']
    - scheduledTime < (now - 30 minutes)
-   - medicine.isActive = true
 
-2. For each missed dose:
-   a. Update Firestore dose status to 'missed'
-   b. Set missedAt = serverTimestamp()
-   c. Log escalation event locally
+2. For each overdue dose:
+   a. Verify medicine is still active
+   b. Update dose status to 'missed'
+   c. Set missedAt and escalatedAt timestamps
+   d. Call sendMissedDoseNotification
 
-3. Firestore update triggers caregiver listeners
+3. Return summary of processed doses
 ```
 
 **Error Handling:**
 
-- Catch and log errors
-- Don't crash background task
-- Retry on next scheduled run
-- Store failed updates for retry
+- Continue processing if one dose fails
+- Log all errors to Cloud Logging
+- Return success/failure counts
+- Alert on high failure rate
 
-### Caregiver App: Dose Status Listener
+### Cloud Function: sendMissedDoseNotification
 
-**Location:** src/services/doseStatusListener.js
+**File:** `functions/src/sendMissedDoseNotification.js`
 
-**Trigger:** Firestore real-time listener
-
-**Setup:**
-
-- Start listener when caregiver app opens
-- Listen to doses for all linked parents
-- Filter for status changes to 'missed'
-- Keep listener active in background (if possible)
+**Trigger:** Called by scheduledDoseCheck
 
 **Logic:**
 
 ```javascript
-1. Subscribe to doses collection:
-   - where parentId IN [linked parent IDs]
-   - where status == 'missed'
-   - orderBy missedAt desc
-
-2. On snapshot change:
-   a. Check if dose is newly missed (not seen before)
-   b. Get parent and medicine details
-   c. Show local notification via Notifee
-   d. Mark dose as notified locally (prevent duplicates)
-   e. Update badge count
-
-3. Handle notification tap:
-   - Navigate to dose history or adherence dashboard
-   - Clear notification
+1. Get parent name from users collection
+2. Get medicine name from medicines collection
+3. Query relationships for caregivers
+4. Get device tokens for caregivers
+5. Build FCM notification payload
+6. Send multicast notification
+7. Log results to escalationLogs
+8. Return success/failure counts
 ```
 
-**Notification Deduplication:**
+**Retry Logic:**
 
-- Store notified dose IDs in AsyncStorage
-- Check before showing notification
-- Clear old entries periodically (> 7 days)
+- FCM handles retries automatically
+- Log failed deliveries
+- Continue with other caregivers if one fails
 
 ### Firestore Queries
 
-**Parent app - Get overdue doses (background task):**
+**Get overdue doses:**
 
 ```javascript
-// Get current user's doses that are overdue
-const userId = auth().currentUser.uid;
-const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
 db.collection('doses')
-  .where('parentId', '==', userId)
   .where('status', 'in', ['pending', 'snoozed'])
   .where('scheduledTime', '<', thirtyMinutesAgo)
   .get();
 ```
 
-**Caregiver app - Listen to missed doses:**
+**Get caregivers for parent:**
 
 ```javascript
-// Real-time listener for missed doses
-const parentIds = ['parent1Id', 'parent2Id']; // From relationships
+db.collection('relationships')
+  .where('parentId', '==', parentId)
+  .where('status', '==', 'active')
+  .get();
+```
 
-db.collection('doses')
-  .where('parentId', 'in', parentIds)
-  .where('status', '==', 'missed')
-  .orderBy('missedAt', 'desc')
-  .limit(50)
-  .onSnapshot(snapshot => {
-    snapshot.docChanges().forEach(change => {
-      if (change.type === 'added' || change.type === 'modified') {
-        // Show notification for newly missed dose
-      }
-    });
-  });
+**Get device tokens:**
+
+```javascript
+db.collection('deviceTokens')
+  .where('userId', '==', caregiverId)
+  .where('enabled', '==', true)
+  .get();
 ```
 
 **Get adherence stats:**
@@ -244,7 +221,7 @@ db.collection('doses')
 
 ### 1. AdherenceDashboard (Caregiver)
 
-**Location:** New screen accessible from caregiver home
+**Location:** src/screens/caregiver/AdherenceDashboardScreen.js
 
 **Components:**
 
@@ -257,7 +234,7 @@ db.collection('doses')
 
 ### 2. MissedDosesList (Caregiver)
 
-**Location:** Accessible from adherence dashboard
+**Location:** src/screens/caregiver/MissedDosesListScreen.js
 
 **Components:**
 
@@ -267,13 +244,13 @@ db.collection('doses')
 - Tap to see dose details
 - Empty state if no missed doses
 
-### 3. Notification Handler
+### 3. FCM Notification Handler
 
-**Location:** src/services/notificationHandler.js
+**Location:** App.js (existing FCM handler)
 
 **Behavior:**
 
-- Listen for local notification taps (Notifee)
+- Listen for FCM messages
 - Handle "missed_dose" notification type
 - Navigate to dose history or adherence dashboard
 - Show in-app alert if app is open
@@ -290,31 +267,32 @@ db.collection('doses')
 
 ```javascript
 {
-  missedAt: timestamp | null,  // When dose was marked missed by parent app
-  checkedAt: timestamp | null,  // Last time background task checked this dose
+  missedAt: timestamp | null,  // When dose was marked missed
+  escalatedAt: timestamp | null,  // When caregivers were notified
 }
 ```
 
-### Local Storage: notifiedDoses
+### New collection: escalationLogs
 
-**Purpose:** Track which missed doses have been notified to prevent duplicates
-
-**Storage:** AsyncStorage (caregiver app only)
+**Purpose:** Track all escalation events for debugging and analytics
 
 **Schema:**
 
 ```javascript
 {
-  [doseId]: {
-    notifiedAt: timestamp,
-    doseId: string,
-    parentId: string,
-    medicineId: string,
-  }
+  id: string,
+  doseId: string,
+  parentId: string,
+  medicineId: string,
+  caregiverIds: string[],
+  scheduledTime: timestamp,
+  missedAt: timestamp,
+  notificationsSent: number,
+  notificationsFailed: number,
+  error: string | null,
+  createdAt: timestamp,
 }
 ```
-
-**Cleanup:** Remove entries older than 7 days
 
 ---
 
@@ -332,7 +310,17 @@ match /doses/{doseId} {
 }
 ```
 
-// No escalationLogs collection needed - using local storage
+### escalationLogs collection
+
+```javascript
+// Only caregivers can read logs for their parents
+match /escalationLogs/{logId} {
+  allow read: if isAuthenticated() &&
+                 isCaregiverOfParent(resource.data.parentId);
+  // Only Cloud Functions can write
+  allow write: if false;
+}
+```
 
 ---
 
@@ -340,41 +328,40 @@ match /doses/{doseId} {
 
 ### Unit Tests
 
-- [ ] Background task identifies overdue doses correctly
+- [ ] scheduledDoseCheck identifies overdue doses correctly
 - [ ] 30-minute grace period calculated accurately
-- [ ] Notification deduplication works
+- [ ] Notification payload built correctly
 - [ ] Adherence calculations are accurate
 - [ ] Edge cases: timezone changes, deleted medicines
 
 ### Integration Tests
 
-- [ ] Background task runs on schedule
+- [ ] Cloud Function triggers on schedule
 - [ ] Dose status updates in Firestore
-- [ ] Caregiver listener receives updates
-- [ ] Local notifications shown to caregivers
+- [ ] FCM notifications delivered to caregivers
 - [ ] Multiple caregivers all receive notifications
 - [ ] Notification opens correct screen in app
+- [ ] escalationLogs populated correctly
 
 ### Manual Tests
 
 - [ ] Create dose, wait 30 minutes, verify escalation
-- [ ] Verify parent background task marks dose missed
-- [ ] Verify caregiver receives notification
+- [ ] Verify Cloud Function marks dose missed
+- [ ] Verify caregiver receives FCM notification
 - [ ] Tap notification, verify navigation
 - [ ] Check adherence dashboard shows correct data
 - [ ] Test with multiple parents and caregivers
-- [ ] Test with parent app closed, in background, in foreground
-- [ ] Test with caregiver app closed (notification on next open)
-- [ ] Test with no internet (updates sync when online)
-- [ ] Test notification deduplication
+- [ ] Test with app closed, in background, in foreground
+- [ ] Test with no internet (notifications queued)
+- [ ] Test with invalid device tokens
 
 ### Performance Tests
 
-- [ ] Background task handles 10+ overdue doses
-- [ ] Firestore listener updates < 2 seconds
+- [ ] Function handles 100+ overdue doses
+- [ ] Notification delivery < 2 minutes
 - [ ] Adherence queries complete < 1 second
 - [ ] No excessive Firestore reads
-- [ ] Background task doesn't drain battery
+- [ ] Function execution time < 30 seconds
 
 ---
 
@@ -383,22 +370,22 @@ match /doses/{doseId} {
 ### Must Have
 
 - [ ] Doses automatically marked missed after 30 minutes
-- [ ] Parent background task runs reliably
-- [ ] All caregivers receive notifications via Firestore listener
+- [ ] Cloud Function runs reliably every 5 minutes
+- [ ] All caregivers receive FCM push notifications
 - [ ] Notifications include parent and medicine names
 - [ ] Adherence dashboard shows accurate percentages
 - [ ] Missed dose list displays all missed doses
 - [ ] No false positives (taken doses not escalated)
-- [ ] No duplicate notifications
+- [ ] escalationLogs track all events
 
 ### Should Have
 
-- [ ] Background task retry on failure
-- [ ] Local logging for debugging
+- [ ] Notification retry on failure
+- [ ] Escalation logging for debugging
 - [ ] Per-medicine adherence breakdown
 - [ ] Time period filtering (7d, 30d)
 - [ ] Visual adherence trends
-- [ ] Works when caregiver app is closed (notification on next open)
+- [ ] Cloud Function monitoring and alerts
 
 ### Nice to Have
 
@@ -406,7 +393,7 @@ match /doses/{doseId} {
 - [ ] Caregiver acknowledgment of alerts
 - [ ] Configurable grace period per medicine
 - [ ] Weekly adherence summary
-- [ ] Background task diagnostics screen
+- [ ] Admin dashboard for escalation metrics
 
 ---
 
@@ -414,40 +401,42 @@ match /doses/{doseId} {
 
 ### External Services
 
-- React Native Background Fetch (for periodic checks)
-- Notifee (for local notifications)
-- Firestore (for real-time sync)
+- Cloud Scheduler (for scheduled function)
+- Firebase Cloud Messaging (for notifications)
+- Cloud Functions (for backend logic)
+- Cloud Logging (for monitoring)
 
 ### Internal Dependencies
 
 - Phase 4 dose tracking must be working
+- Device tokens must be registered
 - Relationships must be established
-- Notifee already configured (from Phase 4)
+- FCM configured in app
 
 ---
 
 ## Risks & Mitigations
 
-### Risk: Background task doesn't run reliably
+### Risk: Cloud Function doesn't run
 
 **Impact:** High - No escalations happen
 **Mitigation:**
 
-- Use platform-specific best practices (WorkManager, Background Fetch)
-- Request battery optimization exemption
-- Test on various devices/OS versions
-- Add diagnostics to monitor task execution
-- Fallback: Check on app foreground as well
+- Monitor function execution logs
+- Set up alerting for missed runs
+- Test scheduler configuration thoroughly
+- Use Cloud Monitoring dashboards
 
-### Risk: Caregiver app closed when dose missed
+### Risk: Notifications not delivered
 
-**Impact:** Medium - Delayed notification
+**Impact:** High - Caregivers not alerted
 **Mitigation:**
 
-- Show notification when app next opens
-- Use Firestore listener to catch up on missed events
-- Store notification state locally
-- Consider periodic background checks for caregivers too
+- FCM has built-in retry logic
+- Log all attempts to escalationLogs
+- Monitor delivery rates
+- Test on various devices/OS versions
+- Handle invalid tokens gracefully
 
 ### Risk: False positives
 
@@ -457,6 +446,7 @@ match /doses/{doseId} {
 - Thorough testing of grace period logic
 - Verify timezone handling
 - Check for race conditions
+- Verify medicine is active before escalating
 
 ### Risk: High Firestore costs
 
@@ -466,49 +456,50 @@ match /doses/{doseId} {
 - Optimize queries (use indexes)
 - Limit query results
 - Cache adherence calculations
-- Use local caching to reduce reads
-- Unsubscribe listeners when not needed
-- Monitor usage
+- Monitor usage with budget alerts
+- Use composite indexes
 
-### Risk: Duplicate notifications
+### Risk: Function timeout
 
-**Impact:** Low - User annoyance
+**Impact:** Medium - Some doses not processed
 **Mitigation:**
 
-- Implement deduplication with AsyncStorage
-- Track notified dose IDs
-- Clear old entries periodically
+- Batch process doses efficiently
+- Set appropriate timeout (60 seconds)
+- Log processing time
+- Optimize queries
 
 ---
 
 ## Rollout Plan
 
-### Phase 5.1: Background Task Setup (Week 1)
+### Phase 5.1: Cloud Functions Setup (Week 1)
 
-- Implement parent background dose checker
-- Configure background fetch/WorkManager
-- Test task execution reliability
+- Enable Blaze plan and APIs
+- Deploy Cloud Functions
+- Configure Cloud Scheduler
+- Test with sample data
 - Monitor for 48 hours
 
-### Phase 5.2: Caregiver Listener (Week 1-2)
+### Phase 5.2: FCM Integration (Week 1-2)
 
-- Implement Firestore listener for missed doses
-- Add notification deduplication
-- Show local notifications via Notifee
+- Update app FCM handler
+- Test notification delivery
+- Add notification navigation
 - Test on real devices
 
-### Phase 5.3: Dashboard (Week 2-3)
+### Phase 5.3: Dashboard UI (Week 2-3)
 
-- Build adherence dashboard UI
+- Build adherence dashboard
 - Implement missed dose list
 - Add filtering and sorting
 - User testing
 
-### Phase 5.4: Polish (Week 3)
+### Phase 5.4: Production Deployment (Week 3)
 
-- Fix bugs from testing
-- Optimize performance
-- Add diagnostics and logging
+- Deploy to production
+- Monitor metrics
+- Fix bugs
 - Documentation
 
 ---
@@ -517,11 +508,11 @@ match /doses/{doseId} {
 
 ### Technical Metrics
 
-- Escalation latency < 15 minutes (from missed to notification)
-- Background task success rate > 95%
-- Notification delivery rate > 90% (when caregiver app opens)
+- Escalation latency < 5 minutes (from missed to notification)
+- Notification delivery rate > 95%
+- Cloud Function success rate > 99%
 - False positive rate < 1%
-- No duplicate notifications
+- Function execution time < 30 seconds
 
 ### Product Metrics
 
@@ -532,16 +523,34 @@ match /doses/{doseId} {
 
 ---
 
+## Cost Estimates
+
+### Development
+
+- Cloud Scheduler: $0 (free tier)
+- Cloud Functions: $0 (free tier)
+- Firestore: ~$1-2/month
+- **Total: ~$1-2/month**
+
+### Production (1,000 users)
+
+- Cloud Scheduler: $0 (free tier)
+- Cloud Functions: ~$0.50/month
+- Firestore: ~$10-15/month
+- **Total: ~$10-15/month**
+
+---
+
 ## Next Steps
 
 1. Review and approve requirements
-2. Install react-native-background-fetch
-3. Implement parent background dose checker
-4. Implement caregiver Firestore listener
+2. Enable Firebase Blaze plan
+3. Follow cloud-functions-setup.md guide
+4. Deploy Cloud Functions to dev
 5. Test escalation flow end-to-end
 6. Build adherence dashboard UI
-7. Conduct user testing
-8. Deploy to production
+7. Deploy to production
+8. Monitor and optimize
 
 ---
 
