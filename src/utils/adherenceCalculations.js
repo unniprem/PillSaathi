@@ -5,9 +5,34 @@
  */
 
 /**
- * Calculates overall adherence metrics from an array of doses
- * @param {Array} doses - Array of dose objects
- * @returns {Object} - { percentage, taken, missed, snoozed, total }
+ * Calculates overall adherence metrics from an array of doses.
+ *
+ * Adherence rate is calculated as (taken / total) * 100.
+ * Handles edge cases including null/undefined inputs, empty arrays, and invalid dose objects.
+ *
+ * @param {Array<Object>} doses - Array of dose objects with status field
+ * @param {string} doses[].status - Dose status: 'taken', 'missed', 'snoozed', or 'pending'
+ * @returns {Object} Adherence metrics object
+ * @returns {number} returns.percentage - Adherence percentage (0-100), rounded to nearest integer
+ * @returns {number} returns.taken - Count of doses with status 'taken'
+ * @returns {number} returns.missed - Count of doses with status 'missed'
+ * @returns {number} returns.snoozed - Count of doses with status 'snoozed'
+ * @returns {number} returns.pending - Count of doses with status 'pending'
+ * @returns {number} returns.total - Total count of valid doses
+ *
+ * @example
+ * const doses = [
+ *   { status: 'taken' },
+ *   { status: 'taken' },
+ *   { status: 'missed' }
+ * ];
+ * const result = calculateAdherence(doses);
+ * // Returns: { percentage: 67, taken: 2, missed: 1, snoozed: 0, pending: 0, total: 3 }
+ *
+ * @example
+ * // Edge case: empty array
+ * calculateAdherence([]);
+ * // Returns: { percentage: 0, taken: 0, missed: 0, snoozed: 0, pending: 0, total: 0 }
  */
 export function calculateAdherence(doses) {
   // Handle edge cases: null, undefined, non-array, or empty array
@@ -61,9 +86,40 @@ export function calculateAdherence(doses) {
 }
 
 /**
- * Calculates adherence metrics grouped by medicine
- * @param {Array} doses - Array of dose objects with medicineId
- * @returns {Object} - Map of medicineId to adherence metrics
+ * Calculates adherence metrics grouped by medicine.
+ *
+ * Groups doses by medicineId and calculates adherence for each medicine separately.
+ * Useful for displaying per-medicine adherence breakdown in the dashboard.
+ * Handles edge cases including missing medicineId fields and invalid doses.
+ *
+ * @param {Array<Object>} doses - Array of dose objects with medicineId and status fields
+ * @param {string} doses[].medicineId - Unique identifier for the medicine
+ * @param {string} doses[].status - Dose status: 'taken', 'missed', 'snoozed', or 'pending'
+ * @returns {Object<string, Object>} Map of medicineId to adherence metrics
+ * @returns {Object} returns[medicineId] - Adherence metrics for specific medicine (same structure as calculateAdherence)
+ * @returns {number} returns[medicineId].percentage - Adherence percentage for this medicine
+ * @returns {number} returns[medicineId].taken - Count of taken doses for this medicine
+ * @returns {number} returns[medicineId].missed - Count of missed doses for this medicine
+ * @returns {number} returns[medicineId].snoozed - Count of snoozed doses for this medicine
+ * @returns {number} returns[medicineId].pending - Count of pending doses for this medicine
+ * @returns {number} returns[medicineId].total - Total doses for this medicine
+ *
+ * @example
+ * const doses = [
+ *   { medicineId: 'med1', status: 'taken' },
+ *   { medicineId: 'med1', status: 'missed' },
+ *   { medicineId: 'med2', status: 'taken' }
+ * ];
+ * const result = getAdherenceByMedicine(doses);
+ * // Returns: {
+ * //   med1: { percentage: 50, taken: 1, missed: 1, snoozed: 0, pending: 0, total: 2 },
+ * //   med2: { percentage: 100, taken: 1, missed: 0, snoozed: 0, pending: 0, total: 1 }
+ * // }
+ *
+ * @example
+ * // Edge case: doses without medicineId are ignored
+ * getAdherenceByMedicine([{ status: 'taken' }]);
+ * // Returns: {}
  */
 export function getAdherenceByMedicine(doses) {
   // Handle edge cases: null, undefined, non-array, or empty array
@@ -103,10 +159,44 @@ export function getAdherenceByMedicine(doses) {
 }
 
 /**
- * Calculates adherence trend over time periods
- * @param {Array} doses - Array of dose objects with scheduledTime
- * @param {string} period - Time period: '7d', '30d', or 'all'
- * @returns {Object} - Adherence metrics for the specified period
+ * Calculates adherence trend over specified time periods.
+ *
+ * Filters doses within the specified time period and calculates adherence metrics.
+ * Supports Firestore Timestamp objects and JavaScript Date objects for scheduledTime.
+ * Useful for displaying adherence over different time ranges (7 days, 30 days, all time).
+ *
+ * @param {Array<Object>} doses - Array of dose objects with scheduledTime and status fields
+ * @param {string} doses[].status - Dose status: 'taken', 'missed', 'snoozed', or 'pending'
+ * @param {(Date|Object)} doses[].scheduledTime - Scheduled time as Date or Firestore Timestamp
+ * @param {string} [period='7d'] - Time period to analyze: '7d', '30d', or 'all'
+ * @returns {Object} Adherence metrics for the specified period
+ * @returns {number} returns.percentage - Adherence percentage (0-100) for the period
+ * @returns {number} returns.taken - Count of taken doses in the period
+ * @returns {number} returns.missed - Count of missed doses in the period
+ * @returns {number} returns.snoozed - Count of snoozed doses in the period
+ * @returns {number} returns.pending - Count of pending doses in the period
+ * @returns {number} returns.total - Total doses in the period
+ *
+ * @example
+ * const doses = [
+ *   { status: 'taken', scheduledTime: new Date('2026-02-20') },
+ *   { status: 'missed', scheduledTime: new Date('2026-02-19') },
+ *   { status: 'taken', scheduledTime: new Date('2026-01-01') }
+ * ];
+ * const result = getAdherenceTrend(doses, '7d');
+ * // Returns adherence for last 7 days only (first two doses)
+ * // { percentage: 50, taken: 1, missed: 1, snoozed: 0, pending: 0, total: 2 }
+ *
+ * @example
+ * // All time period
+ * getAdherenceTrend(doses, 'all');
+ * // Returns adherence for all doses
+ * // { percentage: 67, taken: 2, missed: 1, snoozed: 0, pending: 0, total: 3 }
+ *
+ * @example
+ * // Invalid period defaults to '7d'
+ * getAdherenceTrend(doses, 'invalid');
+ * // Same as getAdherenceTrend(doses, '7d')
  */
 export function getAdherenceTrend(doses, period = '7d') {
   // Handle edge cases: null, undefined, non-array, or empty array

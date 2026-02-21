@@ -305,18 +305,18 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Function: getAdherenceByMedicine(doses)
 - [x] Function: getAdherenceTrend(doses, period)
 - [x] Handle edge cases (no doses, all missed, etc.)
-- [-] Add JSDoc comments
-- [ ] Add unit tests
+- [x] Add JSDoc comments
+- [x] Add unit tests
 
 #### Task 5.7.2: Create useAdherence hook
 
-- [~] Create src/hooks/useAdherence.js
-- [~] Query doses for parent and date range
-- [~] Calculate adherence metrics
-- [~] Return: percentage, taken, missed, snoozed, total
-- [~] Handle loading and error states
-- [~] Memoize calculations
-- [ ] Add JSDoc comments
+- [x] Create src/hooks/useAdherence.js
+- [x] Query doses for parent and date range
+- [x] Calculate adherence metrics
+- [-] Return: percentage, taken, missed, snoozed, total
+- [x] Handle loading and error states
+- [x] Memoize calculations
+- [x] Add JSDoc comments
 
 #### Task 5.7.3: Create useMissedDoses hook
 
