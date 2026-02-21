@@ -8,7 +8,7 @@
  * @format
  */
 
-import notifee, { EventType } from '@notifee/react-native';
+import notifee, { EventType, TriggerType } from '@notifee/react-native';
 import { ParentScreens } from '../types/navigation';
 import AlarmSchedulerService from './AlarmSchedulerService';
 
@@ -169,14 +169,159 @@ class NotificationHandlerService {
 
   /**
    * Handle action button press
-   * For future quick actions (e.g., "Take" button on notification)
+   * Handles quick actions like "Mark as Taken" and "Dismiss"
    *
    * @param {Object} notification - Notification object
    * @param {Object} action - Action that was pressed
    */
-  handleActionPress(notification, action) {
-    console.log('Action pressed:', action?.id);
-    // Future implementation for quick actions
+  async handleActionPress(notification, action) {
+    try {
+      const actionId = action?.id;
+      console.log(
+        'Action pressed:',
+        actionId,
+        'for notification:',
+        notification.id,
+      );
+
+      // Log action
+      AlarmSchedulerService._log('info', 'ALARM_ACTION_PRESSED', {
+        alarmId: notification.id,
+        actionId,
+        medicineId: notification.data?.medicineId,
+        doseId: notification.data?.doseId,
+      });
+
+      switch (actionId) {
+        case 'mark_taken':
+          await this.handleMarkAsTaken(notification);
+          break;
+
+        case 'snooze':
+          await this.handleSnooze(notification);
+          break;
+
+        case 'dismiss':
+          await this.handleDismissAction(notification);
+          break;
+
+        default:
+          console.log('Unknown action:', actionId);
+          break;
+      }
+    } catch (error) {
+      console.error('Failed to handle action press:', error);
+    }
+  }
+
+  /**
+   * Handle "Mark as Taken" action
+   * Updates dose status to taken and dismisses notification
+   *
+   * @param {Object} notification - Notification object
+   */
+  async handleMarkAsTaken(notification) {
+    try {
+      const { doseId } = notification.data;
+
+      if (!doseId) {
+        console.error('No doseId in notification data');
+        return;
+      }
+
+      console.log('Marking dose as taken:', doseId);
+
+      // Update dose status in Firestore
+      const doseService = require('./doseService').default;
+      await doseService.markDoseAsTaken(doseId);
+
+      // Dismiss the notification
+      await notifee.cancelNotification(notification.id);
+
+      console.log('Dose marked as taken and notification dismissed');
+
+      // Log success
+      AlarmSchedulerService._log(
+        'info',
+        'DOSE_MARKED_TAKEN_FROM_NOTIFICATION',
+        {
+          doseId,
+          alarmId: notification.id,
+        },
+      );
+    } catch (error) {
+      console.error('Failed to mark dose as taken:', error);
+      AlarmSchedulerService._log('error', 'MARK_TAKEN_FAILED', {
+        doseId: notification.data?.doseId,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Handle "Snooze" action
+   * Reschedules alarm for 10 minutes later
+   *
+   * @param {Object} notification - Notification object
+   */
+  async handleSnooze(notification) {
+    try {
+      console.log('Snoozing alarm for 10 minutes');
+
+      // Dismiss current notification
+      await notifee.cancelNotification(notification.id);
+
+      // Create new notification for 10 minutes from now
+      const snoozeTime = new Date(Date.now() + 10 * 60 * 1000);
+
+      await notifee.createTriggerNotification(
+        {
+          id: `${notification.id}_snooze`,
+          title: notification.title,
+          body: `Snoozed - ${notification.body}`,
+          data: notification.data,
+          android: notification.android,
+          ios: notification.ios,
+        },
+        {
+          type: notifee.TriggerType.TIMESTAMP,
+          timestamp: snoozeTime.getTime(),
+        },
+      );
+
+      console.log('Alarm snoozed until:', snoozeTime.toLocaleTimeString());
+
+      // Log snooze
+      AlarmSchedulerService._log('info', 'ALARM_SNOOZED', {
+        alarmId: notification.id,
+        snoozeUntil: snoozeTime.toISOString(),
+      });
+    } catch (error) {
+      console.error('Failed to snooze alarm:', error);
+    }
+  }
+
+  /**
+   * Handle "Dismiss" action
+   * Simply dismisses the notification
+   *
+   * @param {Object} notification - Notification object
+   */
+  async handleDismissAction(notification) {
+    try {
+      console.log('Dismissing alarm:', notification.id);
+
+      // Dismiss the notification
+      await notifee.cancelNotification(notification.id);
+
+      // Log dismissal
+      AlarmSchedulerService._log('info', 'ALARM_DISMISSED_BY_ACTION', {
+        alarmId: notification.id,
+        doseId: notification.data?.doseId,
+      });
+    } catch (error) {
+      console.error('Failed to dismiss alarm:', error);
+    }
   }
 
   /**

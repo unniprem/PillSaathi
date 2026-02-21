@@ -17,7 +17,6 @@ import {
   ScrollView,
   FlatList,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ParentScreens } from '../../types/navigation';
@@ -38,31 +37,21 @@ function ParentHomeScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
 
-  // Fetch upcoming doses for next 4 hours
+  // Listen to upcoming doses for next 4 hours (real-time)
   const {
     doses,
     loading: dosesLoading,
     error: dosesError,
-    refetch,
   } = useUpcomingDoses(user?.uid, 4);
 
   /**
    * Navigate to medicine details from dose
    */
-  const handleDosePress = dose => {
+  const handleDosePress = _dose => {
     // Navigate to medicine view in HomeTab stack
     navigation.navigate('HomeTab', {
       screen: ParentScreens.MEDICINE_VIEW,
       params: { userId: user?.uid },
-    });
-  };
-
-  /**
-   * Navigate to pairing screen
-   */
-  const handleManageCaregivers = () => {
-    navigation.navigate('ManageTab', {
-      screen: ParentScreens.PAIRING,
     });
   };
 
@@ -72,7 +61,7 @@ function ParentHomeScreen() {
   const handleMarkAsTaken = async doseId => {
     try {
       await doseService.markDoseAsTaken(doseId);
-      refetch();
+      // No need to refetch - real-time listener will update automatically
     } catch (err) {
       console.error('Error marking dose as taken:', err);
     }

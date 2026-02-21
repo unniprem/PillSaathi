@@ -8,7 +8,7 @@
  * await runAlarmDiagnostics(parentId);
  */
 
-import notifee from '@notifee/react-native';
+import notifee, { TriggerType, AndroidImportance } from '@notifee/react-native';
 import alarmSchedulerService from '../services/AlarmSchedulerService';
 import { Platform } from 'react-native';
 
@@ -271,6 +271,13 @@ export async function createTestAlarm(minutesFromNow = 1) {
         body: `This is a test alarm scheduled for ${testTime.toLocaleTimeString()}`,
         android: {
           channelId: 'medicine-alarms',
+          importance: AndroidImportance.HIGH,
+          category: 'alarm',
+          autoCancel: false, // Don't dismiss automatically
+          ongoing: true, // Make it persistent
+          sound: 'default',
+          loopSound: true, // Loop the sound like an alarm
+          vibrationPattern: [500, 500, 500, 500], // Continuous vibration (even number of values)
           pressAction: {
             id: 'default',
             launchActivity: 'default',
@@ -279,15 +286,24 @@ export async function createTestAlarm(minutesFromNow = 1) {
             id: 'full_screen_alarm',
             launchActivity: 'default',
           },
+          actions: [
+            {
+              title: 'Dismiss',
+              pressAction: {
+                id: 'dismiss',
+              },
+            },
+          ],
         },
         ios: {
           sound: 'default',
           critical: true,
           criticalVolume: 1.0,
+          interruptionLevel: 'timeSensitive',
         },
       },
       {
-        type: notifee.TriggerType.TIMESTAMP,
+        type: TriggerType.TIMESTAMP,
         timestamp: testTime.getTime(),
       },
     );

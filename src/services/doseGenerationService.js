@@ -197,6 +197,50 @@ class DoseGenerationService {
       const dosesWritten = await this.writeDosesInBatches(doses);
 
       console.log(`Successfully generated ${dosesWritten} doses`);
+
+      // Schedule alarms for this medicine
+      try {
+        const AlarmSchedulerService =
+          require('./AlarmSchedulerService').default;
+
+        // Only schedule alarms if current user is the parent
+        // Alarms should only trigger on parent's device, not caregiver's
+        const { getAuth } = require('@react-native-firebase/auth');
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+
+        console.log('Checking if should schedule alarms:', {
+          hasCurrentUser: !!currentUser,
+          currentUserId: currentUser?.uid,
+          parentId: medicineData.parentId,
+          isMatch: currentUser?.uid === medicineData.parentId,
+        });
+
+        if (currentUser && currentUser.uid === medicineData.parentId) {
+          console.log('Scheduling alarms for parent device...');
+          await AlarmSchedulerService.scheduleMedicineAlarms(
+            medicineId,
+            {
+              name: medicineData.name,
+              dosageAmount: medicineData.dosageAmount,
+              dosageUnit: medicineData.dosageUnit,
+              instructions: medicineData.instructions || '',
+            },
+            scheduleData,
+          );
+          console.log(
+            `✓ Alarms scheduled for medicine ${medicineId} on parent device`,
+          );
+        } else {
+          console.log(
+            `✗ Skipping alarm scheduling - current user (${currentUser?.uid}) is not the parent (${medicineData.parentId})`,
+          );
+        }
+      } catch (alarmError) {
+        console.error('Failed to schedule alarms:', alarmError);
+        // Don't fail dose generation if alarm scheduling fails
+      }
+
       return dosesWritten;
     } catch (error) {
       console.error('Error generating doses:', error);
@@ -220,7 +264,17 @@ class DoseGenerationService {
       const deletedCount = await this.deleteFutureDoses(scheduleId);
       console.log(`Deleted ${deletedCount} future doses`);
 
-      // Generate new doses
+      // Cancel existing alarms for this medicine
+      try {
+        const AlarmSchedulerService =
+          require('./AlarmSchedulerService').default;
+        await AlarmSchedulerService.cancelMedicineAlarms(medicineId);
+        console.log(`Cancelled alarms for medicine ${medicineId}`);
+      } catch (alarmError) {
+        console.error('Failed to cancel alarms:', alarmError);
+      }
+
+      // Generate new doses (this will also schedule new alarms)
       return await this.onScheduleCreated(scheduleId, scheduleData, medicineId);
     } catch (error) {
       console.error('Error regenerating doses:', error);

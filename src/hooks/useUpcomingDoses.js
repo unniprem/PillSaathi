@@ -1,31 +1,32 @@
 /**
  * useUpcomingDoses Hook
  *
- * Custom hook to fetch upcoming doses for a parent within a time window.
- * Used to display upcoming medicines scheduled in the next N hours.
+ * Custom hook to listen to upcoming doses for a parent within a time window.
+ * Uses Firestore real-time listeners for live updates.
  * Marks overdue doses for highlighting.
  *
  * Requirements: 7.1, 11.1
  */
 
 import { useState, useEffect } from 'react';
-import doseService from '../services/doseService';
+import firestore from '@react-native-firebase/firestore';
 
 /**
- * Hook to fetch upcoming doses for a parent
+ * Hook to listen to upcoming doses for a parent
  *
- * Fetches doses scheduled within the specified time window (default 24 hours).
+ * Listens to doses scheduled within the specified time window (default 24 hours).
  * Returns doses sorted chronologically by scheduled time.
  * Marks doses as overdue if scheduledTime is in the past.
+ * Updates automatically when doses change in Firestore.
  *
  * @param {string} parentId - Parent's Firebase Auth UID
  * @param {number} hours - Number of hours to look ahead (default: 24)
- * @returns {Object} - { doses: Array, loading: boolean, error: Error | null, refetch: Function }
+ * @returns {Object} - { doses: Array, loading: boolean, error: Error | null }
  *
  * @example
  * function ParentDetailScreen({ route }) {
  *   const { parentId } = route.params;
- *   const { doses, loading, error, refetch } = useUpcomingDoses(parentId, 24);
+ *   const { doses, loading, error } = useUpcomingDoses(parentId, 24);
  *
  *   if (loading) {
  *     return <LoadingSpinner />;
@@ -43,60 +44,65 @@ export function useUpcomingDoses(parentId, hours = 24) {
   const [doses, setDoses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-  /**
-   * Fetch upcoming doses
-   */
-  const fetchUpcomingDoses = async () => {
+  useEffect(() => {
     if (!parentId) {
       setDoses([]);
       setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    // Calculate time window
+    const now = new Date();
+    const endTime = new Date(now.getTime() + hours * 60 * 60 * 1000);
 
-      const upcomingDoses = await doseService.getUpcomingDoses(parentId, hours);
+    // Set up real-time listener using React Native Firebase API
+    const unsubscribe = firestore()
+      .collection('doses')
+      .where('parentId', '==', parentId)
+      .where('scheduledTime', '<=', endTime)
+      .orderBy('scheduledTime', 'asc')
+      .onSnapshot(
+        snapshot => {
+          try {
+            const currentTime = new Date();
+            const dosesData = snapshot.docs
+              .map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                scheduledTime: doc.data().scheduledTime?.toDate(),
+              }))
+              .filter(dose => dose.status !== 'taken') // Filter out taken doses
+              .map(dose => ({
+                ...dose,
+                isOverdue:
+                  dose.scheduledTime && dose.scheduledTime < currentTime,
+              }));
 
-      // Mark overdue doses (Requirement 11.1)
-      const now = new Date();
-      const dosesWithOverdueFlag = upcomingDoses
-        .filter(dose => dose.status !== 'taken') // Filter out taken doses
-        .map(dose => ({
-          ...dose,
-          isOverdue: dose.scheduledTime && dose.scheduledTime < now,
-        }));
+            setDoses(dosesData);
+            setError(null);
+            setLoading(false);
+          } catch (err) {
+            console.error('Error processing doses snapshot:', err);
+            setError(err);
+            setLoading(false);
+          }
+        },
+        err => {
+          console.error('Error listening to upcoming doses:', err);
+          setError(err);
+          setLoading(false);
+        },
+      );
 
-      setDoses(dosesWithOverdueFlag);
-    } catch (err) {
-      console.error('Error fetching upcoming doses:', err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Refetch function to manually trigger a refresh
-   */
-  const refetch = () => {
-    setRefetchTrigger(prev => prev + 1);
-  };
-
-  // Fetch doses when parentId or hours changes or refetch is triggered
-  useEffect(() => {
-    fetchUpcomingDoses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentId, hours, refetchTrigger]);
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, [parentId, hours]);
 
   return {
     doses,
     loading,
     error,
-    refetch,
   };
 }
 

@@ -28,6 +28,7 @@ import ParentUpcomingScreen from '../screens/parent/ParentUpcomingScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import LogoutHeader from '../components/LogoutHeader';
 import FullScreenAlarmScreen from '../screens/parent/FullScreenAlarmScreen';
+import AlarmDiagnosticScreen from '../screens/parent/AlarmDiagnosticScreen';
 // import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
 // import MedicineListScreen from '../screens/parent/MedicineListScreen';
 // import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
@@ -152,6 +153,13 @@ function HomeStack() {
         component={ParentHomeScreen}
         options={{
           title: 'Home',
+        }}
+      />
+      <Stack.Screen
+        name="AlarmDiagnostic"
+        component={AlarmDiagnosticScreen}
+        options={{
+          title: 'Alarm Diagnostics',
         }}
       />
       <Stack.Screen

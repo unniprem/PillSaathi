@@ -7,7 +7,7 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
  */
 
-import notifee, { TriggerType } from '@notifee/react-native';
+import notifee, { TriggerType, AndroidImportance } from '@notifee/react-native';
 import notificationConfig from './notificationConfig';
 import alarmStorage from './alarmStorage';
 
@@ -443,6 +443,13 @@ class AlarmSchedulerService {
           },
           android: {
             channelId: notificationConfig.getChannelId(),
+            importance: AndroidImportance.HIGH,
+            category: 'alarm',
+            autoCancel: false, // Don't dismiss automatically
+            ongoing: true, // Make it persistent
+            sound: 'default',
+            loopSound: true, // Loop the sound like an alarm
+            vibrationPattern: [500, 500, 500, 500], // Continuous vibration (even number of values)
             pressAction: {
               id: 'default',
               launchActivity: 'default',
@@ -451,11 +458,26 @@ class AlarmSchedulerService {
               id: 'full_screen_alarm',
               launchActivity: 'default',
             },
+            actions: [
+              {
+                title: 'Mark as Taken',
+                pressAction: {
+                  id: 'mark_taken',
+                },
+              },
+              {
+                title: 'Snooze 10 min',
+                pressAction: {
+                  id: 'snooze',
+                },
+              },
+            ],
           },
           ios: {
             sound: 'default',
             critical: true,
             criticalVolume: 1.0,
+            interruptionLevel: 'timeSensitive',
           },
         },
         trigger,
@@ -1133,6 +1155,117 @@ class AlarmSchedulerService {
       return results;
     } catch (error) {
       this._log('error', 'MANUAL_RESCHEDULE_ALL_ERROR', {
+        parentId,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Sync alarms for a parent user on app startup
+   * Ensures all active medicines have alarms scheduled
+   *
+   * @param {string} parentId - Parent user ID
+   * @returns {Promise<Object>} Sync results
+   */
+  async syncAlarmsForParent(parentId) {
+    this._log('info', 'SYNC_ALARMS_START', { parentId });
+
+    try {
+      const { getFirestore } = require('@react-native-firebase/firestore');
+      const { getApp } = require('@react-native-firebase/app');
+      const firestore = getFirestore(getApp());
+
+      // Get all active medicines for this parent
+      const medicinesSnapshot = await firestore
+        .collection('medicines')
+        .where('parentId', '==', parentId)
+        .where('status', '==', 'active')
+        .get();
+
+      if (medicinesSnapshot.empty) {
+        this._log('info', 'SYNC_ALARMS_NO_MEDICINES', { parentId });
+        return { medicinesProcessed: 0, alarmsScheduled: 0 };
+      }
+
+      let alarmsScheduled = 0;
+      const errors = [];
+
+      for (const medicineDoc of medicinesSnapshot.docs) {
+        try {
+          const medicineId = medicineDoc.id;
+          const medicineData = medicineDoc.data();
+
+          // Check if alarms already exist for this medicine
+          const existingMetadata = await alarmStorage.getAlarmMetadata(
+            medicineId,
+          );
+
+          if (
+            existingMetadata &&
+            existingMetadata.alarmIds &&
+            existingMetadata.alarmIds.length > 0
+          ) {
+            // Alarms already exist, skip
+            continue;
+          }
+
+          // Get schedule for this medicine
+          const scheduleSnapshot = await firestore
+            .collection('schedules')
+            .where('medicineId', '==', medicineId)
+            .limit(1)
+            .get();
+
+          if (!scheduleSnapshot.empty) {
+            const scheduleData = scheduleSnapshot.docs[0].data();
+
+            // Schedule alarms
+            await this.scheduleMedicineAlarms(
+              medicineId,
+              {
+                name: medicineData.name,
+                dosageAmount: medicineData.dosageAmount,
+                dosageUnit: medicineData.dosageUnit,
+                instructions: medicineData.instructions || '',
+              },
+              scheduleData,
+            );
+
+            alarmsScheduled++;
+            this._log('info', 'SYNC_ALARMS_SCHEDULED', {
+              medicineId,
+              medicineName: medicineData.name,
+            });
+          }
+        } catch (error) {
+          errors.push({
+            medicineId: medicineDoc.id,
+            error: error.message,
+          });
+          this._log('error', 'SYNC_ALARMS_MEDICINE_ERROR', {
+            medicineId: medicineDoc.id,
+            error: error.message,
+          });
+        }
+      }
+
+      this._log('info', 'SYNC_ALARMS_COMPLETE', {
+        parentId,
+        medicinesProcessed: medicinesSnapshot.size,
+        alarmsScheduled,
+        errors: errors.length,
+      });
+
+      return {
+        medicinesProcessed: medicinesSnapshot.size,
+        alarmsScheduled,
+        errors,
+      };
+    } catch (error) {
+      this._log('error', 'SYNC_ALARMS_ERROR', {
         parentId,
         error: error.message,
         stack: error.stack,

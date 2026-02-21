@@ -19,6 +19,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import doseGenerationService from './src/services/doseGenerationService';
 import alarmInitializer from './src/services/alarmInitializer';
 import notificationHandler from './src/services/notificationHandler';
+import AlarmSync from './src/components/AlarmSync';
 
 /**
  * Auto Cleanup Component
@@ -142,6 +143,7 @@ function App() {
               <StatusBar
                 barStyle={isDarkMode ? 'light-content' : 'dark-content'}
               />
+              <AlarmSync />
               <AutoCleanup />
               <RootNavigator />
             </SafeAreaProvider>

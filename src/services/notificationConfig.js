@@ -55,7 +55,7 @@ class NotificationConfigService {
         importance: AndroidImportance.HIGH,
         sound: 'default',
         vibration: true,
-        vibrationPattern: [300, 500, 300, 500],
+        vibrationPattern: [500, 500, 500, 500],
         lights: true,
         lightColor: '#FF0000',
         badge: true,
