@@ -226,8 +226,13 @@ class RelationshipService {
    */
   subscribeToRelationships(uid, role, callback) {
     try {
+      console.log('=== SUBSCRIBE TO RELATIONSHIPS ===');
+      console.log('UID:', uid);
+      console.log('Role:', role);
+
       // Determine which field to query based on role
       const queryField = role === 'parent' ? 'parentUid' : 'caregiverUid';
+      console.log('Query field:', queryField);
 
       // Set up real-time listener
       const unsubscribe = this.firestore
@@ -235,11 +240,18 @@ class RelationshipService {
         .where(queryField, '==', uid)
         .onSnapshot(
           async querySnapshot => {
+            console.log('=== RELATIONSHIPS SNAPSHOT ===');
+            console.log('Empty:', querySnapshot.empty);
+            console.log('Size:', querySnapshot.size);
+
             // If no relationships, call callback with empty array
             if (querySnapshot.empty) {
+              console.log('⚠ No relationships found in Firestore');
               callback([]);
               return;
             }
+
+            console.log('Processing', querySnapshot.size, 'relationships...');
 
             // Fetch profile data for each relationship
             const relationships = await Promise.all(
@@ -247,9 +259,17 @@ class RelationshipService {
                 const data = doc.data();
                 const relationshipId = doc.id;
 
+                console.log('Relationship doc:', {
+                  id: relationshipId,
+                  parentUid: data.parentUid,
+                  caregiverUid: data.caregiverUid,
+                });
+
                 // Determine which user's profile to fetch (the other party)
                 const otherUserUid =
                   role === 'parent' ? data.caregiverUid : data.parentUid;
+
+                console.log('Fetching profile for:', otherUserUid);
 
                 try {
                   const profile = await this.getUserProfile(otherUserUid);
@@ -257,6 +277,7 @@ class RelationshipService {
                   return {
                     id: relationshipId,
                     parentUid: data.parentUid,
+                    parentId: data.parentUid, // Add parentId for compatibility
                     caregiverUid: data.caregiverUid,
                     createdAt: data.createdAt?.toDate() || null,
                     createdBy: data.createdBy || null,
@@ -285,6 +306,7 @@ class RelationshipService {
                   return {
                     id: relationshipId,
                     parentUid: data.parentUid,
+                    parentId: data.parentUid, // Add parentId for compatibility
                     caregiverUid: data.caregiverUid,
                     createdAt: data.createdAt?.toDate() || null,
                     createdBy: data.createdBy || null,
@@ -322,6 +344,7 @@ class RelationshipService {
 
       return unsubscribe;
     } catch (error) {
+      console.error('Failed to set up relationship listener:', error);
       const mappedError = new Error('Failed to set up relationship listener');
       mappedError.code = 'relationships-listener-setup-failed';
       mappedError.originalError = error;

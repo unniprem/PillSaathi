@@ -72,8 +72,9 @@ class DoseGenerationService {
               dosageAmount: medicine.dosageAmount,
               dosageUnit: medicine.dosageUnit,
               scheduledTime,
-              status: 'pending',
+              status: 'scheduled', // Changed from 'pending' to 'scheduled'
               createdAt: new Date(),
+              updatedAt: new Date(),
             });
           }
         }

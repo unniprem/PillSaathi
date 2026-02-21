@@ -221,10 +221,20 @@ export const PairingProvider = ({ children }) => {
    * Set up real-time listeners for relationships
    */
   useEffect(() => {
+    console.log('=== PAIRING CONTEXT EFFECT ===');
+    console.log('User:', user?.uid);
+    console.log('Profile:', profile?.role);
+
     let unsubscribe = null;
 
     // Only set up listener if user is authenticated and has a profile
     if (user && profile) {
+      console.log(
+        'Setting up relationship listener for:',
+        user.uid,
+        profile.role,
+      );
+
       try {
         unsubscribe = RelationshipService.subscribeToRelationships(
           user.uid,
@@ -234,16 +244,22 @@ export const PairingProvider = ({ children }) => {
               console.error('Relationship listener error:', listenerError);
               setError(listenerError.message);
             } else {
+              console.log(
+                'Relationships updated:',
+                updatedRelationships.length,
+              );
               setRelationships(updatedRelationships);
               setError(null);
             }
           },
         );
+        console.log('✓ Relationship listener set up');
       } catch (err) {
         console.error('Failed to set up relationship listener:', err);
         setError(err.message);
       }
     } else {
+      console.log('⚠ No user or profile, clearing relationships');
       // Clear relationships if user is not authenticated
       setRelationships([]);
     }
@@ -251,6 +267,7 @@ export const PairingProvider = ({ children }) => {
     // Cleanup function
     return () => {
       if (unsubscribe) {
+        console.log('Cleaning up relationship listener');
         unsubscribe();
       }
     };

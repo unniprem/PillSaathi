@@ -21,7 +21,6 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
 import { usePairing } from '../../contexts/PairingContext';
 import doseTrackerService from '../../services/DoseTrackerService';
 import { getFirestore } from '@react-native-firebase/firestore';
@@ -74,7 +73,6 @@ function formatDate(date) {
  */
 function CaregiverDoseHistoryScreen({ route }) {
   const { medicineId, medicineName } = route?.params || {};
-  const { user } = useAuth();
   const { relationships } = usePairing();
   const [doses, setDoses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,8 +85,8 @@ function CaregiverDoseHistoryScreen({ route }) {
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Date range for custom filter
-  const [customStartDate, setCustomStartDate] = useState(null);
-  const [customEndDate, setCustomEndDate] = useState(null);
+  const [customStartDate] = useState(null);
+  const [customEndDate] = useState(null);
 
   // Adherence data
   const [adherencePercentage, setAdherencePercentage] = useState(0);
@@ -102,7 +100,7 @@ function CaregiverDoseHistoryScreen({ route }) {
    */
   const getDateRange = useCallback(() => {
     const endDate = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
 
     switch (dateRange) {
       case '7days':
@@ -147,19 +145,37 @@ function CaregiverDoseHistoryScreen({ route }) {
    * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5 - Real-time updates
    */
   const setupRealtimeListener = useCallback(() => {
-    if (!medicineId) {
-      return null;
-    }
-
     const firestore = getFirestore(getApp());
     const { startDate, endDate } = getDateRange();
 
-    console.log('Setting up real-time listener for medicine:', medicineId);
+    // Get parent IDs from relationships
+    const parentIds = relationships.map(rel => rel.parentId).filter(Boolean);
+
+    if (parentIds.length === 0 && !medicineId) {
+      setDoses([]);
+      setLoading(false);
+      return null;
+    }
 
     // Build query with filters
-    let query = firestore
-      .collection('doses')
-      .where('medicineId', '==', medicineId)
+    let query = firestore.collection('doses');
+
+    // If medicineId provided, filter by it (specific medicine view)
+    if (medicineId) {
+      query = query.where('medicineId', '==', medicineId);
+    } else if (parentIds.length > 0) {
+      // Otherwise, filter by parent IDs (all doses for caregiver's parents)
+      // Note: Firestore 'in' queries support up to 10 values
+      const limitedParentIds = parentIds.slice(0, 10);
+      query = query.where('parentId', 'in', limitedParentIds);
+    } else {
+      // No valid query conditions, return null
+      setDoses([]);
+      setLoading(false);
+      return null;
+    }
+
+    query = query
       .where('scheduledTime', '>=', startDate)
       .where('scheduledTime', '<=', endDate)
       .orderBy('scheduledTime', 'desc');
@@ -170,8 +186,6 @@ function CaregiverDoseHistoryScreen({ route }) {
     // Set up listener
     const unsubscribeFn = query.onSnapshot(
       snapshot => {
-        console.log('Received real-time update:', snapshot.size, 'doses');
-
         const updatedDoses = [];
         snapshot.forEach(doc => {
           const doseData = doc.data();
@@ -193,17 +207,45 @@ function CaregiverDoseHistoryScreen({ route }) {
           }
         });
 
+        console.log('Processed doses:', updatedDoses.length);
+
+        if (updatedDoses.length > 0) {
+          console.log('Sample dose:', {
+            id: updatedDoses[0].id,
+            medicineName: updatedDoses[0].medicineName,
+            status: updatedDoses[0].status,
+            scheduledTime:
+              updatedDoses[0].scheduledTime?.toISOString?.() ||
+              updatedDoses[0].scheduledTime,
+          });
+        }
+
+        console.log('Status breakdown:', {
+          taken: updatedDoses.filter(d => d.status === 'taken').length,
+          missed: updatedDoses.filter(d => d.status === 'missed').length,
+          skipped: updatedDoses.filter(d => d.status === 'skipped').length,
+          scheduled: updatedDoses.filter(d => d.status === 'scheduled').length,
+          pending: updatedDoses.filter(d => d.status === 'pending').length,
+        });
+
         // Update doses state (Requirement 5.3: Update UI when dose status changes)
         setDoses(updatedDoses);
+        console.log('✓ Doses state updated');
 
         // Calculate adherence
         calculateAdherence(updatedDoses);
 
         setLoading(false);
         setRefreshing(false);
+        console.log('=== REALTIME UPDATE COMPLETE ===');
       },
       error => {
-        console.error('Error in real-time listener:', error);
+        console.error('=== REALTIME LISTENER ERROR ===');
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          stack: error.stack,
+        });
         setError('Failed to load dose updates');
         setLoading(false);
         setRefreshing(false);
@@ -211,15 +253,37 @@ function CaregiverDoseHistoryScreen({ route }) {
     );
 
     return unsubscribeFn;
-  }, [medicineId, getDateRange, statusFilter, calculateAdherence]);
+  }, [
+    medicineId,
+    relationships,
+    getDateRange,
+    statusFilter,
+    calculateAdherence,
+  ]);
 
   /**
    * Load dose history using DoseTrackerService
    * Requirements: 6.1, 6.5, 6.6 - Query with filters and sorting
    */
   const loadDoseHistory = async (isRefreshing = false) => {
-    if (!medicineId) {
-      setError('Medicine ID is required');
+    console.log('=== LOAD DOSE HISTORY START ===');
+
+    // Get parent IDs from relationships
+    const parentIds = relationships.map(rel => rel.parentId).filter(Boolean);
+
+    console.log('Load parameters:', {
+      medicineId,
+      parentIdsCount: parentIds.length,
+      parentIds: parentIds.slice(0, 3), // Show first 3 for debugging
+      dateRange,
+      statusFilter,
+      isRefreshing,
+    });
+
+    if (!medicineId && parentIds.length === 0) {
+      console.log('⚠ No medicineId and no paired parents');
+      setError(null); // Clear error
+      setDoses([]); // Clear doses
       setLoading(false);
       return;
     }
@@ -230,33 +294,131 @@ function CaregiverDoseHistoryScreen({ route }) {
       }
       setError(null);
 
+      console.log('Initializing DoseTrackerService...');
       await doseTrackerService.initialize();
+      console.log('✓ DoseTrackerService initialized');
 
       const { startDate, endDate } = getDateRange();
+      console.log('Date range:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
 
       console.log('Loading dose history:', {
         medicineId,
+        parentIds: parentIds.length,
         startDate,
         endDate,
         statusFilter,
       });
 
-      // Query dose history with filters (Requirement 6.5, 6.6)
-      const result = await doseTrackerService.getDoseHistory(
-        medicineId,
-        startDate,
-        endDate,
-        statusFilter.length > 0 ? statusFilter : null,
-        100, // Load up to 100 doses
-      );
+      let allDoses = [];
+
+      if (medicineId) {
+        console.log('Querying by medicineId:', medicineId);
+
+        // Query dose history for specific medicine (Requirement 6.5, 6.6)
+        const result = await doseTrackerService.getDoseHistory(
+          medicineId,
+          startDate,
+          endDate,
+          statusFilter.length > 0 ? statusFilter : null,
+          100, // Load up to 100 doses
+        );
+        allDoses = result.doses;
+
+        console.log(
+          '✓ Received doses from DoseTrackerService:',
+          allDoses.length,
+        );
+      } else if (parentIds.length > 0) {
+        console.log('Querying by parentIds:', parentIds.length);
+
+        // Query doses for all paired parents
+        // Note: This is a fallback for when real-time listener isn't used
+        const firestore = doseTrackerService.firestore;
+        const limitedParentIds = parentIds.slice(0, 10); // Firestore 'in' limit
+
+        console.log('Using parentIds:', limitedParentIds);
+
+        const query = firestore
+          .collection('doses')
+          .where('parentId', 'in', limitedParentIds)
+          .where('scheduledTime', '>=', startDate)
+          .where('scheduledTime', '<=', endDate)
+          .orderBy('scheduledTime', 'desc')
+          .limit(100);
+
+        console.log('Executing Firestore query...');
+        const snapshot = await query.get();
+        console.log('✓ Query complete. Documents:', snapshot.size);
+
+        snapshot.forEach(doc => {
+          const doseData = doc.data();
+          const dose = {
+            id: doc.id,
+            ...doseData,
+            scheduledTime:
+              doseData.scheduledTime?.toDate?.() || doseData.scheduledTime,
+            takenAt: doseData.takenAt?.toDate?.() || doseData.takenAt,
+            createdAt: doseData.createdAt?.toDate?.() || doseData.createdAt,
+            updatedAt: doseData.updatedAt?.toDate?.() || doseData.updatedAt,
+          };
+
+          // Apply status filter
+          if (statusFilter.length === 0 || statusFilter.includes(dose.status)) {
+            allDoses.push(dose);
+          }
+        });
+
+        console.log('✓ Processed doses after filter:', allDoses.length);
+      }
+
+      // Log dose details
+      if (allDoses.length > 0) {
+        console.log('Sample dose:', {
+          id: allDoses[0].id,
+          medicineName: allDoses[0].medicineName,
+          status: allDoses[0].status,
+          scheduledTime:
+            allDoses[0].scheduledTime?.toISOString?.() ||
+            allDoses[0].scheduledTime,
+        });
+
+        const statusBreakdown = {
+          scheduled: allDoses.filter(d => d.status === 'scheduled').length,
+          taken: allDoses.filter(d => d.status === 'taken').length,
+          missed: allDoses.filter(d => d.status === 'missed').length,
+          skipped: allDoses.filter(d => d.status === 'skipped').length,
+          pending: allDoses.filter(d => d.status === 'pending').length,
+          other: allDoses.filter(
+            d =>
+              !['scheduled', 'taken', 'missed', 'skipped', 'pending'].includes(
+                d.status,
+              ),
+          ).length,
+        };
+
+        console.log('Status breakdown:', statusBreakdown);
+      } else {
+        console.log('⚠ No doses found');
+      }
 
       // Requirement 6.1: Doses are already sorted by scheduledTime descending
-      setDoses(result.doses);
+      setDoses(allDoses);
+      console.log('✓ Doses state updated:', allDoses.length);
 
       // Calculate adherence (Requirement 6.7)
-      calculateAdherence(result.doses);
+      calculateAdherence(allDoses);
+
+      console.log('=== LOAD DOSE HISTORY COMPLETE ===');
     } catch (err) {
-      console.error('Error loading dose history:', err);
+      console.error('=== LOAD DOSE HISTORY ERROR ===');
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        stack: err.stack,
+      });
       setError('Failed to load dose history');
     } finally {
       setLoading(false);
@@ -273,14 +435,16 @@ function CaregiverDoseHistoryScreen({ route }) {
     if (unsubscribe) {
       console.log('Cleaning up previous listener');
       unsubscribe();
+      setUnsubscribe(null);
     }
 
     // Set up new listener
     const newUnsubscribe = setupRealtimeListener();
-    setUnsubscribe(() => newUnsubscribe);
 
-    // If no real-time listener (no medicineId), load data manually
-    if (!newUnsubscribe) {
+    if (newUnsubscribe) {
+      setUnsubscribe(() => newUnsubscribe);
+    } else {
+      // If no real-time listener, load data manually
       loadDoseHistory();
     }
 
@@ -291,14 +455,22 @@ function CaregiverDoseHistoryScreen({ route }) {
         newUnsubscribe();
       }
     };
-  }, [medicineId, dateRange, statusFilter, customStartDate, customEndDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    medicineId,
+    dateRange,
+    statusFilter,
+    customStartDate,
+    customEndDate,
+    relationships.length,
+  ]);
 
   /**
    * Handle refresh
    */
   const handleRefresh = () => {
     setRefreshing(true);
-    if (medicineId) {
+    if (medicineId || relationships.length > 0) {
       // Real-time listener will handle the refresh
       setRefreshing(false);
     } else {
@@ -349,6 +521,22 @@ function CaregiverDoseHistoryScreen({ route }) {
   };
 
   /**
+   * Get parent display name from relationships
+   * Uses parentAlias if available, otherwise parentName
+   */
+  const getParentDisplayName = useCallback(
+    parentId => {
+      const relationship = relationships.find(rel => rel.parentId === parentId);
+      if (!relationship) {
+        return 'Unknown';
+      }
+      // Use alias if available, otherwise use name
+      return relationship.parentAlias || relationship.parentName || 'Unknown';
+    },
+    [relationships],
+  );
+
+  /**
    * Render dose row
    * Requirements: 6.2, 6.3, 6.4 - Show scheduled time, actual time taken, and status
    */
@@ -357,6 +545,13 @@ function CaregiverDoseHistoryScreen({ route }) {
 
     return (
       <View style={styles.row}>
+        {!medicineId && (
+          <View style={styles.cell}>
+            <Text style={styles.cellText} numberOfLines={1}>
+              {getParentDisplayName(item.parentId)}
+            </Text>
+          </View>
+        )}
         <View style={styles.cellWide}>
           <Text style={styles.cellText} numberOfLines={1}>
             {item.medicineName}
@@ -397,6 +592,11 @@ function CaregiverDoseHistoryScreen({ route }) {
    */
   const renderHeader = () => (
     <View style={styles.headerRow}>
+      {!medicineId && (
+        <View style={styles.cell}>
+          <Text style={styles.headerText}>Parent</Text>
+        </View>
+      )}
       <View style={styles.cellWide}>
         <Text style={styles.headerText}>Medicine</Text>
       </View>
@@ -624,7 +824,9 @@ function CaregiverDoseHistoryScreen({ route }) {
       <Text style={styles.emptyIcon}>📊</Text>
       <Text style={styles.emptyTitle}>No Dose History</Text>
       <Text style={styles.emptySubtitle}>
-        {statusFilter.length > 0
+        {relationships.length === 0
+          ? 'Please pair with a parent to see dose history.'
+          : statusFilter.length > 0
           ? 'No doses match the selected filters.'
           : 'Dose history will appear here once doses are scheduled.'}
       </Text>
