@@ -661,6 +661,20 @@ function AdherenceDashboardScreen() {
                     <Text style={styles.breakdownLabel}>Snoozed</Text>
                   </View>
                 </View>
+
+                {/* View Missed Doses Button */}
+                {adherenceMetrics.missed > 0 && (
+                  <TouchableOpacity
+                    style={styles.viewMissedDosesButton}
+                    onPress={() =>
+                      navigation.navigate(CaregiverScreens.MISSED_DOSES)
+                    }
+                  >
+                    <Text style={styles.viewMissedDosesButtonText}>
+                      View All Missed Doses ({adherenceMetrics.missed})
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Per-Medicine Adherence List */}
@@ -1055,6 +1069,28 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#333333',
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  viewMissedDosesButton: {
+    marginTop: 20,
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignSelf: 'stretch',
+    shadowColor: '#FF3B30',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  viewMissedDosesButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   // Modal styles

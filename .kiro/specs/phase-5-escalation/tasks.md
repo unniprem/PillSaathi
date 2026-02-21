@@ -245,15 +245,15 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.6.1: Create MissedDosesList screen
 
-- [-] Create src/screens/caregiver/MissedDosesListScreen.js
+- [x] Create src/screens/caregiver/MissedDosesListScreen.js
 - [ ] Add to caregiver navigation stack
-- [~] Add navigation from adherence dashboard
+- [x] Add navigation from adherence dashboard
 - [ ] Basic layout with header
 - [ ] Add to navigation types
 
 #### Task 5.6.2: Implement filters
 
-- [~] Parent filter (if multiple parents)
+- [x] Parent filter (if multiple parents)
 - [~] Medicine filter (dropdown of all medicines)
 - [~] Date range picker
 - [~] Clear filters button
@@ -300,32 +300,32 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.7.1: Create adherence utility functions
 
-- [ ] Create src/utils/adherenceCalculations.js
-- [ ] Function: calculateAdherence(doses)
-- [ ] Function: getAdherenceByMedicine(doses)
-- [ ] Function: getAdherenceTrend(doses, period)
-- [ ] Handle edge cases (no doses, all missed, etc.)
-- [ ] Add JSDoc comments
+- [~] Create src/utils/adherenceCalculations.js
+- [~] Function: calculateAdherence(doses)
+- [~] Function: getAdherenceByMedicine(doses)
+- [~] Function: getAdherenceTrend(doses, period)
+- [~] Handle edge cases (no doses, all missed, etc.)
+- [~] Add JSDoc comments
 - [ ] Add unit tests
 
 #### Task 5.7.2: Create useAdherence hook
 
-- [ ] Create src/hooks/useAdherence.js
-- [ ] Query doses for parent and date range
-- [ ] Calculate adherence metrics
-- [ ] Return: percentage, taken, missed, snoozed, total
-- [ ] Handle loading and error states
-- [ ] Memoize calculations
+- [~] Create src/hooks/useAdherence.js
+- [~] Query doses for parent and date range
+- [~] Calculate adherence metrics
+- [~] Return: percentage, taken, missed, snoozed, total
+- [~] Handle loading and error states
+- [~] Memoize calculations
 - [ ] Add JSDoc comments
 
 #### Task 5.7.3: Create useMissedDoses hook
 
-- [ ] Create src/hooks/useMissedDoses.js
-- [ ] Query doses with status 'missed'
-- [ ] Apply filters (parent, medicine, date range)
-- [ ] Sort by most recent
-- [ ] Implement pagination
-- [ ] Return doses and loading state
+- [~] Create src/hooks/useMissedDoses.js
+- [~] Query doses with status 'missed'
+- [~] Apply filters (parent, medicine, date range)
+- [~] Sort by most recent
+- [~] Implement pagination
+- [~] Return doses and loading state
 - [ ] Add JSDoc comments
 
 **Acceptance:**

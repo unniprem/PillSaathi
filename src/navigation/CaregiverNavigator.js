@@ -28,6 +28,7 @@ import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
 import ParentDetailScreen from '../screens/caregiver/ParentDetailScreen';
 import AdherenceDashboardScreen from '../screens/caregiver/AdherenceDashboardScreen';
+import MissedDosesListScreen from '../screens/caregiver/MissedDosesListScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import MedicineDetailsScreen from '../screens/shared/MedicineDetailsScreen';
 import LogoutHeader from '../components/LogoutHeader';
@@ -175,6 +176,13 @@ function HomeStack() {
         component={AdherenceDashboardScreen}
         options={{
           title: 'Adherence Dashboard',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.MISSED_DOSES}
+        component={MissedDosesListScreen}
+        options={{
+          title: 'Missed Doses',
         }}
       />
     </Stack.Navigator>

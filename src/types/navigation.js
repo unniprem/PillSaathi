@@ -101,6 +101,7 @@ export const CaregiverScreens = {
   NOTIFICATIONS: 'Notifications',
   SETTINGS: 'Settings',
   ADHERENCE_DASHBOARD: 'AdherenceDashboard',
+  MISSED_DOSES: 'MissedDoses',
 };
 
 // ============================================================================
