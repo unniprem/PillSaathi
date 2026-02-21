@@ -9,7 +9,7 @@
  * @format
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,9 +19,13 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
+  RefreshControl,
 } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import firestore from '@react-native-firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 import { usePairedParents } from '../../hooks/usePairedParents';
+import { CaregiverScreens } from '../../types/navigation';
 
 // Collection names
 const DOSES_COLLECTION = 'doses';
@@ -38,6 +42,7 @@ const DOSES_COLLECTION = 'doses';
  * - 5.5.6: Loading and error states
  */
 function AdherenceDashboardScreen() {
+  const navigation = useNavigation();
   const {
     parents,
     loading: parentsLoading,
@@ -52,6 +57,9 @@ function AdherenceDashboardScreen() {
   const [doses, setDoses] = useState([]);
   const [dosesLoading, setDosesLoading] = useState(false);
   const [dosesError, setDosesError] = useState(null);
+
+  // Pull to refresh state
+  const [refreshing, setRefreshing] = useState(false);
 
   // Time period state (default to 7 days)
   const [timePeriod, setTimePeriod] = useState(7); // 7, 30, or 0 (all time)
@@ -146,6 +154,15 @@ function AdherenceDashboardScreen() {
   }, [fetchDoses]);
 
   /**
+   * Handle pull to refresh
+   */
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchDoses();
+    setRefreshing(false);
+  }, [fetchDoses]);
+
+  /**
    * Calculate adherence metrics from doses
    */
   const calculateAdherence = useCallback(() => {
@@ -177,6 +194,112 @@ function AdherenceDashboardScreen() {
   }, [doses]);
 
   const adherenceMetrics = calculateAdherence();
+
+  /**
+   * Calculate adherence per medicine
+   */
+  const calculateMedicineAdherence = useCallback(() => {
+    if (!doses || doses.length === 0) {
+      return [];
+    }
+
+    // Group doses by medicineId
+    const medicineMap = {};
+
+    doses.forEach(dose => {
+      const medicineId = dose.medicineId;
+      if (!medicineMap[medicineId]) {
+        medicineMap[medicineId] = {
+          medicineId,
+          medicineName: dose.medicineName || 'Unknown Medicine',
+          doses: [],
+        };
+      }
+      medicineMap[medicineId].doses.push(dose);
+    });
+
+    // Calculate adherence for each medicine
+    const medicineAdherence = Object.values(medicineMap).map(medicine => {
+      const total = medicine.doses.length;
+      const taken = medicine.doses.filter(d => d.status === 'taken').length;
+      const percentage = total > 0 ? Math.round((taken / total) * 100) : 0;
+
+      return {
+        medicineId: medicine.medicineId,
+        medicineName: medicine.medicineName,
+        taken,
+        total,
+        percentage,
+      };
+    });
+
+    // Sort by lowest adherence first
+    medicineAdherence.sort((a, b) => a.percentage - b.percentage);
+
+    return medicineAdherence;
+  }, [doses]);
+
+  const medicineAdherence = calculateMedicineAdherence();
+
+  /**
+   * Get color based on adherence percentage
+   * Green: >80%, Yellow: 60-80%, Red: <60%
+   */
+  const getAdherenceColor = useCallback(percentage => {
+    if (percentage > 80) {
+      return '#34C759'; // Green
+    } else if (percentage >= 60) {
+      return '#FF9500'; // Yellow/Orange
+    } else {
+      return '#FF3B30'; // Red
+    }
+  }, []);
+
+  /**
+   * Render circular progress ring
+   */
+  const renderProgressRing = (percentage, size = 200, strokeWidth = 16) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const progress = (percentage / 100) * circumference;
+    const color = getAdherenceColor(percentage);
+
+    return (
+      <View style={styles.progressRingContainer}>
+        <Svg width={size} height={size}>
+          {/* Background circle */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="#E8E8E8"
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+          {/* Progress circle */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={`${progress} ${circumference}`}
+            strokeLinecap="round"
+            rotation="-90"
+            origin={`${size / 2}, ${size / 2}`}
+          />
+        </Svg>
+        {/* Percentage text in center */}
+        <View style={styles.progressRingCenter}>
+          <Text style={[styles.progressRingPercentage, { color }]}>
+            {percentage}%
+          </Text>
+          <Text style={styles.progressRingLabel}>Adherence</Text>
+        </View>
+      </View>
+    );
+  };
 
   /**
    * Handle parent selection from dropdown
@@ -219,6 +342,53 @@ function AdherenceDashboardScreen() {
       >
         <Text style={[styles.avatarText, { fontSize }]}>{initials}</Text>
       </View>
+    );
+  };
+
+  /**
+   * Render medicine adherence item
+   */
+  const renderMedicineItem = ({ item }) => {
+    const color = getAdherenceColor(item.percentage);
+
+    return (
+      <TouchableOpacity
+        style={styles.medicineItem}
+        activeOpacity={0.7}
+        onPress={() => {
+          // Navigate to medicine details screen
+          if (selectedParent?.id && item.medicineId) {
+            navigation.navigate(CaregiverScreens.MEDICINE_DETAILS, {
+              medicineId: item.medicineId,
+              parentId: selectedParent.id,
+            });
+          }
+        }}
+      >
+        <View style={styles.medicineItemLeft}>
+          {/* Medicine icon/avatar */}
+          <View style={[styles.medicineIcon, { backgroundColor: color }]}>
+            <Text style={styles.medicineIconText}>💊</Text>
+          </View>
+
+          {/* Medicine name and count */}
+          <View style={styles.medicineItemContent}>
+            <Text style={styles.medicineItemName} numberOfLines={2}>
+              {item.medicineName}
+            </Text>
+            <Text style={styles.medicineItemCount}>
+              {item.taken} of {item.total} doses taken
+            </Text>
+          </View>
+        </View>
+
+        {/* Adherence percentage */}
+        <View style={styles.medicineItemRight}>
+          <Text style={[styles.medicineItemPercentage, { color }]}>
+            {item.percentage}%
+          </Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -417,7 +587,17 @@ function AdherenceDashboardScreen() {
       </View>
 
       {/* Main Content */}
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+            colors={['#007AFF']}
+          />
+        }
+      >
         <View style={styles.content}>
           {dosesLoading ? (
             <View style={styles.loadingContainer}>
@@ -445,12 +625,63 @@ function AdherenceDashboardScreen() {
               {/* Adherence Summary Card */}
               <View style={styles.adherenceCard}>
                 <Text style={styles.adherenceCardTitle}>Overall Adherence</Text>
-                <View style={styles.adherencePercentageContainer}>
-                  <Text style={styles.adherencePercentage}>
-                    {adherenceMetrics.percentage}%
-                  </Text>
+
+                {/* Visual Progress Ring */}
+                {renderProgressRing(adherenceMetrics.percentage)}
+
+                {/* Total doses scheduled */}
+                <Text style={styles.totalDosesText}>
+                  {adherenceMetrics.total}{' '}
+                  {adherenceMetrics.total === 1 ? 'dose' : 'doses'} scheduled
+                </Text>
+
+                {/* Breakdown: X taken, Y missed, Z snoozed */}
+                <View style={styles.adherenceBreakdown}>
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownDotGreen} />
+                    <Text style={styles.breakdownValue}>
+                      {adherenceMetrics.taken}
+                    </Text>
+                    <Text style={styles.breakdownLabel}>Taken</Text>
+                  </View>
+
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownDotRed} />
+                    <Text style={styles.breakdownValue}>
+                      {adherenceMetrics.missed}
+                    </Text>
+                    <Text style={styles.breakdownLabel}>Missed</Text>
+                  </View>
+
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownDotOrange} />
+                    <Text style={styles.breakdownValue}>
+                      {adherenceMetrics.snoozed}
+                    </Text>
+                    <Text style={styles.breakdownLabel}>Snoozed</Text>
+                  </View>
                 </View>
               </View>
+
+              {/* Per-Medicine Adherence List */}
+              {medicineAdherence.length > 0 && (
+                <View style={styles.medicineListContainer}>
+                  <Text style={styles.medicineListTitle}>
+                    Adherence by Medicine
+                  </Text>
+                  <View style={styles.medicineList}>
+                    <FlatList
+                      data={medicineAdherence}
+                      keyExtractor={item => item.medicineId}
+                      renderItem={renderMedicineItem}
+                      scrollEnabled={false}
+                      ItemSeparatorComponent={() => (
+                        <View style={styles.medicineItemSeparator} />
+                      )}
+                    />
+                  </View>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -705,30 +936,126 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   adherenceCardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666666',
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: 20,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
-  adherencePercentageContainer: {
+  // Progress Ring Styles
+  progressRingContainer: {
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    marginVertical: 20,
   },
-  adherencePercentage: {
-    fontSize: 72,
-    fontWeight: '700',
-    color: '#007AFF',
+  progressRingCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRingPercentage: {
+    fontSize: 52,
+    fontWeight: '800',
     letterSpacing: -2,
+  },
+  progressRingLabel: {
+    fontSize: 15,
+    color: '#888888',
+    fontWeight: '600',
+    marginTop: 6,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  totalDosesText: {
+    fontSize: 17,
+    color: '#666666',
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  // Breakdown styles
+  adherenceBreakdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 28,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8E8',
+  },
+  breakdownItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 80,
+  },
+  breakdownDotGreen: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#34C759',
+    shadowColor: '#34C759',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  breakdownDotRed: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF3B30',
+    shadowColor: '#FF3B30',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  breakdownDotOrange: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF9500',
+    shadowColor: '#FF9500',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  breakdownLabel: {
+    fontSize: 13,
+    color: '#888888',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  breakdownValue: {
+    fontSize: 22,
+    color: '#333333',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   // Modal styles
   modalOverlay: {
@@ -814,6 +1141,104 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  // Medicine List Styles
+  medicineListContainer: {
+    marginTop: 16,
+  },
+  medicineListTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: 12,
+    letterSpacing: 0.3,
+  },
+  medicineList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  medicineItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    minHeight: 80,
+    transition: 'background-color 0.2s ease',
+  },
+  medicineItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+    marginRight: 8,
+  },
+  medicineIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  medicineIconText: {
+    fontSize: 24,
+  },
+  medicineItemContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 2,
+  },
+  medicineItemName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 6,
+    letterSpacing: 0.2,
+    lineHeight: 22,
+  },
+  medicineItemCount: {
+    fontSize: 14,
+    color: '#888888',
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    lineHeight: 18,
+  },
+  medicineItemRight: {
+    marginLeft: 12,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  medicineItemPercentage: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 30,
+  },
+  medicineItemSeparator: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginLeft: 76,
   },
 });
 

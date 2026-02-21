@@ -205,29 +205,29 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.5.4: Build adherence summary card
 
-- [-] Large percentage display (e.g., "85%")
-- [~] Color coding (green >80%, yellow 60-80%, red <60%)
-- [~] Breakdown: X taken, Y missed, Z snoozed
-- [~] Total doses scheduled
-- [~] Visual progress bar or ring
-- [~] Style card
+- [x] Large percentage display (e.g., "85%")
+- [x] Color coding (green >80%, yellow 60-80%, red <60%)
+- [x] Breakdown: X taken, Y missed, Z snoozed
+- [x] Total doses scheduled
+- [x] Visual progress bar or ring
+- [x] Style card
 
 #### Task 5.5.5: Build per-medicine adherence list
 
-- [~] FlatList of medicines with adherence %
-- [~] Sort by lowest adherence first
-- [~] Show medicine name and icon
-- [~] Show taken/total count
-- [~] Tap to see medicine details
-- [~] Style list items
+- [x] FlatList of medicines with adherence %
+- [x] Sort by lowest adherence first
+- [x] Show medicine name and icon
+- [x] Show taken/total count
+- [x] Tap to see medicine details
+- [x] Style list items
 
 #### Task 5.5.6: Add loading and error states
 
-- [~] Loading spinner while fetching data
-- [~] Error message if query fails
-- [~] Empty state if no doses in period
-- [~] Retry button on error
-- [~] Pull to refresh
+- [x] Loading spinner while fetching data
+- [x] Error message if query fails
+- [x] Empty state if no doses in period
+- [x] Retry button on error
+- [x] Pull to refresh
 
 **Acceptance:**
 
@@ -245,7 +245,7 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.6.1: Create MissedDosesList screen
 
-- [~] Create src/screens/caregiver/MissedDosesListScreen.js
+- [-] Create src/screens/caregiver/MissedDosesListScreen.js
 - [ ] Add to caregiver navigation stack
 - [~] Add navigation from adherence dashboard
 - [ ] Basic layout with header
