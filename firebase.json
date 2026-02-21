@@ -6,6 +6,6 @@
   "functions": {
     "source": "functions",
     "predeploy": [],
-    "runtime": "nodejs22"
+    "runtime": "nodejs18"
   }
 }
