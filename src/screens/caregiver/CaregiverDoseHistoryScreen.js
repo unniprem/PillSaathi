@@ -72,7 +72,8 @@ function formatDate(date) {
  * - 5.1-5.5: Real-time updates via Firestore listeners
  */
 function CaregiverDoseHistoryScreen({ route }) {
-  const { medicineId, medicineName } = route?.params || {};
+  const { medicineId, medicineName, initialStatusFilter, highlightDoseId } =
+    route?.params || {};
   const { relationships } = usePairing();
   const [doses, setDoses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +82,7 @@ function CaregiverDoseHistoryScreen({ route }) {
 
   // Filter states
   const [dateRange, setDateRange] = useState('7days'); // '7days', '30days', 'custom'
-  const [statusFilter, setStatusFilter] = useState([]); // ['taken', 'missed', 'skipped']
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter || []); // ['taken', 'missed', 'skipped']
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Date range for custom filter
@@ -542,9 +543,10 @@ function CaregiverDoseHistoryScreen({ route }) {
    */
   const renderDoseRow = ({ item }) => {
     const statusStyle = getStatusStyle(item.status);
+    const isHighlighted = highlightDoseId && item.id === highlightDoseId;
 
     return (
-      <View style={styles.row}>
+      <View style={[styles.row, isHighlighted && styles.highlightedRow]}>
         {!medicineId && (
           <View style={styles.cell}>
             <Text style={styles.cellText} numberOfLines={1}>
@@ -992,6 +994,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+  },
+  highlightedRow: {
+    backgroundColor: '#FFF9E6',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9500',
   },
   cell: {
     flex: 1,

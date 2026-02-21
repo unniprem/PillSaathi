@@ -9,8 +9,9 @@
  * @format
  */
 
-import notifee, { EventType, TriggerType } from '@notifee/react-native';
+import notifee, { EventType } from '@notifee/react-native';
 import messaging from '@react-native-firebase/messaging';
+import { Alert } from 'react-native';
 import { ParentScreens, CaregiverScreens } from '../types/navigation';
 import AlarmSchedulerService from './AlarmSchedulerService';
 
@@ -434,7 +435,30 @@ class NotificationHandlerService {
         // App is open - show in-app alert
         console.log('Showing in-app alert for missed dose');
 
-        // Display a local notification using Notifee for in-app visibility
+        // Show React Native Alert dialog
+        Alert.alert(
+          notification?.title || 'Missed Dose Alert',
+          notification?.body || 'A dose was missed',
+          [
+            {
+              text: 'Dismiss',
+              style: 'cancel',
+              onPress: () => {
+                console.log('Missed dose alert dismissed');
+              },
+            },
+            {
+              text: 'View Details',
+              onPress: () => {
+                console.log('Navigating to missed dose details');
+                this.navigateToMissedDose(data);
+              },
+            },
+          ],
+          { cancelable: true },
+        );
+
+        // Also display a local notification for notification center
         await notifee.displayNotification({
           title: notification?.title || 'Missed Dose Alert',
           body: notification?.body || 'A dose was missed',
@@ -508,9 +532,9 @@ class NotificationHandlerService {
 
   /**
    * Navigate to missed dose screen
-   * Opens caregiver dose history screen
+   * Opens caregiver dose history screen with the missed dose highlighted
    *
-   * Requirements: Phase 5 - Navigate to dose history
+   * Requirements: Phase 5 - Navigate to dose history or adherence dashboard
    *
    * @param {Object} data - Notification data
    */
@@ -526,6 +550,7 @@ class NotificationHandlerService {
       });
 
       // Navigate to caregiver dose history screen (mapped to UPCOMING screen)
+      // This screen shows all doses including missed ones with filtering capabilities
       if (this.navigationRef?.current) {
         this.navigationRef.current.navigate('Caregiver', {
           screen: CaregiverScreens.UPCOMING,
@@ -533,11 +558,14 @@ class NotificationHandlerService {
             parentId,
             medicineId,
             highlightDoseId: doseId,
+            // Pre-filter to show missed doses
+            initialStatusFilter: ['missed'],
           },
         });
 
         // Clear badge count when user views the notification
         notifee.setBadgeCount(0);
+        console.log('Navigation successful, badge count cleared');
       } else {
         console.warn(
           'Navigation ref not available, cannot navigate to dose history',
