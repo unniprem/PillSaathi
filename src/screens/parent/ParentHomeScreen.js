@@ -123,7 +123,9 @@ function ParentHomeScreen() {
       {/* Upcoming Medicines Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Upcoming Medicines</Text>
-        <Text style={styles.sectionSubtitle}>Next 4 hours</Text>
+        <Text style={styles.sectionSubtitle}>
+          Missed (past 1 hour) and upcoming (next 4 hours)
+        </Text>
         {renderUpcomingSection()}
       </View>
     </ScrollView>

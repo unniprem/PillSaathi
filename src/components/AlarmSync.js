@@ -3,18 +3,17 @@
  *
  * Syncs alarms for parent users when they log in
  * This ensures alarms are only scheduled on parent devices
- * Also listens for new medicines added by caregivers
+ * Listens for new doses and schedules alarms in real-time
  */
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import alarmInitializer from '../services/alarmInitializer';
-import { getFirestore } from '@react-native-firebase/firestore';
-import { getApp } from '@react-native-firebase/app';
+import firestore from '@react-native-firebase/firestore';
 
 function AlarmSync() {
   const { user, profile } = useAuth();
-  const unsubscribeRef = useRef(null);
+  const doseListenerRef = useRef(null);
 
   useEffect(() => {
     const syncAlarms = async () => {
@@ -35,8 +34,8 @@ function AlarmSync() {
           await alarmInitializer.initialize(user.uid, 'parent');
           console.log('AlarmSync: Alarm sync completed');
 
-          // Set up real-time listener for new medicines
-          setupMedicineListener(user.uid);
+          // Set up real-time listener for new doses
+          setupDoseListener(user.uid);
         } catch (error) {
           console.error('AlarmSync: Failed to sync alarms:', error);
         }
@@ -49,80 +48,87 @@ function AlarmSync() {
 
     // Cleanup listener on unmount
     return () => {
-      if (unsubscribeRef.current) {
-        console.log('AlarmSync: Cleaning up medicine listener');
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
+      if (doseListenerRef.current) {
+        console.log('AlarmSync: Cleaning up dose listener');
+        doseListenerRef.current();
+        doseListenerRef.current = null;
       }
     };
   }, [user, profile]);
 
-  const setupMedicineListener = parentId => {
+  const setupDoseListener = parentId => {
     try {
-      const firestore = getFirestore(getApp());
+      console.log('AlarmSync: Setting up real-time listener for new doses');
 
-      console.log('AlarmSync: Setting up real-time listener for medicines');
+      // Listen for new doses created for this parent
+      // Only listen to future doses (scheduled in the future)
+      const now = new Date();
+      let isInitialLoad = true;
 
-      // Listen for new medicines added for this parent
-      unsubscribeRef.current = firestore
-        .collection('medicines')
+      doseListenerRef.current = firestore()
+        .collection('doses')
         .where('parentId', '==', parentId)
-        .where('status', '==', 'active')
+        .where('scheduledTime', '>', now)
+        .where('status', '==', 'scheduled')
         .onSnapshot(
           async snapshot => {
-            // Check for new medicines (added documents)
+            // Skip initial load - we don't want to process existing doses
+            if (isInitialLoad) {
+              isInitialLoad = false;
+              console.log(
+                'AlarmSync: Initial load complete, now listening for new doses',
+              );
+              return;
+            }
+
+            // Check for new doses (added documents)
             const changes = snapshot.docChanges();
 
             for (const change of changes) {
               if (change.type === 'added') {
-                const medicineId = change.doc.id;
-                const medicineData = change.doc.data();
+                const doseData = change.doc.data();
 
                 console.log(
-                  'AlarmSync: New medicine detected:',
-                  medicineId,
-                  medicineData.name,
+                  'AlarmSync: New dose detected:',
+                  doseData.medicineName,
+                  'at',
+                  doseData.scheduledTime?.toDate?.()?.toLocaleString(),
                 );
 
-                // Schedule alarms for this new medicine
+                // Schedule alarm for this new dose
                 try {
                   const AlarmSchedulerService =
                     require('../services/AlarmSchedulerService').default;
 
-                  // Get the schedule for this medicine
-                  const scheduleSnapshot = await firestore
-                    .collection('schedules')
-                    .where('medicineId', '==', medicineId)
-                    .limit(1)
-                    .get();
+                  const scheduledTime = doseData.scheduledTime?.toDate();
 
-                  if (!scheduleSnapshot.empty) {
-                    const scheduleData = scheduleSnapshot.docs[0].data();
-
-                    await AlarmSchedulerService.scheduleMedicineAlarms(
-                      medicineId,
+                  if (scheduledTime && scheduledTime > new Date()) {
+                    await AlarmSchedulerService.createAlarm(
+                      doseData.medicineId,
                       {
-                        name: medicineData.name,
-                        dosageAmount: medicineData.dosageAmount,
-                        dosageUnit: medicineData.dosageUnit,
-                        instructions: medicineData.instructions || '',
+                        name: doseData.medicineName,
+                        dosageAmount: doseData.dosageAmount,
+                        dosageUnit: doseData.dosageUnit,
+                        instructions: doseData.instructions || '',
                       },
-                      scheduleData,
+                      scheduledTime,
                     );
 
                     console.log(
-                      'AlarmSync: ✓ Alarms scheduled for new medicine:',
-                      medicineData.name,
+                      'AlarmSync: ✓ Alarm scheduled for new dose:',
+                      doseData.medicineName,
+                      'at',
+                      scheduledTime.toLocaleString(),
                     );
                   } else {
                     console.log(
-                      'AlarmSync: No schedule found for medicine:',
-                      medicineId,
+                      'AlarmSync: Skipping past dose:',
+                      doseData.medicineName,
                     );
                   }
                 } catch (error) {
                   console.error(
-                    'AlarmSync: Failed to schedule alarms for new medicine:',
+                    'AlarmSync: Failed to schedule alarm for new dose:',
                     error,
                   );
                 }
@@ -130,11 +136,11 @@ function AlarmSync() {
             }
           },
           error => {
-            console.error('AlarmSync: Medicine listener error:', error);
+            console.error('AlarmSync: Dose listener error:', error);
           },
         );
     } catch (error) {
-      console.error('AlarmSync: Failed to setup medicine listener:', error);
+      console.error('AlarmSync: Failed to setup dose listener:', error);
     }
   };
 
