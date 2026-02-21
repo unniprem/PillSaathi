@@ -185,6 +185,13 @@ function HomeStack() {
           title: 'Missed Doses',
         }}
       />
+      <Stack.Screen
+        name={CaregiverScreens.UPCOMING}
+        component={CaregiverDoseHistoryScreen}
+        options={{
+          title: 'Dose History',
+        }}
+      />
     </Stack.Navigator>
   );
 }

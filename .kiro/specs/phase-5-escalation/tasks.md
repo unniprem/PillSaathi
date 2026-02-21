@@ -182,10 +182,10 @@ Approach: Cloud Functions + Cloud Scheduler
 #### Task 5.5.1: Create AdherenceDashboard screen
 
 - [x] Create src/screens/caregiver/AdherenceDashboardScreen.js
-- [x] Add to caregiver navigation stack
+- [~] Add to caregiver navigation stack
 - [x] Add navigation from caregiver home
-- [x] Basic layout with header
-- [x] Add to navigation types
+- [~] Basic layout with header
+- [~] Add to navigation types
 
 #### Task 5.5.2: Implement parent selector
 
@@ -219,7 +219,7 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Show medicine name and icon
 - [x] Show taken/total count
 - [x] Tap to see medicine details
-- [x] Style list items
+- [~] Style list items
 
 #### Task 5.5.6: Add loading and error states
 
@@ -227,7 +227,7 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Error message if query fails
 - [x] Empty state if no doses in period
 - [x] Retry button on error
-- [x] Pull to refresh
+- [~] Pull to refresh
 
 **Acceptance:**
 
@@ -254,10 +254,10 @@ Approach: Cloud Functions + Cloud Scheduler
 #### Task 5.6.2: Implement filters
 
 - [x] Parent filter (if multiple parents)
-- [~] Medicine filter (dropdown of all medicines)
-- [~] Date range picker
-- [~] Clear filters button
-- [~] Apply filters to query
+- [x] Medicine filter (dropdown of all medicines)
+- [x] Date range picker
+- [x] Clear filters button
+- [x] Apply filters to query
 - [~] Style filters
 
 #### Task 5.6.3: Build missed doses list
@@ -275,14 +275,14 @@ Approach: Cloud Functions + Cloud Scheduler
 - [~] Show when no missed doses
 - [~] Positive message ("Great adherence!")
 - [~] Illustration or icon
-- [~] Style empty state
+- [x] Style empty state
 
 #### Task 5.6.5: Add dose detail navigation
 
-- [~] Tap dose to see full details
-- [~] Show medicine info, schedule, history
-- [~] Back button to return to list
-- [~] Test navigation
+- [x] Tap dose to see full details
+- [x] Show medicine info, schedule, history
+- [x] Back button to return to list
+- [x] Test navigation
 
 **Acceptance:**
 
@@ -300,12 +300,12 @@ Approach: Cloud Functions + Cloud Scheduler
 
 #### Task 5.7.1: Create adherence utility functions
 
-- [~] Create src/utils/adherenceCalculations.js
-- [~] Function: calculateAdherence(doses)
-- [~] Function: getAdherenceByMedicine(doses)
-- [~] Function: getAdherenceTrend(doses, period)
-- [~] Handle edge cases (no doses, all missed, etc.)
-- [~] Add JSDoc comments
+- [x] Create src/utils/adherenceCalculations.js
+- [x] Function: calculateAdherence(doses)
+- [x] Function: getAdherenceByMedicine(doses)
+- [x] Function: getAdherenceTrend(doses, period)
+- [x] Handle edge cases (no doses, all missed, etc.)
+- [-] Add JSDoc comments
 - [ ] Add unit tests
 
 #### Task 5.7.2: Create useAdherence hook

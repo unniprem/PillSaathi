@@ -207,21 +207,15 @@ function MissedDosesListScreen() {
 
         const { startDate, endDate } = getDateRange();
 
-        // Build query
+        // Build query - note: we filter by medicine client-side to avoid
+        // needing a composite index for parentId + status + scheduledTime + medicineId
         let query = firestore()
           .collection(DOSES_COLLECTION)
           .where('parentId', '==', selectedParent.id)
           .where('status', '==', 'missed')
           .where('scheduledTime', '>=', startDate)
-          .where('scheduledTime', '<=', endDate);
-
-        // Filter by medicine if selected
-        if (selectedMedicine) {
-          query = query.where('medicineId', '==', selectedMedicine.id);
-        }
-
-        // Sort by most recent first
-        query = query.orderBy('scheduledTime', 'desc');
+          .where('scheduledTime', '<=', endDate)
+          .orderBy('scheduledTime', 'desc');
 
         // Pagination
         if (loadMore && lastDoc) {
@@ -235,6 +229,12 @@ function MissedDosesListScreen() {
         const fetchedDoses = [];
         snapshot.forEach(doc => {
           const doseData = doc.data();
+
+          // Apply medicine filter client-side
+          if (selectedMedicine && doseData.medicineId !== selectedMedicine.id) {
+            return; // Skip this dose
+          }
+
           fetchedDoses.push({
             id: doc.id,
             ...doseData,
@@ -325,19 +325,21 @@ function MissedDosesListScreen() {
   }, [selectedMedicine, dateRange]);
 
   /**
-   * Handle dose press - navigate to dose details
+   * Handle dose press - navigate to dose history with this dose highlighted
    */
   const handleDosePress = useCallback(
     dose => {
-      // Navigate to medicine details screen
-      if (dose.medicineId && selectedParent?.id) {
-        navigation.navigate(CaregiverScreens.MEDICINE_DETAILS, {
+      // Navigate to dose history screen with the missed dose highlighted
+      if (dose.medicineId && dose.medicineName) {
+        navigation.navigate(CaregiverScreens.UPCOMING, {
           medicineId: dose.medicineId,
-          parentId: selectedParent.id,
+          medicineName: dose.medicineName,
+          initialStatusFilter: ['missed'],
+          highlightDoseId: dose.id,
         });
       }
     },
-    [navigation, selectedParent],
+    [navigation],
   );
 
   /**
@@ -958,25 +960,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+    backgroundColor: '#F5F5F5',
   },
   emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 80,
+    marginBottom: 24,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: '#34C759',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   emptySubtext: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#666666',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
+    maxWidth: 320,
+    fontWeight: '400',
   },
   footerLoader: {
     paddingVertical: 20,
