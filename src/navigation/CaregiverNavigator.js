@@ -31,23 +31,13 @@ import MissedDosesListScreen from '../screens/caregiver/MissedDosesListScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import MedicineDetailsScreen from '../screens/shared/MedicineDetailsScreen';
 import LogoutHeader from '../components/LogoutHeader';
-// import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
+import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 // import ParentListScreen from '../screens/caregiver/ParentListScreen';
 // import AlarmScreen from '../screens/caregiver/AlarmScreen';
 // import NotificationsScreen from '../screens/caregiver/NotificationsScreen';
 // import SettingsScreen from '../screens/caregiver/SettingsScreen';
 
 // Temporary placeholder components for development
-
-const CaregiverProfileScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Caregiver Profile</Text>
-      <Text style={styles.placeholderSubtext}>Profile information</Text>
-    </View>
-  );
-};
 
 const ParentListScreen = () => {
   const { View, Text } = require('react-native');

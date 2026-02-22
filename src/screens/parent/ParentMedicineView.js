@@ -25,6 +25,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 import medicineService from '../../services/medicineService';
 import scheduleService from '../../services/scheduleService';
 import { getErrorMessage, logError } from '../../utils/errorHandler';
@@ -34,12 +35,13 @@ import { getErrorMessage, logError } from '../../utils/errorHandler';
  *
  * @param {Object} props
  * @param {Object} props.route - Navigation route object
- * @param {string} props.route.params.userId - Parent's Firebase Auth UID (optional, can use auth context)
+ * @param {string} props.route.params.userId - Parent's Firebase Auth UID (optional, uses auth context if not provided)
  * @returns {JSX.Element}
  */
 const ParentMedicineView = ({ route }) => {
-  // In a real app, userId would come from auth context or route params
-  const { userId } = route.params || {};
+  const { user } = useAuth();
+  // Use userId from route params or fall back to authenticated user
+  const userId = route.params?.userId || user?.uid;
 
   // State
   const [medicines, setMedicines] = useState([]);

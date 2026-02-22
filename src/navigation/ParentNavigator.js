@@ -29,7 +29,7 @@ import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import LogoutHeader from '../components/LogoutHeader';
 import FullScreenAlarmScreen from '../screens/parent/FullScreenAlarmScreen';
 import AlarmDiagnosticScreen from '../screens/parent/AlarmDiagnosticScreen';
-// import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
+import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
 // import MedicineListScreen from '../screens/parent/MedicineListScreen';
 // import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
 // import EditMedicineScreen from '../screens/parent/EditMedicineScreen';
@@ -39,16 +39,6 @@ import AlarmDiagnosticScreen from '../screens/parent/AlarmDiagnosticScreen';
 // import SettingsScreen from '../screens/parent/SettingsScreen';
 
 // Temporary placeholder components for development
-
-const ParentProfileScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Parent Profile</Text>
-      <Text style={styles.placeholderSubtext}>Profile information</Text>
-    </View>
-  );
-};
 
 const MedicineListScreen = () => {
   const { View, Text } = require('react-native');
@@ -127,7 +117,7 @@ const Stack = createNativeStackNavigator();
  * Home Stack Navigator
  *
  * Stack navigator for home-related screens.
- * Includes home screen and medicine management screens.
+ * Includes home screen and related views.
  *
  * @returns {React.ReactElement} Home stack navigator
  */
@@ -160,44 +150,6 @@ function HomeStack() {
         component={AlarmDiagnosticScreen}
         options={{
           title: 'Alarm Diagnostics',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.MEDICINE_LIST}
-        component={MedicineListScreen}
-        options={{
-          title: 'Medicines',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.ADD_MEDICINE}
-        component={AddMedicineScreen}
-        options={{
-          title: 'Add Medicine',
-          presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.EDIT_MEDICINE}
-        component={EditMedicineScreen}
-        options={{
-          title: 'Edit Medicine',
-          presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.CAREGIVER_MANAGEMENT}
-        component={CaregiverManagementScreen}
-        options={{
-          title: 'Caregivers',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.ADD_CAREGIVER}
-        component={AddCaregiverScreen}
-        options={{
-          title: 'Add Caregiver',
-          presentation: 'modal',
         }}
       />
       <Stack.Screen
@@ -236,7 +188,7 @@ function HomeStack() {
  * Profile Stack Navigator
  *
  * Stack navigator for profile-related screens.
- * Includes profile, notifications, and settings.
+ * Includes profile, caregiver management, and settings.
  *
  * @returns {React.ReactElement} Profile stack navigator
  */
@@ -270,6 +222,13 @@ function ProfileStack() {
         options={{
           title: 'Edit Profile',
           presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name={ParentScreens.PAIRING}
+        component={ParentPairingScreen}
+        options={{
+          title: 'Manage Caregivers',
         }}
       />
       <Stack.Screen
@@ -318,8 +277,8 @@ function MedicinesStack() {
       }}
     >
       <Stack.Screen
-        name={ParentScreens.UPCOMING_DOSES}
-        component={ParentUpcomingScreen}
+        name={ParentScreens.MEDICINE_VIEW}
+        component={ParentMedicineView}
         options={{
           title: 'My Medicines',
         }}
@@ -336,49 +295,13 @@ function MedicinesStack() {
 }
 
 /**
- * Manage Stack Navigator
- *
- * Stack navigator for manage tab (pairing and caregiver management).
- *
- * @returns {React.ReactElement} Manage stack navigator
- */
-function ManageStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: true,
-        headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
-        headerStyle: {
-          backgroundColor: '#FFFFFF',
-        },
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
-        animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
-      }}
-    >
-      <Stack.Screen
-        name={ParentScreens.PAIRING}
-        component={ParentPairingScreen}
-        options={{
-          title: 'Manage Caregivers',
-        }}
-      />
-    </Stack.Navigator>
-  );
-}
-
-/**
  * Parent Navigator Component
  *
  * Bottom tab navigator for parent-specific screens.
  * Tabs:
  * 1. Home - Dashboard with upcoming doses (4 hours)
  * 2. Medicines - All medicines with mark as taken
- * 3. Manage - Pairing and caregiver management
- * 4. Profile - User profile, notifications, settings
+ * 3. Profile - User profile, medicine/caregiver management, notifications, settings
  *
  * Requirements: 17.1
  *
@@ -424,17 +347,6 @@ function ParentTabNavigator() {
           tabBarIcon: ({ color, size }) => {
             const { Text } = require('react-native');
             return <Text style={{ fontSize: size, color }}>💊</Text>;
-          },
-        }}
-      />
-      <Tab.Screen
-        name="ManageTab"
-        component={ManageStack}
-        options={{
-          tabBarLabel: 'Manage',
-          tabBarIcon: ({ color, size }) => {
-            const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>👥</Text>;
           },
         }}
       />
