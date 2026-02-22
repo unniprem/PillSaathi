@@ -190,6 +190,12 @@ class InviteCodeService {
    */
   async getActiveInviteCode(parentUid) {
     try {
+      // Validate input
+      if (!parentUid) {
+        console.error('[InviteCodeService] parentUid is required');
+        return null;
+      }
+
       return await retryOperation(async () => {
         console.log(
           '[InviteCodeService] getActiveInviteCode called with parentUid:',
@@ -230,10 +236,18 @@ class InviteCodeService {
         const data = codeDoc.data();
         console.log('[InviteCodeService] Found active code:', data.code);
 
+        // Safely handle timestamp conversion
+        const expiresAt = data.expiresAt?.toDate
+          ? data.expiresAt.toDate()
+          : new Date(data.expiresAt);
+        const createdAt = data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : new Date(data.createdAt);
+
         return {
           code: data.code,
-          expiresAt: data.expiresAt.toDate(),
-          createdAt: data.createdAt.toDate(),
+          expiresAt,
+          createdAt,
           parentUid: data.parentUid,
         };
       });
@@ -248,6 +262,16 @@ class InviteCodeService {
       // Log the original error if it exists
       if (error.originalError) {
         console.error('Original error:', error.originalError);
+      }
+
+      // If it's an index error, provide helpful message
+      if (
+        error.code === 'failed-precondition' ||
+        error.message?.includes('index')
+      ) {
+        console.error(
+          '[InviteCodeService] Index may not be deployed. Run: firebase deploy --only firestore:indexes',
+        );
       }
 
       const mappedError = new Error('Failed to get active invite code');

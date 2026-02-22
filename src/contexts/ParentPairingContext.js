@@ -52,6 +52,9 @@ export const ParentPairingProvider = ({ children }) => {
    */
   const loadActiveInviteCode = async () => {
     if (!user || profile?.role !== 'parent') {
+      console.log(
+        '[ParentPairingContext] Skipping loadActiveInviteCode - user not authenticated or not a parent',
+      );
       return;
     }
 
@@ -59,11 +62,35 @@ export const ParentPairingProvider = ({ children }) => {
     setError(null);
 
     try {
+      console.log(
+        '[ParentPairingContext] Loading active invite code for user:',
+        user.uid,
+      );
       const activeCode = await InviteCodeService.getActiveInviteCode(user.uid);
+      console.log(
+        '[ParentPairingContext] Active invite code loaded:',
+        activeCode ? 'found' : 'not found',
+      );
       setInviteCode(activeCode);
     } catch (err) {
-      console.error('Failed to load active invite code:', err);
-      setError(err.message);
+      console.error(
+        '[ParentPairingContext] Failed to load active invite code:',
+        err,
+      );
+
+      // Provide more specific error messages
+      let errorMessage = 'Failed to load invite code';
+      if (err.code === 'failed-precondition') {
+        errorMessage =
+          'Database index not ready. Please try again in a moment.';
+      } else if (err.code === 'permission-denied') {
+        errorMessage = 'Permission denied. Please check your account settings.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      // Don't throw - allow the UI to continue functioning
     } finally {
       setLoading(false);
     }

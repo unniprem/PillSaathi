@@ -322,7 +322,7 @@ Approach: Cloud Functions + Cloud Scheduler
 
 - [x] Create src/hooks/useMissedDoses.js
 - [x] Query doses with status 'missed'
-- [-] Apply filters (parent, medicine, date range)
+- [x] Apply filters (parent, medicine, date range)
 - [x] Sort by most recent
 - [x] Implement pagination
 - [x] Return doses and loading state

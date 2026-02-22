@@ -24,7 +24,7 @@
         },
         {
           "fieldPath": "expiresAt",
-          "order": "DESCENDING"
+          "order": "ASCENDING"
         }
       ]
     },
