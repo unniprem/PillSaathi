@@ -73,6 +73,7 @@ class DoseGenerationService {
               dosageUnit: medicine.dosageUnit,
               scheduledTime,
               status: 'scheduled', // Changed from 'pending' to 'scheduled'
+              missedCount: 0, // Track retry attempts (0-3)
               createdAt: new Date(),
               updatedAt: new Date(),
             });

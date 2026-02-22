@@ -449,6 +449,7 @@ class AlarmSchedulerService {
             ongoing: true, // Make it persistent
             sound: 'default',
             loopSound: true, // Loop the sound like an alarm
+            timeoutAfter: 60000, // Ring for 60 seconds (1 minute)
             vibrationPattern: [500, 500, 500, 500], // Continuous vibration (even number of values)
             pressAction: {
               id: 'default',

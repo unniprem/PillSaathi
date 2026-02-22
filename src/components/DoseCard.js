@@ -104,6 +104,14 @@ function DoseCard({ dose, onPress, onMarkTaken }) {
                 <Text style={styles.overdueBadgeText}>MISSED</Text>
               </View>
             )}
+            {/* Show retry count if dose is being retried */}
+            {dose.missedCount > 0 && dose.missedCount < 3 && (
+              <View style={styles.retryBadge}>
+                <Text style={styles.retryBadgeText}>
+                  Retry {dose.missedCount}/3
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -144,6 +152,7 @@ DoseCard.propTypes = {
     dosage: PropTypes.string.isRequired,
     scheduledTime: PropTypes.instanceOf(Date).isRequired,
     isOverdue: PropTypes.bool,
+    missedCount: PropTypes.number,
   }).isRequired,
   onPress: PropTypes.func.isRequired,
   onMarkTaken: PropTypes.func,
@@ -196,6 +205,18 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   overdueBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  retryBadge: {
+    backgroundColor: '#FFA500',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  retryBadgeText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',

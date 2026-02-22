@@ -9,7 +9,7 @@
  * @format
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import useUpcomingDoses from '../../hooks/useUpcomingDoses';
 import DoseCard from '../../components/DoseCard';
 import doseService from '../../services/doseService';
+import RetryAlarmService from '../../services/RetryAlarmService';
 
 /**
  * Parent Home Screen Component
@@ -43,6 +44,20 @@ function ParentHomeScreen() {
     loading: dosesLoading,
     error: dosesError,
   } = useUpcomingDoses(user?.uid, 4);
+
+  // Start retry alarm monitoring when component mounts
+  useEffect(() => {
+    if (user?.uid) {
+      console.log('[ParentHomeScreen] Starting retry alarm monitoring');
+      RetryAlarmService.startMonitoring(user.uid);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[ParentHomeScreen] Stopping retry alarm monitoring');
+      RetryAlarmService.stopMonitoring();
+    };
+  }, [user?.uid]);
 
   /**
    * Navigate to medicine details from dose

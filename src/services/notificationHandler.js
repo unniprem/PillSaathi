@@ -158,6 +158,7 @@ class NotificationHandlerService {
         alarmId: id,
         medicineId: data?.medicineId,
         doseId: data?.doseId,
+        isRetry: data?.isRetry === 'true',
       });
 
       // Extract alarm data including doseId
@@ -272,6 +273,10 @@ class NotificationHandlerService {
 
       // Dismiss the notification
       await notifee.cancelNotification(notification.id);
+
+      // Cancel any retry alarms for this dose
+      const RetryAlarmService = require('./RetryAlarmService').default;
+      await RetryAlarmService.cancelRetryAlarm(doseId);
 
       console.log('Dose marked as taken and notification dismissed');
 

@@ -78,11 +78,15 @@ async function handler({ doseId, parentId, medicineId, scheduledTime }) {
       hour12: true,
     });
 
+    // Build notification message based on missed count
+    const missedCount = params.missedCount || 3;
+    const attemptText = missedCount === 3 ? ' (3 missed attempts)' : '';
+
     // Build notification payload
     const message = {
       notification: {
-        title: 'Missed Dose Alert',
-        body: `${parentName} missed ${medicineName} at ${timeString}`,
+        title: '🚨 Missed Dose Alert',
+        body: `${parentName} missed ${medicineName} at ${timeString}${attemptText}`,
       },
       data: {
         type: 'missed_dose',
@@ -90,6 +94,7 @@ async function handler({ doseId, parentId, medicineId, scheduledTime }) {
         parentId,
         medicineId,
         scheduledTime: scheduledTime.toMillis().toString(),
+        missedCount: missedCount.toString(),
       },
       tokens,
     };

@@ -46,20 +46,34 @@ import RelationshipCard from '../../components/pairing/RelationshipCard';
  * @returns {JSX.Element}
  */
 const ParentPairingScreen = ({ navigation: _navigation }) => {
+  const pairingContext = usePairing();
+  const parentPairingContext = useParentPairing();
+  const { user } = useAuth();
+
+  // Destructure with logging
   const {
     relationships,
     loading: relationshipsLoading,
     removeRelationship,
     refreshRelationships,
-  } = usePairing();
+  } = pairingContext || {};
+
   const {
     inviteCode,
     loading: codeLoading,
     error: codeError,
     generateInviteCode,
     loadActiveInviteCode,
-  } = useParentPairing();
-  const { user } = useAuth();
+  } = parentPairingContext || {};
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[ParentPairingScreen] Context values:', {
+      hasRefreshRelationships: typeof refreshRelationships === 'function',
+      hasLoadActiveInviteCode: typeof loadActiveInviteCode === 'function',
+      hasGenerateInviteCode: typeof generateInviteCode === 'function',
+    });
+  }, [refreshRelationships, loadActiveInviteCode, generateInviteCode]);
 
   // Local state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,8 +81,10 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
 
   // Load active invite code when screen mounts
   useEffect(() => {
-    loadActiveInviteCode();
-  }, []);
+    if (loadActiveInviteCode && typeof loadActiveInviteCode === 'function') {
+      loadActiveInviteCode();
+    }
+  }, [loadActiveInviteCode]);
 
   // Use invite code from context
   const displayInviteCode = inviteCode;
@@ -143,8 +159,21 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
     setIsRefreshing(true);
 
     try {
-      await refreshRelationships();
+      // Ensure refreshRelationships is defined
+      if (typeof refreshRelationships === 'function') {
+        await refreshRelationships();
+      } else {
+        console.error(
+          '[ParentPairingScreen] refreshRelationships is not a function',
+        );
+      }
+
+      // Also reload the invite code
+      if (typeof loadActiveInviteCode === 'function') {
+        await loadActiveInviteCode();
+      }
     } catch (err) {
+      console.error('[ParentPairingScreen] Refresh error:', err);
       Alert.alert('Error', err.message || 'Failed to refresh relationships');
     } finally {
       setIsRefreshing(false);
