@@ -32,54 +32,6 @@ import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import MedicineDetailsScreen from '../screens/shared/MedicineDetailsScreen';
 import LogoutHeader from '../components/LogoutHeader';
 import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
-// import ParentListScreen from '../screens/caregiver/ParentListScreen';
-// import AlarmScreen from '../screens/caregiver/AlarmScreen';
-// import NotificationsScreen from '../screens/caregiver/NotificationsScreen';
-// import SettingsScreen from '../screens/caregiver/SettingsScreen';
-
-// Temporary placeholder components for development
-
-const ParentListScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Parent List</Text>
-      <Text style={styles.placeholderSubtext}>
-        List of parents you care for
-      </Text>
-    </View>
-  );
-};
-
-const AlarmScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Alarm</Text>
-      <Text style={styles.placeholderSubtext}>Medicine reminder</Text>
-    </View>
-  );
-};
-
-const NotificationsScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Notifications</Text>
-      <Text style={styles.placeholderSubtext}>View notifications</Text>
-    </View>
-  );
-};
-
-const SettingsScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Settings</Text>
-      <Text style={styles.placeholderSubtext}>App settings</Text>
-    </View>
-  );
-};
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -124,25 +76,10 @@ function HomeStack() {
         }}
       />
       <Stack.Screen
-        name={CaregiverScreens.PARENT_LIST}
-        component={ParentListScreen}
-        options={{
-          title: 'Parents',
-        }}
-      />
-      <Stack.Screen
         name={CaregiverScreens.MEDICINE_DETAILS}
         component={MedicineDetailsScreen}
         options={{
           title: 'Medicine Details',
-        }}
-      />
-      <Stack.Screen
-        name={CaregiverScreens.ALARM}
-        component={AlarmScreen}
-        options={{
-          title: 'Alarm',
-          presentation: 'fullScreenModal',
         }}
       />
       <Stack.Screen
@@ -261,7 +198,7 @@ function UpcomingStack() {
  * Profile Stack Navigator
  *
  * Stack navigator for profile-related screens.
- * Includes profile, notifications, and settings.
+ * Includes profile and edit profile.
  *
  * @returns {React.ReactElement} Profile stack navigator
  */
@@ -295,20 +232,6 @@ function ProfileStack() {
         options={{
           title: 'Edit Profile',
           presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
-        name={CaregiverScreens.NOTIFICATIONS}
-        component={NotificationsScreen}
-        options={{
-          title: 'Notifications',
-        }}
-      />
-      <Stack.Screen
-        name={CaregiverScreens.SETTINGS}
-        component={SettingsScreen}
-        options={{
-          title: 'Settings',
         }}
       />
     </Stack.Navigator>
@@ -395,28 +318,5 @@ function CaregiverNavigator() {
     </Tab.Navigator>
   );
 }
-
-// Placeholder styles
-const { StyleSheet } = require('react-native');
-const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 20,
-  },
-  placeholderText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-  },
-});
 
 export default CaregiverNavigator;

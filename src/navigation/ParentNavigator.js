@@ -30,85 +30,6 @@ import LogoutHeader from '../components/LogoutHeader';
 import FullScreenAlarmScreen from '../screens/parent/FullScreenAlarmScreen';
 import AlarmDiagnosticScreen from '../screens/parent/AlarmDiagnosticScreen';
 import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
-// import MedicineListScreen from '../screens/parent/MedicineListScreen';
-// import AddMedicineScreen from '../screens/parent/AddMedicineScreen';
-// import EditMedicineScreen from '../screens/parent/EditMedicineScreen';
-// import CaregiverManagementScreen from '../screens/parent/CaregiverManagementScreen';
-// import AddCaregiverScreen from '../screens/parent/AddCaregiverScreen';
-// import NotificationsScreen from '../screens/parent/NotificationsScreen';
-// import SettingsScreen from '../screens/parent/SettingsScreen';
-
-// Temporary placeholder components for development
-
-const MedicineListScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Medicine List</Text>
-      <Text style={styles.placeholderSubtext}>List of all medicines</Text>
-    </View>
-  );
-};
-
-const AddMedicineScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Add Medicine</Text>
-      <Text style={styles.placeholderSubtext}>Add new medicine form</Text>
-    </View>
-  );
-};
-
-const EditMedicineScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Edit Medicine</Text>
-      <Text style={styles.placeholderSubtext}>Edit medicine details</Text>
-    </View>
-  );
-};
-
-const CaregiverManagementScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Caregiver Management</Text>
-      <Text style={styles.placeholderSubtext}>Manage caregivers</Text>
-    </View>
-  );
-};
-
-const AddCaregiverScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Add Caregiver</Text>
-      <Text style={styles.placeholderSubtext}>Add new caregiver</Text>
-    </View>
-  );
-};
-
-const NotificationsScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Notifications</Text>
-      <Text style={styles.placeholderSubtext}>View notifications</Text>
-    </View>
-  );
-};
-
-const SettingsScreen = () => {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>Settings</Text>
-      <Text style={styles.placeholderSubtext}>App settings</Text>
-    </View>
-  );
-};
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -188,7 +109,7 @@ function HomeStack() {
  * Profile Stack Navigator
  *
  * Stack navigator for profile-related screens.
- * Includes profile, caregiver management, and settings.
+ * Includes profile, caregiver management, and edit profile.
  *
  * @returns {React.ReactElement} Profile stack navigator
  */
@@ -229,20 +150,6 @@ function ProfileStack() {
         component={ParentPairingScreen}
         options={{
           title: 'Manage Caregivers',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.NOTIFICATIONS}
-        component={NotificationsScreen}
-        options={{
-          title: 'Notifications',
-        }}
-      />
-      <Stack.Screen
-        name={ParentScreens.SETTINGS}
-        component={SettingsScreen}
-        options={{
-          title: 'Settings',
         }}
       />
     </Stack.Navigator>
@@ -395,28 +302,5 @@ function ParentNavigator() {
     </Stack.Navigator>
   );
 }
-
-// Placeholder styles
-const { StyleSheet } = require('react-native');
-const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 20,
-  },
-  placeholderText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-  },
-});
 
 export default ParentNavigator;
