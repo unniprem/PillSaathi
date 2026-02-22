@@ -3,20 +3,20 @@ const admin = require('firebase-admin');
 const { sendMissedDoseNotification } = require('./sendMissedDoseNotification');
 
 /**
- * Scheduled function that runs every 5 minutes to check for missed doses
+ * Scheduled function that runs every 1 minute to check for missed doses
  *
- * New Logic:
+ * Logic:
  * - First check: 1 minute after scheduled time (missedCount = 0)
  * - Retry 1: 10 minutes after scheduled time (missedCount = 1)
  * - Retry 2: 20 minutes after scheduled time (missedCount = 2)
  * - Escalate: 30 minutes after scheduled time (missedCount = 3) - notify caregivers
  *
- * Triggered by Cloud Scheduler every 5 minutes
+ * Triggered by Cloud Scheduler every 1 minute
  */
 exports.scheduledDoseCheck = functions.pubsub
-  .schedule('*/5 * * * *') // Every 5 minutes
+  .schedule('* * * * *') // Every 1 minute
   .timeZone('UTC')
-  .onRun(async context => {
+  .onRun(async _context => {
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     const nowMillis = now.toMillis();

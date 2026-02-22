@@ -45,6 +45,7 @@ export function useUpcomingDoses(parentId, hours = 24) {
   const [doses, setDoses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     if (!parentId) {
@@ -100,12 +101,18 @@ export function useUpcomingDoses(parentId, hours = 24) {
 
     // Cleanup listener on unmount
     return () => unsubscribe();
-  }, [parentId, hours]);
+  }, [parentId, hours, refreshTrigger]);
+
+  // Refetch function to manually trigger a refresh
+  const refetch = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return {
     doses,
     loading,
     error,
+    refetch,
   };
 }
 
