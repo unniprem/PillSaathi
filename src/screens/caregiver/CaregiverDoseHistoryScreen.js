@@ -544,6 +544,7 @@ function CaregiverDoseHistoryScreen({ route }) {
   const renderDoseRow = ({ item }) => {
     const statusStyle = getStatusStyle(item.status);
     const isHighlighted = highlightDoseId && item.id === highlightDoseId;
+    const missedCount = item.missedCount || 0;
 
     return (
       <View style={[styles.row, isHighlighted && styles.highlightedRow]}>
@@ -558,6 +559,13 @@ function CaregiverDoseHistoryScreen({ route }) {
           <Text style={styles.cellText} numberOfLines={1}>
             {item.medicineName}
           </Text>
+          {/* Show retry count if dose is being retried */}
+          {missedCount > 0 && missedCount < 3 && (
+            <Text style={styles.retryText}>Retry {missedCount}/3</Text>
+          )}
+          {missedCount === 3 && (
+            <Text style={styles.escalatedText}>Escalated (3 attempts)</Text>
+          )}
         </View>
         <View style={styles.cell}>
           <Text style={styles.cellText}>{formatDate(item.scheduledTime)}</Text>
@@ -1027,6 +1035,18 @@ const styles = StyleSheet.create({
   cellSubtext: {
     fontSize: 11,
     color: '#666666',
+    marginTop: 2,
+  },
+  retryText: {
+    fontSize: 11,
+    color: '#FFA500',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  escalatedText: {
+    fontSize: 11,
+    color: '#FF3B30',
+    fontWeight: '600',
     marginTop: 2,
   },
   statusBadge: {

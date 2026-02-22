@@ -24,12 +24,12 @@ exports.scheduledDoseCheck = functions.pubsub
     console.log('Starting scheduled dose check at', now.toDate().toISOString());
 
     try {
-      // Query all pending/snoozed doses that are overdue
+      // Query all scheduled/pending/snoozed doses that are overdue
       const oneMinuteAgo = new Date(nowMillis - 1 * 60 * 1000);
 
       const overdueSnapshot = await db
         .collection('doses')
-        .where('status', 'in', ['pending', 'snoozed'])
+        .where('status', 'in', ['scheduled', 'pending', 'snoozed'])
         .where(
           'scheduledTime',
           '<',
