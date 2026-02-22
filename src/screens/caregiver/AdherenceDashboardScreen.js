@@ -1212,7 +1212,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     minHeight: 80,
-    transition: 'background-color 0.2s ease',
   },
   medicineItemLeft: {
     flexDirection: 'row',

@@ -182,6 +182,7 @@ export const CaregiverScreens = {
  * @property {undefined} Notifications - Notifications screen (no params)
  * @property {undefined} Settings - Settings screen (no params)
  * @property {undefined} AdherenceDashboard - Adherence dashboard screen (no params)
+ * @property {undefined} MissedDoses - Missed doses list screen (no params)
  */
 
 /**

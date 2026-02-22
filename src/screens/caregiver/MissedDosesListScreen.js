@@ -244,6 +244,13 @@ function MissedDosesListScreen() {
           });
         });
 
+        // Sort by most recent first (missedAt timestamp)
+        fetchedDoses.sort((a, b) => {
+          const timeA = a.missedAt || a.scheduledTime || new Date(0);
+          const timeB = b.missedAt || b.scheduledTime || new Date(0);
+          return timeB - timeA; // Descending order (most recent first)
+        });
+
         if (loadMore) {
           setMissedDoses(prev => [...prev, ...fetchedDoses]);
         } else {
@@ -824,56 +831,85 @@ const styles = StyleSheet.create({
   filtersContainer: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E5E5EA',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 40,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E5EA',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 44,
     flex: 1,
-    minWidth: 120,
+    minWidth: 130,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterButtonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666666',
-    marginRight: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8E8E93',
+    marginRight: 6,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   filterButtonValue: {
-    fontSize: 14,
-    color: '#333333',
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#1C1C1E',
+    fontWeight: '600',
     flex: 1,
   },
   filterButtonIcon: {
-    fontSize: 12,
-    color: '#666666',
-    marginLeft: 4,
+    fontSize: 10,
+    color: '#8E8E93',
+    marginLeft: 6,
+    fontWeight: '600',
   },
   clearFiltersButton: {
     backgroundColor: '#FF3B30',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 44,
+    shadowColor: '#FF3B30',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   clearFiltersText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   doseItem: {
     backgroundColor: '#FFFFFF',

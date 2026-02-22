@@ -182,10 +182,10 @@ Approach: Cloud Functions + Cloud Scheduler
 #### Task 5.5.1: Create AdherenceDashboard screen
 
 - [x] Create src/screens/caregiver/AdherenceDashboardScreen.js
-- [~] Add to caregiver navigation stack
+- [x] Add to caregiver navigation stack
 - [x] Add navigation from caregiver home
-- [~] Basic layout with header
-- [~] Add to navigation types
+- [x] Basic layout with header
+- [x] Add to navigation types
 
 #### Task 5.5.2: Implement parent selector
 
@@ -219,7 +219,7 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Show medicine name and icon
 - [x] Show taken/total count
 - [x] Tap to see medicine details
-- [~] Style list items
+- [x] Style list items
 
 #### Task 5.5.6: Add loading and error states
 
@@ -227,7 +227,7 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Error message if query fails
 - [x] Empty state if no doses in period
 - [x] Retry button on error
-- [~] Pull to refresh
+- [x] Pull to refresh
 
 **Acceptance:**
 
@@ -258,28 +258,28 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Date range picker
 - [x] Clear filters button
 - [x] Apply filters to query
-- [~] Style filters
+- [x] Style filters
 
 #### Task 5.6.3: Build missed doses list
 
-- [~] FlatList of missed doses
-- [~] Each item shows: medicine name, scheduled time, missed time
-- [~] Show "X hours ago" relative time
-- [~] Sort by most recent first
-- [~] Pagination (load more on scroll)
-- [ ] Pull to refresh
-- [ ] Style list items
+- [x] FlatList of missed doses
+- [x] Each item shows: medicine name, scheduled time, missed time
+- [x] Show "X hours ago" relative time
+- [x] Sort by most recent first
+- [x] Pagination (load more on scroll)
+- [x] Pull to refresh
+- [x] Style list items
 
 #### Task 5.6.4: Add empty state
 
-- [~] Show when no missed doses
-- [~] Positive message ("Great adherence!")
-- [~] Illustration or icon
+- [x] Show when no missed doses
+- [x] Positive message ("Great adherence!")
+- [x] Illustration or icon
 - [x] Style empty state
 
 #### Task 5.6.5: Add dose detail navigation
 
-- [x] Tap dose to see full details
+- [ ] Tap dose to see full details
 - [x] Show medicine info, schedule, history
 - [x] Back button to return to list
 - [x] Test navigation
@@ -313,19 +313,19 @@ Approach: Cloud Functions + Cloud Scheduler
 - [x] Create src/hooks/useAdherence.js
 - [x] Query doses for parent and date range
 - [x] Calculate adherence metrics
-- [-] Return: percentage, taken, missed, snoozed, total
+- [x] Return: percentage, taken, missed, snoozed, total
 - [x] Handle loading and error states
 - [x] Memoize calculations
 - [x] Add JSDoc comments
 
 #### Task 5.7.3: Create useMissedDoses hook
 
-- [~] Create src/hooks/useMissedDoses.js
-- [~] Query doses with status 'missed'
-- [~] Apply filters (parent, medicine, date range)
-- [~] Sort by most recent
-- [~] Implement pagination
-- [~] Return doses and loading state
+- [x] Create src/hooks/useMissedDoses.js
+- [x] Query doses with status 'missed'
+- [-] Apply filters (parent, medicine, date range)
+- [x] Sort by most recent
+- [x] Implement pagination
+- [x] Return doses and loading state
 - [ ] Add JSDoc comments
 
 **Acceptance:**

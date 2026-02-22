@@ -22,7 +22,6 @@ import { CaregiverScreens } from '../types/navigation';
 // Placeholder screens (will be created in subsequent tasks)
 import CaregiverHomeScreen from '../screens/caregiver/CaregiverHomeScreen';
 import CaregiverPairingScreen from '../screens/caregiver/CaregiverPairingScreen';
-import CaregiverUpcomingScreen from '../screens/caregiver/CaregiverUpcomingScreen';
 import CaregiverDoseHistoryScreen from '../screens/caregiver/CaregiverDoseHistoryScreen';
 import CaregiverMedicineList from '../screens/caregiver/CaregiverMedicineList';
 import MedicineFormScreen from '../screens/caregiver/MedicineFormScreen';
