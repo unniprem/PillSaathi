@@ -1,0 +1,46 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Users collection - allow authenticated users full access
+    match /users/{userId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Relationships - allow authenticated users full access
+    match /relationships/{relId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Medicines - allow authenticated users full access
+    match /medicines/{medicineId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Schedules - allow authenticated users full access
+    match /schedules/{scheduleId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Doses - allow authenticated users full access
+    match /doses/{doseId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Invite Codes - allow authenticated users full access
+    match /inviteCodes/{code} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Device Tokens - allow authenticated users to write
+    match /deviceTokens/{tokenId} {
+      allow write: if isSignedIn();
+      allow read: if false;
+    }
+  }
+}

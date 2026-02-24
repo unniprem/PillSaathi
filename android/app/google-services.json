@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1054326980522",
+    "project_id": "pillsathi-dev",
+    "storage_bucket": "pillsathi-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1054326980522:android:2b05aa3888748b513635d3",
+        "android_client_info": {
+          "package_name": "com.pillsaathi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgVjBrS8Uz6QXqb6cLJOpcQkn9degehA8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

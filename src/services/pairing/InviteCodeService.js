@@ -1,0 +1,286 @@
+/**
+ * InviteCodeService - Invite Code Management Service
+ *
+ * Handles invite code generation, validation, and management for parent-caregiver pairing.
+ * Parents generate time-limited invite codes that caregivers can redeem to establish relationships.
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.5, 2.3, 8.1, 8.3, 9.2
+ */
+
+import { getFirestore } from '@react-native-firebase/firestore';
+import { getApp } from '@react-native-firebase/app';
+import { retryOperation } from '../../utils/retryHelper';
+
+/**
+ * InviteCodeService class
+ * Provides methods for invite code generation and management
+ */
+class InviteCodeService {
+  constructor(firestoreInstance = null) {
+    this.firestore = firestoreInstance || getFirestore(getApp());
+    this.inviteCodesCollection = 'inviteCodes';
+  }
+
+  /**
+   * Generate random alphanumeric code
+   * Creates a random uppercase alphanumeric string of specified length
+   *
+   * Requirements: 1.1 - Generate unique alphanumeric code
+   *
+   * @param {number} length - Code length (default: 8)
+   * @returns {string} Uppercase alphanumeric code
+   *
+   * @example
+   * const code = inviteCodeService.generateRandomCode(8);
+   * // Returns: 'A3B7K9M2'
+   */
+  generateRandomCode(length = 8) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      code += characters[randomIndex];
+    }
+
+    return code;
+  }
+
+  /**
+   * Calculate expiration timestamp
+   * Computes the expiration date/time based on minutes from now
+   *
+   * Requirements: 1.3 - Set TTL to 15 minutes
+   *
+   * @param {number} minutes - Minutes until expiration (default: 15)
+   * @returns {Date} Expiration timestamp
+   *
+   * @example
+   * const expiresAt = inviteCodeService.calculateExpiration(15);
+   * // Returns: Date object 15 minutes from now
+   */
+  calculateExpiration(minutes = 15) {
+    const now = new Date();
+    const expirationTime = now.getTime() + minutes * 60 * 1000;
+    return new Date(expirationTime);
+  }
+
+  /**
+   * Check if invite code is expired
+   * Compares expiration timestamp against current time
+   *
+   * Requirements: 8.3 - Check if code has expired
+   *
+   * @param {Date} expiresAt - Expiration timestamp
+   * @returns {boolean} True if expired, false otherwise
+   *
+   * @example
+   * const isExpired = inviteCodeService.isCodeExpired(expiresAt);
+   * if (isExpired) {
+   *   console.log('Code has expired');
+   * }
+   */
+  isCodeExpired(expiresAt) {
+    const now = new Date();
+    return now > expiresAt;
+  }
+
+  /**
+   * Generate or retrieve active invite code for a parent
+   * Always generates a new code and invalidates any existing active codes.
+   * Includes retry logic for network errors.
+   *
+   * Requirements: 1.1 - Generate invite code
+   * Requirements: 1.2 - Store code with parent UID, timestamps
+   * Requirements: 9.2 - Retry logic for network errors
+   *
+   * @param {string} parentUid - Parent's Firebase Auth UID
+   * @returns {Promise<{code: string, expiresAt: Date, createdAt: Date, parentUid: string}>}
+   * @throws {Error} If generation or Firestore operation fails
+   *
+   * @example
+   * try {
+   *   const inviteCode = await inviteCodeService.generateInviteCode(parentUid);
+   *   console.log('Invite code:', inviteCode.code);
+   *   console.log('Expires at:', inviteCode.expiresAt);
+   * } catch (error) {
+   *   console.error('Failed to generate invite code:', error.message);
+   * }
+   */
+  async generateInviteCode(parentUid) {
+    try {
+      return await retryOperation(async () => {
+        // Query for active unexpired codes for this parent
+        const now = new Date();
+        const querySnapshot = await this.firestore
+          .collection(this.inviteCodesCollection)
+          .where('parentUid', '==', parentUid)
+          .where('expiresAt', '>', now)
+          .limit(1)
+          .get();
+
+        // If active code exists, mark it as expired and generate a new one
+        if (!querySnapshot.empty) {
+          const existingCodeDoc = querySnapshot.docs[0];
+          // Mark the old code as expired
+          await existingCodeDoc.ref.update({
+            expiresAt: new Date(), // Set to now to expire it
+            replacedAt: new Date(),
+          });
+        }
+
+        // Generate a new code
+        const code = this.generateRandomCode(8);
+        const createdAt = new Date();
+        const expiresAt = this.calculateExpiration(15);
+
+        // Store in Firestore
+        const docData = {
+          code,
+          parentUid,
+          createdAt,
+          expiresAt,
+          usedCount: 0,
+          used: false,
+        };
+
+        await this.firestore
+          .collection(this.inviteCodesCollection)
+          .add(docData);
+
+        return {
+          code,
+          expiresAt,
+          createdAt,
+          parentUid,
+        };
+      });
+    } catch (error) {
+      const mappedError = new Error('Failed to generate invite code');
+      mappedError.code = 'invite-code-generation-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+
+  /**
+   * Get active invite code for a parent
+   * Queries Firestore for active unexpired codes for the specified parent.
+   * Returns the code object if found, or null if no active code exists.
+   * Includes retry logic for network errors.
+   *
+   * Requirements: 2.3 - Display active invite code
+   * Requirements: 9.2 - Retry logic for network errors
+   *
+   * @param {string} parentUid - Parent's Firebase Auth UID
+   * @returns {Promise<{code: string, expiresAt: Date, createdAt: Date, parentUid: string} | null>}
+   * @throws {Error} If Firestore query fails
+   *
+   * @example
+   * try {
+   *   const activeCode = await inviteCodeService.getActiveInviteCode(parentUid);
+   *   if (activeCode) {
+   *     console.log('Active code:', activeCode.code);
+   *   } else {
+   *     console.log('No active code found');
+   *   }
+   * } catch (error) {
+   *   console.error('Failed to get active code:', error.message);
+   * }
+   */
+  async getActiveInviteCode(parentUid) {
+    try {
+      // Validate input
+      if (!parentUid) {
+        console.error('[InviteCodeService] parentUid is required');
+        return null;
+      }
+
+      return await retryOperation(async () => {
+        console.log(
+          '[InviteCodeService] getActiveInviteCode called with parentUid:',
+          parentUid,
+        );
+
+        // Query for active unexpired codes for this parent
+        const now = new Date();
+        console.log(
+          '[InviteCodeService] Querying for codes with expiresAt >',
+          now,
+        );
+
+        const querySnapshot = await this.firestore
+          .collection(this.inviteCodesCollection)
+          .where('parentUid', '==', parentUid)
+          .where('expiresAt', '>', now)
+          .limit(1)
+          .get();
+
+        console.log(
+          '[InviteCodeService] Query completed. Empty:',
+          querySnapshot.empty,
+          'Size:',
+          querySnapshot.size,
+        );
+
+        // If no active code exists, return null
+        if (querySnapshot.empty) {
+          console.log(
+            '[InviteCodeService] No active code found, returning null',
+          );
+          return null;
+        }
+
+        // Return the active code
+        const codeDoc = querySnapshot.docs[0];
+        const data = codeDoc.data();
+        console.log('[InviteCodeService] Found active code:', data.code);
+
+        // Safely handle timestamp conversion
+        const expiresAt = data.expiresAt?.toDate
+          ? data.expiresAt.toDate()
+          : new Date(data.expiresAt);
+        const createdAt = data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : new Date(data.createdAt);
+
+        return {
+          code: data.code,
+          expiresAt,
+          createdAt,
+          parentUid: data.parentUid,
+        };
+      });
+    } catch (error) {
+      console.error('getActiveInviteCode error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        fullError: error,
+      });
+
+      // Log the original error if it exists
+      if (error.originalError) {
+        console.error('Original error:', error.originalError);
+      }
+
+      // If it's an index error, provide helpful message
+      if (
+        error.code === 'failed-precondition' ||
+        error.message?.includes('index')
+      ) {
+        console.error(
+          '[InviteCodeService] Index may not be deployed. Run: firebase deploy --only firestore:indexes',
+        );
+      }
+
+      const mappedError = new Error('Failed to get active invite code');
+      mappedError.code = 'invite-code-query-failed';
+      mappedError.originalError = error;
+      throw mappedError;
+    }
+  }
+}
+
+// Export singleton instance
+export default new InviteCodeService();
