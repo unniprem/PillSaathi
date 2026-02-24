@@ -82,9 +82,13 @@ const ParentPairingScreen = ({ navigation: _navigation }) => {
   // Load active invite code when screen mounts
   useEffect(() => {
     if (loadActiveInviteCode && typeof loadActiveInviteCode === 'function') {
+      console.log(
+        '[ParentPairingScreen] Calling loadActiveInviteCode on mount',
+      );
       loadActiveInviteCode();
     }
-  }, [loadActiveInviteCode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   // Use invite code from context
   const displayInviteCode = inviteCode;

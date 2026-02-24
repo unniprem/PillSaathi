@@ -50,17 +50,25 @@ class PairingService {
   async redeemInviteCode(code, caregiverUid) {
     try {
       return await retryOperation(async () => {
+        console.log('[PairingService] redeemInviteCode called', {
+          code,
+          caregiverUid,
+        });
+
         // Validate code format
         const codeUppercase = code.toUpperCase();
         const codeFormatRegex = /^[A-Z0-9]{8}$/;
 
         if (!codeFormatRegex.test(codeUppercase)) {
+          console.log('[PairingService] Invalid code format:', codeUppercase);
           const error = new Error(
             'Invalid code format. Code must be 8 alphanumeric characters',
           );
           error.code = 'invalid-argument';
           throw error;
         }
+
+        console.log('[PairingService] Querying for code:', codeUppercase);
 
         // Query for the invite code
         const inviteCodesSnapshot = await this.db
@@ -69,8 +77,14 @@ class PairingService {
           .limit(1)
           .get();
 
+        console.log('[PairingService] Query result:', {
+          empty: inviteCodesSnapshot.empty,
+          size: inviteCodesSnapshot.size,
+        });
+
         // Check if code exists
         if (inviteCodesSnapshot.empty) {
+          console.log('[PairingService] Code not found in database');
           const error = new Error(
             'Invalid invite code. Please check the code and try again',
           );
@@ -81,9 +95,27 @@ class PairingService {
         const inviteCodeDoc = inviteCodesSnapshot.docs[0];
         const inviteCodeData = inviteCodeDoc.data();
 
+        console.log('[PairingService] Found invite code:', {
+          code: inviteCodeData.code,
+          parentUid: inviteCodeData.parentUid,
+          expiresAt: inviteCodeData.expiresAt,
+          used: inviteCodeData.used,
+        });
+
         // Check if code is expired
-        const now = firestore.Timestamp.now();
-        if (inviteCodeData.expiresAt <= now) {
+        const now = new Date();
+        const expiresAt = inviteCodeData.expiresAt?.toDate
+          ? inviteCodeData.expiresAt.toDate()
+          : new Date(inviteCodeData.expiresAt);
+
+        console.log('[PairingService] Expiration check:', {
+          now: now.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          isExpired: expiresAt <= now,
+        });
+
+        if (expiresAt <= now) {
+          console.log('[PairingService] Code is expired');
           const error = new Error(
             'This invite code has expired. Please request a new code from the parent',
           );
@@ -93,6 +125,7 @@ class PairingService {
 
         // Check if code has already been used
         if (inviteCodeData.used === true) {
+          console.log('[PairingService] Code has already been used');
           const error = new Error(
             'This invite code has already been used. Please request a new code from the parent',
           );
@@ -109,9 +142,25 @@ class PairingService {
           .doc(relationshipId)
           .get();
 
-        if (existingRelationship.exists) {
-          const error = new Error('You are already connected with this parent');
+        // Handle both function and property for exists (different Firebase versions)
+        const relationshipExists =
+          typeof existingRelationship.exists === 'function'
+            ? existingRelationship.exists()
+            : existingRelationship.exists;
+
+        if (relationshipExists) {
+          const relationshipData = existingRelationship.data();
+          const error = new Error(
+            `You are already connected with this parent. Relationship created on ${
+              relationshipData?.createdAt
+                ? new Date(
+                    relationshipData.createdAt.seconds * 1000,
+                  ).toLocaleDateString()
+                : 'unknown date'
+            }`,
+          );
           error.code = 'already-exists';
+          error.relationshipData = relationshipData;
           throw error;
         }
 
@@ -177,8 +226,14 @@ class PairingService {
           .doc(relationshipId)
           .get();
 
+        // Handle both function and property for exists (different Firebase versions)
+        const docExists =
+          typeof relationshipDoc.exists === 'function'
+            ? relationshipDoc.exists()
+            : relationshipDoc.exists;
+
         // Check if relationship exists
-        if (!relationshipDoc.exists) {
+        if (!docExists) {
           const error = new Error('Relationship not found');
           error.code = 'not-found';
           throw error;
@@ -197,6 +252,36 @@ class PairingService {
       const mappedError = this._mapError(error, 'remove');
       throw mappedError;
     }
+  }
+
+  /**
+   * Check if a relationship exists between parent and caregiver
+   * Diagnostic method to help debug relationship issues.
+   *
+   * @param {string} parentUid - Parent's Firebase Auth UID
+   * @param {string} caregiverUid - Caregiver's Firebase Auth UID
+   * @returns {Promise<{exists: boolean, data: Object|null}>}
+   *
+   * @example
+   * const check = await pairingService.checkRelationship(parentUid, caregiverUid);
+   * console.log('Relationship exists:', check.exists);
+   */
+  async checkRelationship(parentUid, caregiverUid) {
+    const relationshipId = `${parentUid}_${caregiverUid}`;
+    const doc = await this.db
+      .collection('relationships')
+      .doc(relationshipId)
+      .get();
+
+    // Handle both function and property for exists (different Firebase versions)
+    const docExists =
+      typeof doc.exists === 'function' ? doc.exists() : doc.exists;
+
+    return {
+      exists: docExists,
+      data: docExists ? doc.data() : null,
+      relationshipId,
+    };
   }
 
   /**
@@ -252,7 +337,12 @@ class PairingService {
 
       case 'already-exists':
         mappedError.code = 'already-exists';
-        mappedError.message = 'You are already connected with this parent';
+        mappedError.message =
+          error.message || 'You are already connected with this parent';
+        // Preserve relationship data if it exists
+        if (error.relationshipData) {
+          mappedError.relationshipData = error.relationshipData;
+        }
         break;
 
       case 'failed-precondition':

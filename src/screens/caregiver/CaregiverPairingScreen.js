@@ -23,6 +23,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import firestore from '@react-native-firebase/firestore';
 import { usePairing } from '../../contexts/PairingContext';
 import { useAuth } from '../../contexts/AuthContext';
 import RelationshipCard from '../../components/pairing/RelationshipCard';
@@ -78,7 +79,6 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [validationError, setValidationError] = useState(null);
-  const [showDebug, setShowDebug] = useState(true); // Show debug by default
 
   /**
    * Handle code input change
@@ -108,8 +108,6 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
    * Requirements: 9.3 - Display success confirmation
    */
   const handleRedeemCode = async () => {
-    console.log('[CaregiverPairingScreen] handleRedeemCode called', { code });
-
     // Validate code format
     if (!validateCodeFormat(code)) {
       setValidationError(
@@ -123,24 +121,82 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
     setValidationError(null);
 
     try {
-      console.log('[CaregiverPairingScreen] Calling redeemInviteCode');
+      // Client-side check: See if we're already connected with this parent
+      const codeUppercase = code.toUpperCase();
+
+      try {
+        const inviteSnapshot = await firestore()
+          .collection('inviteCodes')
+          .where('code', '==', codeUppercase)
+          .limit(1)
+          .get();
+
+        if (!inviteSnapshot.empty) {
+          const inviteData = inviteSnapshot.docs[0].data();
+          const parentUid = inviteData.parentUid;
+
+          // Check 1: Local state (fast check)
+          const existingRelationshipLocal = relationships.find(
+            r => r.parentUid === parentUid,
+          );
+
+          if (existingRelationshipLocal) {
+            const parentName =
+              existingRelationshipLocal.parentName || 'this parent';
+            Alert.alert(
+              'Already Connected',
+              `You are already connected with ${parentName}. Check your "Linked Parents" list below.`,
+              [{ text: 'OK' }],
+            );
+            setCode('');
+            setIsRedeeming(false);
+            return;
+          }
+
+          // Check 2: Firestore direct (catches orphaned relationships)
+          const relationshipId = `${parentUid}_${user.uid}`;
+          const relationshipDoc = await firestore()
+            .collection('relationships')
+            .doc(relationshipId)
+            .get();
+
+          // Handle both function and property for exists (different Firebase versions)
+          const docExists =
+            typeof relationshipDoc.exists === 'function'
+              ? relationshipDoc.exists()
+              : relationshipDoc.exists;
+
+          if (docExists) {
+            Alert.alert(
+              'Already Connected',
+              'You are already connected with this parent, but they are not showing in your list. Try pulling down to refresh.',
+              [{ text: 'Refresh Now', onPress: handleRefresh }, { text: 'OK' }],
+            );
+            setCode('');
+            setIsRedeeming(false);
+            return;
+          }
+        }
+      } catch (checkError) {
+        console.error(
+          '[CaregiverPairingScreen] Client-side check error:',
+          checkError,
+        );
+        // Continue with redemption - server will validate
+      }
       await redeemInviteCode(code);
 
-      // Requirements: 9.3 - Display success confirmation
       Alert.alert(
         'Success',
         'You have successfully connected with the parent. They will now appear in your list.',
         [{ text: 'OK' }],
       );
 
-      // Clear the input field on success
       setCode('');
     } catch (err) {
       console.error('[CaregiverPairingScreen] Error redeeming code:', err);
-      // Requirements: 9.1 - Display specific error messages
       const errorMessage = getErrorMessage(err.code, err.message);
       setLocalError(errorMessage);
-
       Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     } finally {
       setIsRedeeming(false);
@@ -227,51 +283,15 @@ const CaregiverPairingScreen = ({ navigation: _navigation }) => {
         accessibilityRole="scrollview"
         accessibilityLabel="Caregiver pairing screen"
       >
-        {/* Debug Panel - Tap title 3 times to toggle */}
-        {showDebug && (
-          <View style={styles.debugPanel}>
-            <Text style={styles.debugTitle}>Debug Info</Text>
-            <Text style={styles.debugText}>
-              User: {user ? user.uid : 'null'}
-            </Text>
-            <Text style={styles.debugText}>
-              Profile: {profile ? JSON.stringify(profile) : 'null'}
-            </Text>
-            <Text style={styles.debugText}>
-              Role: {profile?.role || 'null'}
-            </Text>
-            <Text style={styles.debugText}>
-              Is Caregiver: {profile?.role === 'caregiver' ? 'YES' : 'NO'}
-            </Text>
-          </View>
-        )}
-
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => {
-              let tapCount = 0;
-              return () => {
-                tapCount++;
-                if (tapCount === 3) {
-                  setShowDebug(!showDebug);
-                  tapCount = 0;
-                }
-                setTimeout(() => {
-                  tapCount = 0;
-                }, 1000);
-              };
-            }}
-            activeOpacity={0.9}
+          <Text
+            style={styles.title}
+            accessibilityRole="header"
+            accessibilityLabel="Connect with Parents"
           >
-            <Text
-              style={styles.title}
-              accessibilityRole="header"
-              accessibilityLabel="Connect with Parents"
-            >
-              Connect with Parents
-            </Text>
-          </TouchableOpacity>
+            Connect with Parents
+          </Text>
           <Text
             style={styles.subtitle}
             accessibilityRole="text"
@@ -619,26 +639,6 @@ const styles = StyleSheet.create({
   },
   relationshipsList: {
     marginTop: 8,
-  },
-  debugPanel: {
-    backgroundColor: '#FFF9C4',
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#FBC02D',
-  },
-  debugTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F57F17',
-    marginBottom: 8,
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#333333',
-    marginBottom: 4,
-    fontFamily: 'monospace',
   },
 });
 

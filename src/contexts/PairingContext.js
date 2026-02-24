@@ -278,6 +278,8 @@ export const PairingProvider = ({ children }) => {
     relationships,
     loading,
     error,
+    generateInviteCode,
+    redeemInviteCode,
     removeRelationship,
     refreshRelationships,
   };

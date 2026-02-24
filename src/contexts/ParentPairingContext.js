@@ -4,7 +4,7 @@
  * Manages invite code generation for parents only.
  */
 
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import InviteCodeService from '../services/pairing/InviteCodeService';
 import { useAuth } from './AuthContext';
 
@@ -19,7 +19,7 @@ export const ParentPairingProvider = ({ children }) => {
   /**
    * Generate invite code for parent
    */
-  const generateInviteCode = async () => {
+  const generateInviteCode = useCallback(async () => {
     if (!user) {
       const authError = new Error('User not authenticated');
       authError.code = 'unauthenticated';
@@ -45,12 +45,12 @@ export const ParentPairingProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, profile]);
 
   /**
    * Load active invite code
    */
-  const loadActiveInviteCode = async () => {
+  const loadActiveInviteCode = useCallback(async () => {
     if (!user || profile?.role !== 'parent') {
       console.log(
         '[ParentPairingContext] Skipping loadActiveInviteCode - user not authenticated or not a parent',
@@ -94,7 +94,7 @@ export const ParentPairingProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, profile]);
 
   const value = {
     inviteCode,
