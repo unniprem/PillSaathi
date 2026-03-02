@@ -123,6 +123,21 @@ const CaregiverProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Management Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Management</Text>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate(CaregiverScreens.PAIRING)}
+          accessibilityLabel="Pairing and relationships"
+          accessibilityRole="button"
+        >
+          <Text style={styles.menuItemText}>Pairing &amp; Relationships</Text>
+          <Text style={styles.menuItemArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Logout Section */}
       <View style={styles.section}>
         <TouchableOpacity
@@ -200,6 +215,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  menuItem: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    minHeight: 56,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  menuItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333333',
+  },
+  menuItemArrow: {
+    fontSize: 24,
+    color: '#CCCCCC',
+    fontWeight: '300',
   },
   logoutButton: {
     backgroundColor: '#FFFFFF',

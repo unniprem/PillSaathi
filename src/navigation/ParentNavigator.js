@@ -26,7 +26,7 @@ import ParentMedicineDetailScreen from '../screens/parent/ParentMedicineDetailSc
 import UpcomingDoses from '../screens/parent/UpcomingDoses';
 import ParentUpcomingScreen from '../screens/parent/ParentUpcomingScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
-import LogoutHeader from '../components/LogoutHeader';
+import HeaderActions from '../components/HeaderActions';
 import FullScreenAlarmScreen from '../screens/parent/FullScreenAlarmScreen';
 import AlarmDiagnosticScreen from '../screens/parent/AlarmDiagnosticScreen';
 import ParentProfileScreen from '../screens/parent/ParentProfileScreen';
@@ -48,7 +48,7 @@ function HomeStack() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
@@ -56,7 +56,7 @@ function HomeStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Stack.Screen
@@ -111,6 +111,9 @@ function HomeStack() {
  * Stack navigator for profile-related screens.
  * Includes profile, caregiver management, and edit profile.
  *
+ * This stack is not part of the bottom tabs; it is opened
+ * via the Profile icon in the header as a separate route.
+ *
  * @returns {React.ReactElement} Profile stack navigator
  */
 function ProfileStack() {
@@ -119,7 +122,7 @@ function ProfileStack() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
@@ -127,7 +130,7 @@ function ProfileStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Stack.Screen
@@ -172,7 +175,7 @@ function MedicinesStack() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
@@ -180,7 +183,7 @@ function MedicinesStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Stack.Screen
@@ -208,7 +211,7 @@ function MedicinesStack() {
  * Tabs:
  * 1. Home - Dashboard with upcoming doses (4 hours)
  * 2. Medicines - All medicines with mark as taken
- * 3. Profile - User profile, medicine/caregiver management, notifications, settings
+ * 3. Profile (opened via header, not tab) - User profile, medicine/caregiver management, notifications, settings
  *
  * Requirements: 17.1
  *
@@ -219,19 +222,14 @@ function ParentTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#FFFFFF',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E5E5EA',
+          backgroundColor: '#4e8ea2',
+          borderTopWidth: 0,
           paddingBottom: 5,
           paddingTop: 5,
           height: 60,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
         },
       }}
     >
@@ -257,17 +255,6 @@ function ParentTabNavigator() {
           },
         }}
       />
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileStack}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => {
-            const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>👤</Text>;
-          },
-        }}
-      />
     </Tab.Navigator>
   );
 }
@@ -290,6 +277,7 @@ function ParentNavigator() {
       }}
     >
       <Stack.Screen name="ParentTabs" component={ParentTabNavigator} />
+      <Stack.Screen name="ParentProfile" component={ProfileStack} />
       <Stack.Screen
         name={ParentScreens.FULL_SCREEN_ALARM}
         component={FullScreenAlarmScreen}

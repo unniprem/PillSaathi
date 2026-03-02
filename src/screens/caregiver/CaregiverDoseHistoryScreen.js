@@ -846,7 +846,7 @@ function CaregiverDoseHistoryScreen({ route }) {
   if (loading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#4e8ea2" />
         <Text style={styles.loadingText}>Loading dose history...</Text>
       </View>
     );
@@ -890,7 +890,7 @@ function CaregiverDoseHistoryScreen({ route }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#007AFF"
+            tintColor="#4e8ea2"
           />
         }
       />
@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   filterButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4e8ea2',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -989,7 +989,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4e8ea2',
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 2,
@@ -1136,7 +1136,7 @@ const styles = StyleSheet.create({
   },
   filterOptionActive: {
     backgroundColor: '#E3F2FD',
-    borderColor: '#007AFF',
+    borderColor: '#4e8ea2',
   },
   filterOptionText: {
     fontSize: 15,
@@ -1144,7 +1144,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   filterOptionTextActive: {
-    color: '#007AFF',
+    color: '#4e8ea2',
     fontWeight: '600',
   },
   clearFiltersButton: {

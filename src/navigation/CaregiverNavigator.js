@@ -17,6 +17,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CaregiverScreens } from '../types/navigation';
 
 // Placeholder screens (will be created in subsequent tasks)
@@ -30,11 +31,12 @@ import AdherenceDashboardScreen from '../screens/caregiver/AdherenceDashboardScr
 import MissedDosesListScreen from '../screens/caregiver/MissedDosesListScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import MedicineDetailsScreen from '../screens/shared/MedicineDetailsScreen';
-import LogoutHeader from '../components/LogoutHeader';
+import HeaderActions from '../components/HeaderActions';
 import CaregiverProfileScreen from '../screens/caregiver/CaregiverProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
 
 /**
  * Home Stack Navigator
@@ -50,7 +52,7 @@ function HomeStack() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
@@ -58,7 +60,7 @@ function HomeStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Stack.Screen
@@ -123,42 +125,6 @@ function HomeStack() {
 }
 
 /**
- * Pairing Stack Navigator
- *
- * Stack navigator for pairing-related screens.
- * Includes pairing screen and generate code screen.
- *
- * @returns {React.ReactElement} Pairing stack navigator
- */
-function PairingStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: true,
-        headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
-        headerStyle: {
-          backgroundColor: '#FFFFFF',
-        },
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
-        animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
-      }}
-    >
-      <Stack.Screen
-        name={CaregiverScreens.PAIRING}
-        component={CaregiverPairingScreen}
-        options={{
-          title: 'Pairing & Relationships',
-        }}
-      />
-    </Stack.Navigator>
-  );
-}
-
-/**
  * Upcoming Stack Navigator
  *
  * Stack navigator for dose history tab.
@@ -172,7 +138,7 @@ function UpcomingStack() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
@@ -180,7 +146,7 @@ function UpcomingStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Stack.Screen
@@ -198,7 +164,7 @@ function UpcomingStack() {
  * Profile Stack Navigator
  *
  * Stack navigator for profile-related screens.
- * Includes profile and edit profile.
+ * Includes profile, pairing, and edit profile.
  *
  * @returns {React.ReactElement} Profile stack navigator
  */
@@ -208,7 +174,7 @@ function ProfileStack() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
@@ -216,7 +182,7 @@ function ProfileStack() {
           fontWeight: '600',
         },
         animation: 'slide_from_right',
-        headerRight: () => <LogoutHeader />,
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Stack.Screen
@@ -224,6 +190,13 @@ function ProfileStack() {
         component={CaregiverProfileScreen}
         options={{
           title: 'Profile',
+        }}
+      />
+      <Stack.Screen
+        name={CaregiverScreens.PAIRING}
+        component={CaregiverPairingScreen}
+        options={{
+          title: 'Pairing & Relationships',
         }}
       />
       <Stack.Screen
@@ -239,35 +212,32 @@ function ProfileStack() {
 }
 
 /**
- * Caregiver Navigator Component
+ * Caregiver Tabs Component
  *
- * Bottom tab navigator for caregiver-specific screens.
+ * Bottom tab navigator for caregiver-specific main screens.
  * Tabs:
  * 1. Home - Dashboard, parent list, medicine details, alarms
  * 2. Upcoming - All upcoming medicines across all parents
  * 3. Pairing - Pairing and relationship management
- * 4. Profile - User profile, notifications, settings
  *
- * @returns {React.ReactElement} Caregiver navigator component
+ * Profile is available as a separate route, opened via the header icon.
+ *
+ * @returns {React.ReactElement} Caregiver tabs component
  */
-function CaregiverNavigator() {
+function CaregiverTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#FFFFFF',
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E5E5EA',
+          backgroundColor: '#4e8ea2',
+          borderTopWidth: 0,
           paddingBottom: 5,
           paddingTop: 5,
           height: 60,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
         },
       }}
     >
@@ -275,10 +245,8 @@ function CaregiverNavigator() {
         name="HomeTab"
         component={HomeStack}
         options={{
-          tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => {
-            const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>🏠</Text>;
+            return <Ionicons name="medkit" size={size} color={color} />;
           },
         }}
       />
@@ -286,36 +254,34 @@ function CaregiverNavigator() {
         name="UpcomingTab"
         component={UpcomingStack}
         options={{
-          tabBarLabel: 'History',
           tabBarIcon: ({ color, size }) => {
-            const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>📊</Text>;
+            return <Ionicons name="document-text" size={size} color={color} />;
           },
         }}
       />
-      <Tab.Screen
-        name="PairingTab"
-        component={PairingStack}
-        options={{
-          tabBarLabel: 'Pairing',
-          tabBarIcon: ({ color, size }) => {
-            const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>🔗</Text>;
-          },
-        }}
-      />
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileStack}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => {
-            const { Text } = require('react-native');
-            return <Text style={{ fontSize: size, color }}>👤</Text>;
-          },
-        }}
-      />
+      {/* Pairing is accessible from the Profile view and not shown as a tab */}
     </Tab.Navigator>
+  );
+}
+
+/**
+ * Caregiver Navigator Component
+ *
+ * Wraps the caregiver tabs with additional routes like the profile stack.
+ * Profile is not a tab; it is opened via the header Profile icon.
+ *
+ * @returns {React.ReactElement} Caregiver navigator component
+ */
+function CaregiverNavigator() {
+  return (
+    <RootStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <RootStack.Screen name="CaregiverTabs" component={CaregiverTabs} />
+      <RootStack.Screen name="CaregiverProfile" component={ProfileStack} />
+    </RootStack.Navigator>
   );
 }
 

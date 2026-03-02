@@ -61,6 +61,9 @@ react {
     autolinkLibrariesWithApp()
 }
 
+// Ensure vector icon fonts are bundled with the app
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
