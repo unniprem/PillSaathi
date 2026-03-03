@@ -46,7 +46,7 @@ const LoadingOverlay = ({ visible, message = 'Loading...' }) => {
         <View style={styles.container}>
           <ActivityIndicator
             size="large"
-            color="#007AFF"
+            color="#4e8ea2"
             accessibilityLabel="Loading indicator"
           />
           {message && (

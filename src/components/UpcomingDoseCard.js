@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#4e8ea2',
     marginBottom: 4,
   },
   timeOverdue: {

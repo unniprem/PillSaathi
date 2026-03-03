@@ -133,10 +133,10 @@ const ParentProfileScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => navigation.navigate(ParentScreens.PAIRING)}
-          accessibilityLabel="Manage caregivers"
+          accessibilityLabel="Pairing and relationships"
           accessibilityRole="button"
         >
-          <Text style={styles.menuItemText}>Manage Caregivers</Text>
+          <Text style={styles.menuItemText}>Pairing &amp; Relationships</Text>
           <Text style={styles.menuItemArrow}>›</Text>
         </TouchableOpacity>
       </View>

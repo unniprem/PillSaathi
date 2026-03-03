@@ -66,7 +66,7 @@ function AuthNavigator() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
-        headerTintColor: '#007AFF',
+        headerTintColor: '#4e8ea2',
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
