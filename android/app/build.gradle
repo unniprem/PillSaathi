@@ -2,13 +2,6 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-// Apply react-native-config plugin
-project.ext.envConfigFiles = [
-    debug: ".env.development",
-    release: ".env.production",
-]
-apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
-
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -61,9 +54,6 @@ react {
     autolinkLibrariesWithApp()
 }
 
-// Ensure vector icon fonts are bundled with the app
-apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
-
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
@@ -94,9 +84,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        
-        // Make environment variables available to BuildConfig
-        resValue "string", "build_config_package", "com.pillsaathi"
     }
     signingConfigs {
         debug {
@@ -115,7 +102,7 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
 }
@@ -129,23 +116,4 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-
-    // Firebase dependencies
-    // Import the Firebase BoM (Bill of Materials)
-    implementation platform('com.google.firebase:firebase-bom:33.7.0')
-    
-    // Firebase Analytics (included with firebase-bom)
-    implementation 'com.google.firebase:firebase-analytics'
-    
-    // Firebase Authentication
-    implementation 'com.google.firebase:firebase-auth'
-    
-    // Cloud Firestore
-    implementation 'com.google.firebase:firebase-firestore'
-    
-    // Firebase Cloud Messaging
-    implementation 'com.google.firebase:firebase-messaging'
 }
-
-// Apply Google services plugin (must be at the bottom)
-apply plugin: 'com.google.gms.google-services'
