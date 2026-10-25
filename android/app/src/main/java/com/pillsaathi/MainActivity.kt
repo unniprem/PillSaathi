@@ -1,5 +1,6 @@
 package com.pillsaathi
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +20,10 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    // The process may have started before the first unlock, without React Native.
+    (application as MainApplication).ensureReactNativeLoaded()
+    super.onCreate(savedInstanceState)
+  }
 }
