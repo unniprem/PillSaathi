@@ -32,30 +32,43 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const mounted = useRef(true);
   const latest = useRef(0);
   const firstFocus = useRef(true);
 
   const refresh = useCallback(async (reconcile: boolean) => {
     const request = ++latest.current;
-    try {
-      if (reconcile) {
+    if (reconcile) {
+      try {
         await reconcileOnAppOpen();
+      } catch (e) {
+        console.warn('Could not reconcile alarms', e);
       }
-      // The health and setup state feed the Task 8 banner.
-      const [nextAlarms, nextSounds] = await Promise.all([
-        listAlarms(),
-        listSounds(),
-        getHealth(),
-        getSetupState(),
-      ]);
-      if (mounted.current && request === latest.current) {
-        setAlarms(nextAlarms);
-        setSounds(nextSounds);
-        setLoaded(true);
-      }
-    } catch (e) {
-      console.warn('Could not refresh the alarm list', e);
+    }
+    // The health and setup state feed the Task 8 banner; their failure must
+    // never hide the alarms.
+    getHealth().catch(e => console.warn('Could not read health', e));
+    getSetupState().catch(e => console.warn('Could not read setup state', e));
+    const [alarmsResult, soundsResult] = await Promise.allSettled([
+      listAlarms(),
+      listSounds(),
+    ]);
+    if (!mounted.current || request !== latest.current) {
+      return;
+    }
+    if (soundsResult.status === 'fulfilled') {
+      setSounds(soundsResult.value);
+    } else {
+      console.warn('Could not load sounds', soundsResult.reason);
+    }
+    if (alarmsResult.status === 'fulfilled') {
+      setAlarms(alarmsResult.value);
+      setLoadFailed(false);
+      setLoaded(true);
+    } else {
+      console.warn('Could not load alarms', alarmsResult.reason);
+      setLoadFailed(true);
     }
   }, []);
 
@@ -129,7 +142,12 @@ export default function AlarmListScreen({ navigation }: Props) {
           />
         )}
         ListEmptyComponent={
-          loaded ? (
+          loadFailed ? (
+            <Text style={styles.empty}>
+              Couldn't load your alarms. Pull down or reopen the app to try
+              again.
+            </Text>
+          ) : loaded ? (
             <Text style={styles.empty}>No alarms yet. Tap + to add one.</Text>
           ) : undefined
         }

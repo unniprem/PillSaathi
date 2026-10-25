@@ -146,13 +146,18 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
       ).sort((a, b) => a - b),
     }));
 
+  // Runs after a successful save; it never throws, so the user always leaves.
   const finish = async () => {
-    if (!(await getSetupState()).seen) {
-      await markSetupSeen();
-      navigation.replace('Setup');
-    } else {
-      leave();
+    try {
+      if (!(await getSetupState()).seen) {
+        await markSetupSeen();
+        navigation.replace('Setup');
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not check the setup state', e);
     }
+    leave();
   };
 
   const save = async () => {
@@ -169,36 +174,44 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
         name: draft.name.trim() || 'Alarm',
         soundId: draft.soundId,
       });
-      if (!(await getHealth()).exactAlarmAllowed) {
-        Alert.alert(
-          'PillSaathi needs permission to set alarms',
-          'Without it, Android may not ring your alarms on time.',
-          [
-            { text: 'Not now', style: 'cancel', onPress: () => finish() },
-            {
-              text: 'Allow',
-              onPress: () => {
-                openSetting('exactAlarm').catch(e =>
-                  console.warn('Could not open settings', e),
-                );
-                finish();
-              },
-            },
-          ],
-          { cancelable: false },
-        );
-        return;
-      }
-      await finish();
     } catch (e) {
       console.warn('Could not save the alarm', e);
       if (mounted.current) {
         Alert.alert('Could not save the alarm', 'Please try again.');
-      }
-    } finally {
-      if (mounted.current) {
         setSaving(false);
       }
+      return;
+    }
+    // The alarm is saved; whatever happens next, leave the editor.
+    let exactAlarmAllowed = true;
+    try {
+      exactAlarmAllowed = (await getHealth()).exactAlarmAllowed;
+    } catch (e) {
+      console.warn('Could not read health', e);
+    }
+    if (!exactAlarmAllowed) {
+      Alert.alert(
+        'PillSaathi needs permission to set alarms',
+        'Without it, Android may not ring your alarms on time.',
+        [
+          { text: 'Not now', style: 'cancel', onPress: () => finish() },
+          {
+            text: 'Allow',
+            onPress: () => {
+              openSetting('exactAlarm').catch(e =>
+                console.warn('Could not open settings', e),
+              );
+              finish();
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    } else {
+      await finish();
+    }
+    if (mounted.current) {
+      setSaving(false);
     }
   };
 

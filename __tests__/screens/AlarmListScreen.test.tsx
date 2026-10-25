@@ -87,3 +87,35 @@ test('reconciles on open and refreshes health and setup state', async () => {
   expect(alarms.reconcileOnAppOpen).toHaveBeenCalled();
   expect(alarms.getHealth).toHaveBeenCalled();
 });
+
+describe('when a side call fails', () => {
+  let warn: jest.SpyInstance;
+  beforeEach(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => warn.mockRestore());
+
+  test('getHealth rejecting still shows the alarms', async () => {
+    jest.mocked(alarms.listAlarms).mockResolvedValue([alarm]);
+    jest.mocked(alarms.getHealth).mockRejectedValue(new Error('boom'));
+    await renderApp();
+    expect(await screen.findByText('Morning tablet')).toBeTruthy();
+  });
+
+  test('reconcileOnAppOpen rejecting still shows the alarms', async () => {
+    jest.mocked(alarms.listAlarms).mockResolvedValue([alarm]);
+    jest.mocked(alarms.reconcileOnAppOpen).mockRejectedValue(new Error('x'));
+    await renderApp();
+    expect(await screen.findByText('Morning tablet')).toBeTruthy();
+  });
+
+  test('listAlarms rejecting shows an error message', async () => {
+    jest.mocked(alarms.listAlarms).mockRejectedValue(new Error('x'));
+    await renderApp();
+    expect(
+      await screen.findByText(
+        "Couldn't load your alarms. Pull down or reopen the app to try again.",
+      ),
+    ).toBeTruthy();
+  });
+});
