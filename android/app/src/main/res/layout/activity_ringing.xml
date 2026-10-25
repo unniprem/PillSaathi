@@ -44,6 +44,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:background="@drawable/ringing_snooze_bg"
+        android:backgroundTint="@null"
         android:text="@string/action_snooze"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"

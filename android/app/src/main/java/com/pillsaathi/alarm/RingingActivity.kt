@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.WindowManager
+import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
 import com.pillsaathi.R
 import java.util.Date
@@ -26,6 +27,12 @@ class RingingActivity : Activity() {
       )
     }
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    if (Build.VERSION.SDK_INT >= 33) {
+      // Predictive back (target 36) no longer calls onBackPressed; swallow the gesture here.
+      onBackInvokedDispatcher.registerOnBackInvokedCallback(
+        OnBackInvokedDispatcher.PRIORITY_DEFAULT
+      ) {}
+    }
     setContentView(R.layout.activity_ringing)
     findViewById<TextView>(R.id.ringing_snooze).setOnClickListener {
       RingingService.snooze(applicationContext)
@@ -46,7 +53,7 @@ class RingingActivity : Activity() {
     super.onStop()
   }
 
-  // Back must not dismiss the alarm.
+  // Back must not dismiss the alarm (API 24-32; 33+ uses the callback in onCreate).
   @Deprecated("Deprecated in Java")
   override fun onBackPressed() {}
 
