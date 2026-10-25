@@ -35,6 +35,8 @@ export const AlarmErrors = {
   InvalidAlarm: 'INVALID_ALARM',
   NoActivity: 'NO_ACTIVITY',
   NotFound: 'NOT_FOUND',
+  /** The app's storage couldn't be read or written, often because the phone is full. */
+  StorageError: 'STORAGE_ERROR',
 } as const;
 
 function native(): Spec {

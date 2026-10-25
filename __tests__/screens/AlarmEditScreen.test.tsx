@@ -158,6 +158,72 @@ test('Delete asks for confirmation, then deletes', async () => {
   alert.mockRestore();
 });
 
+test('Save cannot be pressed before the alarm being edited has loaded', async () => {
+  let resolveLoad: (list: (typeof existing)[]) => void = () => {};
+  jest.mocked(alarms.listAlarms).mockReturnValueOnce(
+    new Promise(resolve => {
+      resolveLoad = resolve;
+    }),
+  );
+  jest.mocked(alarms.saveAlarm).mockClear();
+  await renderApp('AlarmEdit', { alarmId: 'a1' });
+  await screen.findByText('Save');
+  await save();
+  expect(alarms.saveAlarm).not.toHaveBeenCalled();
+
+  await act(async () => resolveLoad([existing]));
+  expect(await screen.findByText('8:15 AM')).toBeTruthy();
+  await save();
+  expect(alarms.saveAlarm).toHaveBeenCalledWith({
+    id: 'a1',
+    hour: 8,
+    minute: 15,
+    days: [2],
+    name: 'Evening',
+    soundId: null,
+  });
+});
+
+test('a failed load says so and leaves the editor without saving', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.mocked(alarms.listAlarms).mockRejectedValueOnce(new Error('disk'));
+  jest.mocked(alarms.saveAlarm).mockClear();
+  await renderApp('AlarmEdit', { alarmId: 'a1' });
+  await waitFor(() =>
+    expect(alert).toHaveBeenCalledWith("Couldn't load this alarm."),
+  );
+  expect(warn).toHaveBeenCalledWith(
+    'Could not load the alarm',
+    expect.any(Error),
+  );
+  // replace('AlarmList') unmounts the editor.
+  await waitFor(() => expect(screen.queryByText('Save')).toBeNull());
+  expect(alarms.saveAlarm).not.toHaveBeenCalled();
+});
+
+test('a failed delete says so and stays in the editor', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const failure = Object.assign(new Error('disk full'), {
+    code: 'STORAGE_ERROR',
+  });
+  jest.mocked(alarms.deleteAlarm).mockRejectedValueOnce(failure);
+  await renderApp('AlarmEdit', { alarmId: 'a1' });
+  expect(await screen.findByText('8:15 AM')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Delete'));
+  const buttons = alert.mock.calls[0][2]!;
+  await act(async () => {
+    buttons.find(b => b.style === 'destructive')!.onPress!();
+  });
+  expect(alert).toHaveBeenLastCalledWith(
+    'Could not delete the alarm',
+    'Please try again.',
+  );
+  expect(warn).toHaveBeenCalledWith('Could not delete the alarm', failure);
+  expect(screen.getByText('Save')).toBeTruthy();
+});
+
 test('a sound created while picking is named once it is returned', async () => {
   jest.mocked(sounds.listSounds).mockResolvedValueOnce([]);
   await renderApp('AlarmEdit', { pickedSoundId: 's1' });

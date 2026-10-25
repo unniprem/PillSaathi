@@ -13,6 +13,8 @@ export const SoundErrors = {
   Busy: 'BUSY',
   NotFound: 'NOT_FOUND',
   MicPermission: 'MIC_PERMISSION',
+  /** The app's storage couldn't be read or written, often because the phone is full. */
+  StorageError: 'STORAGE_ERROR',
 } as const;
 
 function native(): Spec {

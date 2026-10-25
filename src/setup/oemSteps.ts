@@ -54,7 +54,7 @@ const lockRecents = (): SetupStep => ({
 const BATTERY_STEP: SetupStep = {
   key: 'battery',
   title: 'Allow unrestricted battery use',
-  body: 'Battery saving can delay or stop alarms.',
+  body: "Battery saving can delay or stop alarms. On the next screen, switch to All apps, find PillSaathi and choose Don't optimise.",
   setting: 'batteryOptimization',
   autoDone: 'batteryOptimization',
 };

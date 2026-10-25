@@ -158,6 +158,9 @@ export default function AlarmListScreen({ navigation }: Props) {
       }
     } catch (e) {
       console.warn('Could not change the alarm', e);
+      if (mounted.current) {
+        Alert.alert('Could not change the alarm', 'Please try again.');
+      }
       refresh(false);
     }
   };
@@ -196,8 +199,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         ListEmptyComponent={
           loadFailed ? (
             <Text style={styles.empty}>
-              Couldn't load your alarms. Pull down or reopen the app to try
-              again.
+              Couldn't load your alarms. Reopen the app to try again.
             </Text>
           ) : loaded ? (
             <Text style={styles.empty}>No alarms yet. Tap + to add one.</Text>

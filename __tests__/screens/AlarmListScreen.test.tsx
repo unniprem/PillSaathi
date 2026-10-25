@@ -65,6 +65,31 @@ test('turning the switch off calls setAlarmEnabled(id, false)', async () => {
   expect(alarms.setAlarmEnabled).toHaveBeenCalledWith('a1', false);
 });
 
+test('a switch change that fails says so and shows the stored state', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const failure = Object.assign(new Error('disk full'), {
+    code: 'STORAGE_ERROR',
+  });
+  jest.mocked(alarms.listAlarms).mockResolvedValue([alarm]);
+  jest.mocked(alarms.setAlarmEnabled).mockRejectedValueOnce(failure);
+  await renderApp();
+  const toggle = await screen.findByRole('switch');
+  const loads = jest.mocked(alarms.listAlarms).mock.calls.length;
+  await fireEvent(toggle, 'valueChange', false);
+  expect(alert).toHaveBeenCalledWith(
+    'Could not change the alarm',
+    'Please try again.',
+  );
+  expect(warn).toHaveBeenCalledWith('Could not change the alarm', failure);
+  // The list is re-read, so the switch shows what was really stored.
+  await waitFor(() =>
+    expect(jest.mocked(alarms.listAlarms).mock.calls.length).toBe(loads + 1),
+  );
+  alert.mockRestore();
+  warn.mockRestore();
+});
+
 test('shows the empty state when there are no alarms', async () => {
   await renderApp();
   expect(
@@ -186,7 +211,7 @@ describe('when a side call fails', () => {
     await renderApp();
     expect(
       await screen.findByText(
-        "Couldn't load your alarms. Pull down or reopen the app to try again.",
+        "Couldn't load your alarms. Reopen the app to try again.",
       ),
     ).toBeTruthy();
   });

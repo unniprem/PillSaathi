@@ -48,7 +48,7 @@ test('steps per maker always end with the battery step', () => {
   expect(stepsFor('Google')[0]).toEqual({
     key: 'battery',
     title: 'Allow unrestricted battery use',
-    body: 'Battery saving can delay or stop alarms.',
+    body: "Battery saving can delay or stop alarms. On the next screen, switch to All apps, find PillSaathi and choose Don't optimise.",
     setting: 'batteryOptimization',
     autoDone: 'batteryOptimization',
   });

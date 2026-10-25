@@ -53,6 +53,8 @@ const NEW_ALARM: Draft = {
 export default function AlarmEditScreen({ navigation, route }: Props) {
   const { alarmId, pickedSoundId } = route.params ?? {};
   const [draft, setDraft] = useState<Draft>(NEW_ALARM);
+  // Editing: Save waits for the alarm, or it would overwrite it with the new-alarm defaults.
+  const [loaded, setLoaded] = useState(!alarmId);
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [saving, setSaving] = useState(false);
   const [is24h] = useState(() => is24HourFormat());
@@ -118,8 +120,15 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
           // A sound picked before the alarm loaded wins.
           soundId: d.soundId ?? alarm.soundId,
         }));
+        setLoaded(true);
       })
-      .catch(e => console.warn('Could not load the alarm', e));
+      .catch(e => {
+        console.warn('Could not load the alarm', e);
+        if (mounted.current) {
+          Alert.alert("Couldn't load this alarm.");
+          leave();
+        }
+      });
   }, [alarmId, leave]);
 
   // A child screen returns its pick through the params; apply it, then clear it.
@@ -165,7 +174,7 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
   };
 
   const save = async () => {
-    if (saving) {
+    if (saving || !loaded) {
       return;
     }
     setSaving(true);
@@ -234,6 +243,9 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
             leave();
           } catch (e) {
             console.warn('Could not delete the alarm', e);
+            if (mounted.current) {
+              Alert.alert('Could not delete the alarm', 'Please try again.');
+            }
           }
         },
       },
@@ -286,8 +298,8 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
       <Pressable
         accessibilityRole="button"
         onPress={save}
-        disabled={saving}
-        style={styles.save}
+        disabled={saving || !loaded}
+        style={[styles.save, !loaded && styles.saveDisabled]}
       >
         <Text style={styles.saveText}>Save</Text>
       </Pressable>
@@ -340,6 +352,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'center',
   },
+  saveDisabled: { opacity: 0.5 },
   saveText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
   delete: { marginTop: spacing.md, padding: spacing.md, alignItems: 'center' },
   deleteText: { color: colors.danger, fontSize: 18 },
