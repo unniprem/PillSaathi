@@ -4,33 +4,41 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Small text files in [dir], safe to share between the app's processes. Every read comes from
  * disk, writes replace a file atomically, and [locked] serialises access across threads and
- * processes. Plain JVM, so it can be unit tested.
+ * processes. Plain JVM, so it can be unit tested; problems with the lock go to [warn].
  */
-class FileStore(private val dir: File) {
+class FileStore(
+  private val dir: File,
+  private val lockTimeoutMs: Long = DEFAULT_LOCK_TIMEOUT_MS,
+  private val warn: (String, Throwable?) -> Unit = { _, _ -> },
+) {
   private val threadLock = lockFor(dir)
 
   /**
    * Runs [block] holding the store lock: an in-process lock shared by every [FileStore] over [dir],
    * plus a file lock on `store.lock` that other processes respect. Re-entrant; the file lock is
    * only taken by the outermost call, because a second one in the same JVM would throw.
+   *
+   * The file lock is waited for at most [lockTimeoutMs]. If another process keeps it longer (it may
+   * be frozen or stuck) or it can't be taken at all, [block] runs with only the in-process lock:
+   * an alarm must still ring, at the risk of losing a concurrent update. Files stay whole either
+   * way, because every [write] goes through its own temporary file.
    */
   fun <T> locked(block: () -> T): T {
     threadLock.lock()
     try {
       if (threadLock.holdCount > 1) return block()
-      dir.mkdirs()
-      RandomAccessFile(File(dir, LOCK_FILE), "rw").use { file ->
-        val fileLock = file.channel.lock()
-        try {
-          return block()
-        } finally {
-          fileLock.release()
-        }
+      val held = acquireFileLock()
+      try {
+        return block()
+      } finally {
+        held?.let(::release)
       }
     } finally {
       threadLock.unlock()
@@ -51,14 +59,18 @@ class FileStore(private val dir: File) {
         if (file.exists() && !file.delete()) throw IOException("Could not delete $name")
         return@locked
       }
-      val tmp = File(dir, "$name.tmp")
-      FileOutputStream(tmp).use { out ->
-        out.write(content.toByteArray())
-        out.fd.sync()
-      }
-      if (!tmp.renameTo(file)) {
-        tmp.delete()
-        throw IOException("Could not replace $name")
+      // Never a shared "<name>.tmp": a writer that lost the lock may still be writing to that one.
+      val tmp = File.createTempFile("$name.", ".tmp", dir)
+      var replaced = false
+      try {
+        FileOutputStream(tmp).use { out ->
+          out.write(content.toByteArray())
+          out.fd.sync()
+        }
+        replaced = tmp.renameTo(file)
+        if (!replaced) throw IOException("Could not replace $name")
+      } finally {
+        if (!replaced) tmp.delete()
       }
     }
   }
@@ -82,11 +94,63 @@ class FileStore(private val dir: File) {
     }
   }
 
-  private companion object {
-    const val LOCK_FILE = "store.lock"
-    val threadLocks = HashMap<String, ReentrantLock>()
+  /** Takes the cross-process lock, trying every [POLL_MS] for up to [lockTimeoutMs]. */
+  private fun acquireFileLock(): HeldLock? {
+    val started = System.nanoTime()
+    var file: RandomAccessFile? = null
+    try {
+      dir.mkdirs()
+      val opened = RandomAccessFile(File(dir, LOCK_FILE), "rw")
+      file = opened
+      while (true) {
+        val lock = opened.channel.tryLock()
+        if (lock != null) return HeldLock(opened, lock)
+        if (elapsedMs(started) >= lockTimeoutMs) break
+        Thread.sleep(POLL_MS)
+      }
+      warn("Store lock held elsewhere for ${elapsedMs(started)} ms; going on without it", null)
+    } catch (e: IOException) {
+      warn("Store lock unavailable after ${elapsedMs(started)} ms; going on without it", e)
+    } catch (e: OverlappingFileLockException) {
+      warn("Store lock unavailable after ${elapsedMs(started)} ms; going on without it", e)
+    } catch (e: InterruptedException) {
+      Thread.currentThread().interrupt()
+      warn("Interrupted after ${elapsedMs(started)} ms waiting for the store lock; going on", e)
+    }
+    try {
+      file?.close()
+    } catch (e: IOException) {
+      warn("Could not close the store lock file", e)
+    }
+    return null
+  }
 
-    fun lockFor(dir: File): ReentrantLock {
+  private fun release(held: HeldLock) {
+    try {
+      held.lock.release()
+    } catch (e: IOException) {
+      warn("Could not release the store lock; closing its file releases it", e)
+    } finally {
+      try {
+        held.file.close()
+      } catch (e: IOException) {
+        warn("Could not close the store lock file", e)
+      }
+    }
+  }
+
+  private class HeldLock(val file: RandomAccessFile, val lock: FileLock)
+
+  private fun elapsedMs(startedNanos: Long): Long = (System.nanoTime() - startedNanos) / 1_000_000
+
+  companion object {
+    /** How long to wait for another process to release the store before going on without it. */
+    const val DEFAULT_LOCK_TIMEOUT_MS = 3_000L
+    private const val POLL_MS = 25L
+    private const val LOCK_FILE = "store.lock"
+    private val threadLocks = HashMap<String, ReentrantLock>()
+
+    private fun lockFor(dir: File): ReentrantLock {
       val key =
         try {
           dir.canonicalPath

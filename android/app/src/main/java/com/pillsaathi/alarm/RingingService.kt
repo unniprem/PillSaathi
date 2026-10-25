@@ -119,8 +119,9 @@ class RingingService : Service() {
     handler.removeCallbacks(autoSilence)
     silence()
     abandonOwed()
-    RingingState.update(null)
+    // Marker first, so the main process never sees it after the ringing screen has closed.
     saveMarker(null)
+    RingingState.update(null)
     super.onDestroy()
   }
 
@@ -179,15 +180,21 @@ class RingingService : Service() {
 
   /** Starts ringing [alarmId] if it still exists and is on. */
   private fun startRingFor(alarmId: String): Boolean {
-    val alarm = engine.alarms().firstOrNull { it.id == alarmId && it.enabled }
-    if (alarm == null) {
+    // One store lock for all three reads, so a stuck lock delays startForeground once, not 3 times.
+    val found =
+      engine.store.locked {
+        engine.alarms().firstOrNull { it.id == alarmId && it.enabled }?.let { alarm ->
+          Triple(alarm, engine.soundNameFor(alarm), engine.soundFileFor(alarm))
+        }
+      }
+    if (found == null) {
       Log.i(LOG_TAG, "Not ringing $alarmId: it is gone or off")
       owed.remove(alarmId)
       return false
     }
-    val ring =
-      RingingState.Ring(alarm.id, alarm.name, engine.soundNameFor(alarm), System.currentTimeMillis())
-    startRing(ring, engine.soundFileFor(alarm))
+    val (alarm, soundName, soundFile) = found
+    val ring = RingingState.Ring(alarm.id, alarm.name, soundName, System.currentTimeMillis())
+    startRing(ring, soundFile)
     return true
   }
 
@@ -214,8 +221,8 @@ class RingingService : Service() {
   private fun finish() {
     silence()
     queue.clear()
-    RingingState.update(null)
     saveMarker(null)
+    RingingState.update(null)
     ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
     // Only stops if no newer command has arrived, so a ring that is on its way isn't lost.
     stopSelfResult(lastStartId)

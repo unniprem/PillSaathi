@@ -1,7 +1,9 @@
 package com.pillsaathi
 
+import android.app.ActivityManager
 import android.app.Application
 import android.os.Build
+import android.os.Process
 import android.util.Log
 import androidx.core.os.UserManagerCompat
 import com.facebook.react.PackageList
@@ -56,9 +58,21 @@ class MainApplication : Application(), ReactApplication {
       try {
         File("/proc/self/cmdline").readText().substringBefore('\u0000').trim()
       } catch (e: Exception) {
-        Log.e(LOG_TAG, "Could not read the process name", e)
-        ""
+        Log.e(LOG_TAG, "Could not read /proc/self/cmdline; asking ActivityManager", e)
+        processNameFromActivityManager()
       }
+    }
+
+  private fun processNameFromActivityManager(): String =
+    try {
+      getSystemService(ActivityManager::class.java)
+        ?.runningAppProcesses
+        ?.firstOrNull { it.pid == Process.myPid() }
+        ?.processName
+        .orEmpty()
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not read the process name", e)
+      ""
     }
 
   private companion object {

@@ -13,11 +13,13 @@ import java.io.IOException
  */
 class AlarmStore(context: Context) {
   private val storage: Context = context.createDeviceProtectedStorageContext()
-  private val files = FileStore(File(storage.filesDir, STORE_DIR))
+  private val files =
+    FileStore(File(storage.filesDir, STORE_DIR)) { message, e -> Log.w(LOG_TAG, message, e) }
 
   /**
    * Runs [block] under the store lock, which every thread and process of the app shares. All
-   * read-modify-write goes through here.
+   * read-modify-write goes through here. Another process gets at most
+   * [FileStore.DEFAULT_LOCK_TIMEOUT_MS] to let go, so a stuck process can't stop an alarm.
    */
   fun <T> locked(block: () -> T): T = files.locked(block)
 

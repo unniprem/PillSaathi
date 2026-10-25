@@ -1,11 +1,13 @@
 package com.pillsaathi.alarm
 
 import java.io.File
+import java.io.RandomAccessFile
 import java.util.Collections
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -73,14 +75,7 @@ class FileStoreTest {
   @Test(timeout = 120_000)
   fun concurrentIncrementsFromTwoProcesses_areSerialised() {
     store.write(COUNTER, "0")
-    val java = File(System.getProperty("java.home"), "bin/java").path
-    val classpath = System.getProperty("java.class.path")
-    val children =
-      (1..2).map {
-        ProcessBuilder(java, "-cp", classpath, Incrementer::class.java.name, dir.path, "300")
-          .redirectErrorStream(true)
-          .start()
-      }
+    val children = (1..2).map { startChild(Incrementer::class.java, dir.path, "300") }
     // Meanwhile this process increments too, so the in-process lock alone can't serialise them.
     repeat(100) { store.locked { increment(store) } }
     children.forEach { child ->
@@ -125,6 +120,97 @@ class FileStoreTest {
     assertEquals(emptyList<Alarm>(), alarms)
     assertFalse(corrupt)
     assertTrue(File(dir, "alarms.json").exists())
+  }
+
+  @Test(timeout = 60_000)
+  fun locked_proceedsAfterDeadline_whenAnotherProcessHoldsLock() {
+    val warnings = Collections.synchronizedList(mutableListOf<String>())
+    val impatient = FileStore(dir, lockTimeoutMs = 300) { message, _ -> warnings.add(message) }
+    val holder = startChild(LockHolder::class.java, dir.path, "3000")
+    val output = holder.inputStream.bufferedReader()
+    assertEquals("child did not take the lock", "locked", output.readLine())
+
+    val started = System.nanoTime()
+    val result = impatient.locked { impatient.write("alarms.json", "[]").let { "ran" } }
+    val elapsedMs = (System.nanoTime() - started) / 1_000_000
+
+    assertEquals("ran", result)
+    assertTrue("gave up too early: $elapsedMs ms", elapsedMs >= 300)
+    assertTrue("waited for the holder: $elapsedMs ms", elapsedMs < 2_000)
+    assertEquals("[]", File(dir, "alarms.json").readText())
+    assertEquals(1, warnings.size)
+    assertTrue(warnings.single(), warnings.single().contains(" ms"))
+    assertEquals(0, holder.waitFor())
+  }
+
+  @Test(timeout = 10_000)
+  fun locked_runsBlock_whenLockFileCannotBeOpened() {
+    val warnings = Collections.synchronizedList(mutableListOf<String>())
+    val unlockable = FileStore(dir) { message, _ -> warnings.add(message) }
+    assertTrue(File(dir, "store.lock").mkdir())
+
+    val result = unlockable.locked { unlockable.write("alarms.json", "[1]").let { 42 } }
+
+    assertEquals(42, result)
+    assertEquals("[1]", File(dir, "alarms.json").readText())
+    assertEquals(1, warnings.size)
+  }
+
+  @Test(timeout = 30_000)
+  fun locked_releasesLock_whenBlockThrows() {
+    try {
+      store.locked { throw IllegalStateException("boom") }
+      fail("the block's exception should propagate")
+    } catch (e: IllegalStateException) {
+      assertEquals("boom", e.message)
+    }
+    // A lock leaked by this JVM would still block another process (POSIX locks are per process).
+    val probe = startChild(LockProbe::class.java, dir.path)
+    val output = probe.inputStream.bufferedReader().readText()
+    assertEquals("lock still held: $output", 0, probe.waitFor())
+  }
+
+  @Test
+  fun write_usesOwnTempFile_soAStaleTmpIsNeverTheTarget() {
+    // A writer that lost the lock mid-write may still hold "<name>.tmp" open; never reuse it.
+    File(dir, "alarms.json.tmp").writeText("other writer")
+    store.write("alarms.json", "[2]")
+    assertEquals("[2]", store.read("alarms.json"))
+    assertEquals("other writer", File(dir, "alarms.json.tmp").readText())
+  }
+
+  private fun startChild(main: Class<*>, vararg args: String): Process {
+    val java = File(System.getProperty("java.home"), "bin/java").path
+    val classpath = System.getProperty("java.class.path")
+    return ProcessBuilder(listOf(java, "-cp", classpath, main.name) + args)
+      .redirectErrorStream(true)
+      .start()
+  }
+
+  /** Child JVM: holds the store's file lock for `args[1]` ms. */
+  object LockHolder {
+    @JvmStatic
+    fun main(args: Array<String>) {
+      RandomAccessFile(File(args[0], "store.lock"), "rw").use { file ->
+        val lock = file.channel.lock()
+        println("locked")
+        System.out.flush()
+        Thread.sleep(args[1].toLong())
+        lock.release()
+      }
+    }
+  }
+
+  /** Child JVM: exits 0 if the store's file lock is free right now, 2 if another process has it. */
+  object LockProbe {
+    @JvmStatic
+    fun main(args: Array<String>) {
+      RandomAccessFile(File(args[0], "store.lock"), "rw").use { file ->
+        val lock = file.channel.tryLock()
+        lock?.release()
+        System.exit(if (lock != null) 0 else 2)
+      }
+    }
   }
 
   /** Run in a child JVM by [concurrentIncrementsFromTwoProcesses_areSerialised]. */
