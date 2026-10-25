@@ -1,6 +1,7 @@
 package com.pillsaathi.alarm
 
 import android.content.Context
+import android.util.Log
 import com.pillsaathi.R
 import java.io.File
 import java.time.ZoneId
@@ -8,7 +9,7 @@ import java.util.UUID
 
 internal const val LOG_TAG = "PillSaathiAlarm"
 
-enum class ReconcileTrigger { BOOT, CLOCK_CHANGED, APP_OPEN, PERMISSION_CHANGED }
+enum class ReconcileTrigger { BOOT, CLOCK_CHANGED, APP_OPEN, PERMISSION_CHANGED, RECOVERY }
 
 /**
  * The one entry point for changing alarms. Receivers, the ringing service and the React Native
@@ -63,6 +64,7 @@ class AlarmEngine private constructor(context: Context) {
         else AlarmRules.disarmed(alarm)
       store.saveAlarms(alarms.replace(next))
       scheduler.sync(next)
+      if (!enabled) scheduler.cancelRecovery(id)
       next
     }
     if (!enabled) RingingService.stopIfRinging(context, id)
@@ -72,6 +74,7 @@ class AlarmEngine private constructor(context: Context) {
   fun delete(id: String) {
     store.locked {
       scheduler.cancel(id)
+      scheduler.cancelRecovery(id)
       store.saveAlarms(store.loadAlarms().filterNot { it.id == id })
     }
     RingingService.stopIfRinging(context, id)
@@ -88,17 +91,48 @@ class AlarmEngine private constructor(context: Context) {
     return missed
   }
 
-  /** Records that [id] fired. Returns null if it no longer exists or is off, so it must not ring. */
-  fun onFired(id: String): Alarm? = store.locked {
-    val alarms = store.loadAlarms()
-    val alarm = alarms.firstOrNull { it.id == id && it.enabled } ?: return@locked null
-    val fired = AlarmRules.fired(alarm, System.currentTimeMillis())
-    store.saveAlarms(alarms.replace(fired))
-    fired
+  /**
+   * Handles an AlarmManager delivery for [id]. Returns the alarm to ring, or null when it must not
+   * ring: it is gone, the delivery is stale ([FireDecision.STALE]), or it came too late and is
+   * reported as missed instead ([FireDecision.MISSED]).
+   */
+  fun onFired(id: String): Alarm? {
+    val (ring, missed) = store.locked<Pair<Alarm?, MissedAlarm?>> {
+      val alarms = store.loadAlarms()
+      val alarm = alarms.firstOrNull { it.id == id }
+      if (alarm == null) {
+        Log.i(LOG_TAG, "Fire $id: alarm is gone")
+        return@locked null to null
+      }
+      val now = System.currentTimeMillis()
+      val decision = AlarmRules.fireDecision(alarm, now)
+      Log.i(LOG_TAG, "Fire $id: $decision")
+      when (decision) {
+        FireDecision.STALE -> {
+          scheduler.sync(alarm)
+          null to null
+        }
+        FireDecision.MISSED -> {
+          val ended = AlarmRules.ringEnded(alarm, now, zone())
+          store.saveAlarms(alarms.replace(ended))
+          scheduler.sync(ended)
+          null to AlarmRules.dueAt(alarm)?.let { MissedAlarm(alarm.id, alarm.name, it) }
+        }
+        FireDecision.RING -> {
+          val fired = AlarmRules.fired(alarm, now)
+          store.saveAlarms(alarms.replace(fired))
+          scheduler.scheduleRecovery(fired.id, AlarmRules.recoveryAt(now))
+          fired to null
+        }
+      }
+    }
+    missed?.let { Notifications.postMissed(context, it) }
+    return ring
   }
 
   fun onRingEnded(id: String, autoSilenced: Boolean) {
     val missed = store.locked {
+      scheduler.cancelRecovery(id)
       val alarms = store.loadAlarms()
       // Deleted or switched off while ringing: it has already been cancelled.
       val alarm = alarms.firstOrNull { it.id == id && it.enabled } ?: return@locked null
@@ -113,6 +147,7 @@ class AlarmEngine private constructor(context: Context) {
 
   fun onSnoozed(id: String) {
     store.locked {
+      scheduler.cancelRecovery(id)
       val alarms = store.loadAlarms()
       val alarm = alarms.firstOrNull { it.id == id && it.enabled } ?: return@locked
       val snoozed = AlarmRules.snoozed(alarm, System.currentTimeMillis())

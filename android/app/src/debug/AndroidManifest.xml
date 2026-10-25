@@ -12,6 +12,7 @@
             <action android:name="com.pillsaathi.DEBUG_STOP" />
             <action android:name="com.pillsaathi.DEBUG_SNOOZE" />
             <action android:name="com.pillsaathi.DEBUG_AUTO_SILENCE_MS" />
+            <action android:name="com.pillsaathi.DEBUG_STOP_SERVICE" />
         </intent-filter>
       </receiver>
     </application>

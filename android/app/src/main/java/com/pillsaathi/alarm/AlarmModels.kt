@@ -33,3 +33,6 @@ data class MissedAlarm(val id: String, val name: String, val dueAt: Long)
 data class ReconcileResult(val alarms: List<Alarm>, val missed: List<MissedAlarm>)
 
 data class SetupState(val seen: Boolean, val doneSteps: Set<String>)
+
+/** What to do with an AlarmManager delivery: ring it, ignore it, or report it as missed. */
+enum class FireDecision { RING, STALE, MISSED }

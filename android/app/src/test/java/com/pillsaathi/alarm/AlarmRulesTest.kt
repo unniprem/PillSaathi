@@ -166,4 +166,64 @@ class AlarmRulesTest {
     assertEquals(listOf(a), r.alarms)
     assertTrue(r.missed.isEmpty())
   }
+
+  @Test fun fireDecision_onTime_rings() =
+    assertEquals(
+      FireDecision.RING,
+      AlarmRules.fireDecision(alarm(next = at(2026, 10, 25, 7, 0)), at(2026, 10, 25, 7, 0, 5)),
+    )
+
+  @Test fun fireDecision_clockJumpedPastGrace_missed() =
+    assertEquals(
+      FireDecision.MISSED,
+      AlarmRules.fireDecision(alarm(next = at(2026, 10, 25, 7, 0)), at(2026, 10, 25, 7, 5)),
+    )
+
+  @Test fun fireDecision_dueAdvancedAfterStop_stale() =
+    assertEquals(
+      FireDecision.STALE,
+      AlarmRules.fireDecision(
+        alarm(WEEKDAYS, next = at(2026, 10, 27, 7, 0), lastFired = at(2026, 10, 26, 7, 0, 1)),
+        at(2026, 10, 26, 7, 0, 10),
+      ),
+    )
+
+  @Test fun fireDecision_disabled_stale() =
+    assertEquals(
+      FireDecision.STALE,
+      AlarmRules.fireDecision(
+        alarm(enabled = false, next = at(2026, 10, 25, 7, 0)),
+        at(2026, 10, 25, 7, 0, 5),
+      ),
+    )
+
+  @Test fun fireDecision_refireWhileRinging_rings() =
+    assertEquals(
+      FireDecision.RING,
+      AlarmRules.fireDecision(
+        alarm(next = at(2026, 10, 25, 7, 0), lastFired = at(2026, 10, 25, 7, 0, 1)),
+        at(2026, 10, 25, 7, 3),
+      ),
+    )
+
+  @Test fun fireDecision_snoozeDue_rings() =
+    assertEquals(
+      FireDecision.RING,
+      AlarmRules.fireDecision(
+        alarm(
+          next = at(2026, 10, 25, 7, 0),
+          snooze = at(2026, 10, 25, 7, 10, 2),
+          lastFired = at(2026, 10, 25, 7, 0, 1),
+        ),
+        at(2026, 10, 25, 7, 10, 2),
+      ),
+    )
+
+  @Test fun recoveryAt_reconcileThenEndsStuckRing() {
+    val fired = at(2026, 10, 26, 7, 0, 1)
+    val a = alarm(WEEKDAYS, next = at(2026, 10, 26, 7, 0), lastFired = fired)
+    val r = AlarmRules.reconcile(listOf(a), AlarmRules.recoveryAt(fired), IST)
+    assertEquals(at(2026, 10, 27, 7, 0), r.alarms[0].nextTriggerAt)
+    assertTrue(r.missed.isEmpty())
+  }
 }

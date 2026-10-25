@@ -59,6 +59,13 @@ class RingingService : Service() {
 
   private val handler = Handler(Looper.getMainLooper())
   private val queue = ArrayDeque<String>()
+
+  /**
+   * Alarms this service has taken on (ringing or queued) whose ring hasn't been recorded as ended.
+   * If the service fails or is destroyed with any left, they are recorded as missed, so the next
+   * occurrence is still scheduled.
+   */
+  private val owed = LinkedHashSet<String>()
   private val autoSilence = Runnable {
     guarded("auto-silence", null) { endCurrent { engine.onRingEnded(it, true) } }
   }
@@ -96,11 +103,13 @@ class RingingService : Service() {
   override fun onDestroy() {
     handler.removeCallbacks(autoSilence)
     silence()
+    abandonOwed()
     RingingState.update(null)
     super.onDestroy()
   }
 
   private fun onRing(alarmId: String?) {
+    alarmId?.let { owed.add(it) }
     val current = RingingState.current
     if (current != null) {
       // Every startForegroundService call needs its own startForeground.
@@ -117,6 +126,7 @@ class RingingService : Service() {
   }
 
   private fun onDismiss(alarmId: String?) {
+    alarmId?.let { owed.remove(it) }
     if (alarmId != null && RingingState.current?.alarmId == alarmId) {
       silence()
       ringNextOrFinish()
@@ -134,6 +144,7 @@ class RingingService : Service() {
       return
     }
     silence()
+    owed.remove(ring.alarmId)
     try {
       record(ring.alarmId)
     } catch (e: Exception) {
@@ -154,6 +165,7 @@ class RingingService : Service() {
     val alarm = engine.alarms().firstOrNull { it.id == alarmId && it.enabled }
     if (alarm == null) {
       Log.i(LOG_TAG, "Not ringing $alarmId: it is gone or off")
+      owed.remove(alarmId)
       return false
     }
     val ring =
@@ -166,10 +178,11 @@ class RingingService : Service() {
     ringing = true
     RingingState.update(ring)
     goForeground(ring)
-    player.start(sound)
-    vibrator.start()
+    // Arm auto-silence before anything that touches audio, so a ring can never run forever.
     handler.removeCallbacks(autoSilence)
     handler.postDelayed(autoSilence, DebugHooks.autoSilenceMsOverride ?: AlarmRules.AUTO_SILENCE_MS)
+    vibrator.start()
+    player.start(sound)
     Log.i(LOG_TAG, "Ringing ${ring.alarmId} (${ring.name}), ${queue.size} queued")
   }
 
@@ -187,6 +200,20 @@ class RingingService : Service() {
     ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
     // Only stops if no newer command has arrived, so a ring that is on its way isn't lost.
     stopSelfResult(lastStartId)
+  }
+
+  /** Records every ring still owed as missed (auto-silenced), which also schedules what's next. */
+  private fun abandonOwed() {
+    val ids = owed.toList()
+    owed.clear()
+    ids.forEach { id ->
+      Log.w(LOG_TAG, "Ring of $id ended abnormally; recording it as missed")
+      try {
+        engine.onRingEnded(id, autoSilenced = true)
+      } catch (e: Exception) {
+        Log.e(LOG_TAG, "Could not record $id as missed", e)
+      }
+    }
   }
 
   private fun goForeground(ring: RingingState.Ring) {
@@ -220,6 +247,7 @@ class RingingService : Service() {
       Log.e(LOG_TAG, "RingingService failed handling $action", e)
       if (!ringing) {
         if (action == ACTION_RING) goForeground(placeholderRing(alarmId))
+        abandonOwed()
         finish()
       }
     }

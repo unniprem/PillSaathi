@@ -55,7 +55,13 @@ class AlarmPlayer(context: Context) {
 
   private fun tryStart(index: Int): MediaPlayer? {
     val source = sources[index]
-    val mp = MediaPlayer()
+    val mp =
+      try {
+        MediaPlayer()
+      } catch (e: Exception) {
+        Log.w(LOG_TAG, "Could not create a player for ${source.label}", e)
+        return null
+      }
     return try {
       mp.setAudioAttributes(
         AudioAttributes.Builder()
@@ -67,11 +73,15 @@ class AlarmPlayer(context: Context) {
       setDataSource(mp, source)
       mp.isLooping = true
       mp.setOnErrorListener { failed, what, extra ->
-        if (failed === player) {
-          Log.w(LOG_TAG, "Playback error ($what, $extra) on ${source.label}; trying the next sound")
-          failed.release()
-          player = null
-          playFrom(index + 1)
+        try {
+          if (failed === player) {
+            Log.w(LOG_TAG, "Playback error ($what, $extra) on ${source.label}; trying the next sound")
+            player = null
+            failed.release()
+            playFrom(index + 1)
+          }
+        } catch (e: Exception) {
+          Log.e(LOG_TAG, "Could not move on from ${source.label}", e)
         }
         true
       }

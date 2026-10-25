@@ -50,6 +50,9 @@ class DebugAlarmReceiver : BroadcastReceiver() {
       }
       "com.pillsaathi.DEBUG_STOP" -> RingingService.stop(context)
       "com.pillsaathi.DEBUG_SNOOZE" -> RingingService.snooze(context)
+      // Simulates the system destroying RingingService mid-ring.
+      "com.pillsaathi.DEBUG_STOP_SERVICE" ->
+        context.stopService(Intent(context, RingingService::class.java))
       "com.pillsaathi.DEBUG_AUTO_SILENCE_MS" -> {
         DebugHooks.autoSilenceMsOverride = intent.getLongExtra("ms", -1L).takeIf { it > 0 }
         Log.i(LOG_TAG, "autoSilenceMsOverride=${DebugHooks.autoSilenceMsOverride}")

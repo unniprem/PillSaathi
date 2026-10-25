@@ -10,6 +10,9 @@ object AlarmRules {
   const val AUTO_SILENCE_MS = 600_000L
   const val MISSED_GRACE_MS = 120_000L
 
+  /** A delivery may arrive this much before its due time and still ring. */
+  const val EARLY_FIRE_TOLERANCE_MS = 60_000L
+
   /** First matching time strictly after [afterMillis]. Empty [days] means any day. */
   fun nextTrigger(hour: Int, minute: Int, days: Set<Int>, afterMillis: Long, zone: ZoneId): Long {
     val startDate = Instant.ofEpochMilli(afterMillis).atZone(zone).toLocalDate()
@@ -55,6 +58,23 @@ object AlarmRules {
     val last = alarm.lastFiredAt
     return due < now - MISSED_GRACE_MS && (last == null || last < due)
   }
+
+  /**
+   * Decides whether a delivery for [alarm] at [now] should ring. A delivery for an alarm that is
+   * off or has moved on is stale, and one that arrives past the grace period is missed, never
+   * rung late. A re-fire of a ring already under way still rings; the service ignores duplicates.
+   */
+  fun fireDecision(alarm: Alarm, now: Long): FireDecision {
+    val due = dueAt(alarm) ?: return FireDecision.STALE
+    return when {
+      due > now + EARLY_FIRE_TOLERANCE_MS -> FireDecision.STALE
+      isMissed(alarm, now) -> FireDecision.MISSED
+      else -> FireDecision.RING
+    }
+  }
+
+  /** When to reconcile a ring fired at [firedAt]: just after [reconcile] treats it as stuck. */
+  fun recoveryAt(firedAt: Long): Long = firedAt + AUTO_SILENCE_MS + MISSED_GRACE_MS + 60_000L
 
   fun reconcile(alarms: List<Alarm>, now: Long, zone: ZoneId): ReconcileResult {
     val missed = mutableListOf<MissedAlarm>()
