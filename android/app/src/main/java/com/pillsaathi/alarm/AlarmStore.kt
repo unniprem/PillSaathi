@@ -1,71 +1,71 @@
 package com.pillsaathi.alarm
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import java.io.File
+import java.io.IOException
 
 /**
  * Alarm, sound and setup data, kept in device-protected storage so alarms can ring before the
- * first unlock after a reboot.
+ * first unlock after a reboot. Shared by the main and `:ringing` processes: each value is a JSON
+ * file under `store/`, read fresh from disk every time, so one process always sees the other's
+ * writes.
  */
 class AlarmStore(context: Context) {
   private val storage: Context = context.createDeviceProtectedStorageContext()
-  private val prefs: SharedPreferences =
-    storage.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+  private val files = FileStore(File(storage.filesDir, STORE_DIR))
 
-  /** Runs [block] under the one process-wide store lock. All read-modify-write goes through here. */
-  fun <T> locked(block: () -> T): T = synchronized(LOCK) { block() }
+  /**
+   * Runs [block] under the store lock, which every thread and process of the app shares. All
+   * read-modify-write goes through here.
+   */
+  fun <T> locked(block: () -> T): T = files.locked(block)
 
-  fun loadAlarms(): List<Alarm> = load(KEY_ALARMS, emptyList(), AlarmJson::alarmsFromJson)
+  fun loadAlarms(): List<Alarm> = load(ALARMS, emptyList(), AlarmJson::alarmsFromJson)
 
-  fun saveAlarms(alarms: List<Alarm>) = save(KEY_ALARMS, AlarmJson.alarmsToJson(alarms))
+  fun saveAlarms(alarms: List<Alarm>) = save(ALARMS, AlarmJson.alarmsToJson(alarms))
 
-  fun loadSounds(): List<Sound> = load(KEY_SOUNDS, emptyList(), AlarmJson::soundsFromJson)
+  fun loadSounds(): List<Sound> = load(SOUNDS, emptyList(), AlarmJson::soundsFromJson)
 
-  fun saveSounds(sounds: List<Sound>) = save(KEY_SOUNDS, AlarmJson.soundsToJson(sounds))
+  fun saveSounds(sounds: List<Sound>) = save(SOUNDS, AlarmJson.soundsToJson(sounds))
 
   fun loadSetup(): SetupState =
-    load(KEY_SETUP, SetupState(seen = false, doneSteps = emptySet()), AlarmJson::setupFromJson)
+    load(SETUP, SetupState(seen = false, doneSteps = emptySet()), AlarmJson::setupFromJson)
 
-  fun saveSetup(state: SetupState) = save(KEY_SETUP, AlarmJson.setupToJson(state))
+  fun saveSetup(state: SetupState) = save(SETUP, AlarmJson.setupToJson(state))
+
+  /** What the `:ringing` process is ringing, or null. A crashed process can leave a stale one. */
+  fun loadRingingMarker(): RingingMarker? = load(RINGING, null, AlarmJson::ringingMarkerFromJson)
+
+  fun saveRingingMarker(m: RingingMarker?) = save(RINGING, m?.let(AlarmJson::ringingMarkerToJson))
 
   val soundsDir: File
     get() = File(storage.filesDir, SOUNDS_DIR).apply { mkdirs() }
 
   /**
-   * Parses [key], or returns [empty] if the stored value can't be read. Unreadable data is moved
-   * to a `<key>_corrupt_<epochMs>` backup first, so a later save never destroys it.
+   * Parses [name], or returns [empty] if the stored value can't be read. Unreadable data is moved
+   * to a `<name>.corrupt-<epochMs>` backup first, so a later save never destroys it.
    */
-  private fun <T> load(key: String, empty: T, parse: (String?) -> T): T = locked {
-    try {
-      parse(prefs.getString(key, null))
-    } catch (e: Exception) {
-      Log.e(LOG_TAG, "Stored $key is unreadable; backing it up and starting empty", e)
-      backUpCorrupt(key)
+  private fun <T> load(name: String, empty: T, parse: (String?) -> T): T =
+    files.readParsed(name, parse) { e ->
+      Log.e(LOG_TAG, "Stored $name is unreadable; backed it up and starting empty", e)
       empty
     }
-  }
 
-  private fun backUpCorrupt(key: String) {
-    val raw = prefs.all[key]?.toString()
-    val editor = prefs.edit().remove(key)
-    if (raw != null) editor.putString("${key}_corrupt_${System.currentTimeMillis()}", raw)
-    if (!editor.commit()) Log.e(LOG_TAG, "Could not back up unreadable $key")
-  }
-
-  private fun save(key: String, json: String) {
-    locked {
-      if (!prefs.edit().putString(key, json).commit()) Log.e(LOG_TAG, "Could not write $key")
+  private fun save(name: String, json: String?) {
+    try {
+      files.write(name, json)
+    } catch (e: IOException) {
+      Log.e(LOG_TAG, "Could not write $name", e)
     }
   }
 
   private companion object {
-    const val PREFS_NAME = "pillsaathi_store"
-    const val KEY_ALARMS = "alarms"
-    const val KEY_SOUNDS = "sounds"
-    const val KEY_SETUP = "setup"
+    const val STORE_DIR = "store"
+    const val ALARMS = "alarms.json"
+    const val SOUNDS = "sounds.json"
+    const val SETUP = "setup.json"
+    const val RINGING = "ringing.json"
     const val SOUNDS_DIR = "sounds"
-    val LOCK = Any()
   }
 }

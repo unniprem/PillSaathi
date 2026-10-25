@@ -17,7 +17,8 @@ import java.io.File
 /**
  * Foreground service that rings one alarm at a time: sound, vibration and the ongoing
  * notification. Alarms that fire meanwhile wait in a queue. Everything runs on the main thread
- * and nothing here depends on React Native.
+ * and nothing here depends on React Native. It runs in the `:ringing` process, so a crash in the
+ * React Native process can't silence a ring; [RingingState] therefore only has meaning there.
  */
 class RingingService : Service() {
 
@@ -35,18 +36,32 @@ class RingingService : Service() {
       )
     }
 
+    /** Stops the current ring. Call only from the `:ringing` process (ringing screen, debug). */
     fun stop(context: Context) = command(context, intent(context, ACTION_STOP))
 
+    /** Snoozes the current ring. Call only from the `:ringing` process (ringing screen, debug). */
     fun snooze(context: Context) = command(context, intent(context, ACTION_SNOOZE))
 
-    /** Ends [alarmId]'s ring without recording it, or drops it from the queue. */
-    fun stopIfRinging(context: Context, alarmId: String) =
-      command(context, intent(context, ACTION_DISMISS).putExtra(EXTRA_ALARM_ID, alarmId))
+    /**
+     * Ends [alarmId]'s ring without recording it, or drops it from the queue. Callable from any
+     * process: it can't tell from here whether `:ringing` is ringing, so it always sends the
+     * request, and a service with nothing to dismiss just stops again.
+     */
+    fun stopIfRinging(context: Context, alarmId: String) {
+      try {
+        context.startService(intent(context, ACTION_DISMISS).putExtra(EXTRA_ALARM_ID, alarmId))
+      } catch (e: Exception) {
+        Log.w(LOG_TAG, "Could not send the dismiss of $alarmId to RingingService", e)
+      }
+    }
 
     private fun intent(context: Context, action: String): Intent =
       Intent(context, RingingService::class.java).setAction(action)
 
-    /** Sends a command to the running service. Never starts it just to have nothing to do. */
+    /**
+     * Sends a command to the running service, judged by this process's [RingingState]. Never
+     * starts it just to have nothing to do.
+     */
     private fun command(context: Context, intent: Intent) {
       if (RingingState.current == null) return
       try {
@@ -105,6 +120,7 @@ class RingingService : Service() {
     silence()
     abandonOwed()
     RingingState.update(null)
+    saveMarker(null)
     super.onDestroy()
   }
 
@@ -132,6 +148,7 @@ class RingingService : Service() {
       ringNextOrFinish()
     } else {
       alarmId?.let { queue.remove(it) }
+      // Sent with startService, so a service started only for this needs no startForeground.
       if (!ringing) finish()
     }
   }
@@ -183,6 +200,7 @@ class RingingService : Service() {
     handler.postDelayed(autoSilence, DebugHooks.autoSilenceMsOverride ?: AlarmRules.AUTO_SILENCE_MS)
     vibrator.start()
     player.start(sound)
+    saveMarker(RingingMarker(ring.alarmId, ring.startedAt))
     Log.i(LOG_TAG, "Ringing ${ring.alarmId} (${ring.name}), ${queue.size} queued")
   }
 
@@ -197,6 +215,7 @@ class RingingService : Service() {
     silence()
     queue.clear()
     RingingState.update(null)
+    saveMarker(null)
     ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
     // Only stops if no newer command has arrived, so a ring that is on its way isn't lost.
     stopSelfResult(lastStartId)
@@ -213,6 +232,15 @@ class RingingService : Service() {
       } catch (e: Exception) {
         Log.e(LOG_TAG, "Could not record $id as missed", e)
       }
+    }
+  }
+
+  /** Tells the main process what is ringing (null: nothing). Never fails the ring. */
+  private fun saveMarker(marker: RingingMarker?) {
+    try {
+      engine.store.saveRingingMarker(marker)
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not save the ringing marker ($marker)", e)
     }
   }
 

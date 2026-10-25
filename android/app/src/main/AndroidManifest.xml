@@ -35,8 +35,10 @@
         </intent-filter>
       </activity>
 
+      <!-- Everything that rings runs in its own process, so a React Native crash can't silence it. -->
       <activity
         android:name=".alarm.RingingActivity"
+        android:process=":ringing"
         android:theme="@style/RingingTheme"
         android:launchMode="singleInstance"
         android:excludeFromRecents="true"
@@ -48,11 +50,13 @@
 
       <receiver
         android:name=".alarm.AlarmFireReceiver"
+        android:process=":ringing"
         android:directBootAware="true"
         android:exported="false" />
 
       <receiver
         android:name=".alarm.SystemEventReceiver"
+        android:process=":ringing"
         android:directBootAware="true"
         android:exported="true">
         <intent-filter>
@@ -67,6 +71,7 @@
 
       <service
         android:name=".alarm.RingingService"
+        android:process=":ringing"
         android:directBootAware="true"
         android:exported="false"
         android:foregroundServiceType="systemExempted" />

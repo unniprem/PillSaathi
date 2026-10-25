@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Build
 import android.os.Bundle
 import android.text.format.DateFormat
+import android.util.Log
 import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
@@ -45,7 +46,9 @@ class RingingActivity : Activity() {
   override fun onStart() {
     super.onStart()
     RingingState.addListener(listener)
-    render(RingingState.current)
+    val ring = RingingState.current
+    if (ring == null) clearStaleMarker()
+    render(ring)
   }
 
   override fun onStop() {
@@ -56,6 +59,19 @@ class RingingActivity : Activity() {
   // Back must not dismiss the alarm (API 24-32; 33+ uses the callback in onCreate).
   @Deprecated("Deprecated in Java")
   override fun onBackPressed() {}
+
+  /**
+   * Nothing rings in this process, which is the one that rings, so a marker saying otherwise was
+   * left by a `:ringing` process that died mid-ring. Without this, MainActivity would redirect here
+   * again every time this screen finished, until the marker aged out.
+   */
+  private fun clearStaleMarker() {
+    try {
+      AlarmEngine.get(this).store.saveRingingMarker(null)
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not clear a stale ringing marker", e)
+    }
+  }
 
   private fun render(ring: RingingState.Ring?) {
     if (ring == null) {

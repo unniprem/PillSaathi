@@ -1,6 +1,7 @@
 package com.pillsaathi.alarm
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -33,5 +34,11 @@ class AlarmJsonTest {
     assertTrue(AlarmJson.alarmsFromJson(null).isEmpty())
     assertTrue(AlarmJson.alarmsFromJson("").isEmpty())
     assertTrue(AlarmJson.alarmsFromJson("   ").isEmpty())
+  }
+
+  @Test fun ringingMarker_roundTrip_andNullWhenMissing() {
+    val m = RingingMarker("a1", 1792890480992L)
+    assertEquals(m, AlarmJson.ringingMarkerFromJson(AlarmJson.ringingMarkerToJson(m)))
+    assertNull(AlarmJson.ringingMarkerFromJson(null))
   }
 }
