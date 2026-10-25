@@ -1,0 +1,21 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+      <!-- Debug-only adb hooks for driving the alarm engine; see DebugAlarmReceiver. In :ringing,
+           because DebugHooks and RingingState are per-process. -->
+      <receiver
+        android:name="com.pillsaathi.alarm.debug.DebugAlarmReceiver"
+        android:process=":ringing"
+        android:directBootAware="true"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="com.pillsaathi.DEBUG_ADD_ALARM" />
+            <action android:name="com.pillsaathi.DEBUG_LIST" />
+            <action android:name="com.pillsaathi.DEBUG_STOP" />
+            <action android:name="com.pillsaathi.DEBUG_SNOOZE" />
+            <action android:name="com.pillsaathi.DEBUG_AUTO_SILENCE_MS" />
+            <action android:name="com.pillsaathi.DEBUG_STOP_SERVICE" />
+        </intent-filter>
+      </receiver>
+    </application>
+</manifest>

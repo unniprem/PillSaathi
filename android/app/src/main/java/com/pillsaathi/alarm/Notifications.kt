@@ -1,0 +1,96 @@
+package com.pillsaathi.alarm
+
+import android.app.Notification
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.text.format.DateFormat
+import android.util.Log
+import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import com.pillsaathi.MainActivity
+import com.pillsaathi.R
+import java.util.Date
+
+object Notifications {
+  const val CHANNEL_RINGING = "alarms_ringing"
+  const val CHANNEL_MISSED = "alarms_missed"
+  const val RINGING_ID = 1001
+
+  private const val FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+
+  fun ensureChannels(context: Context) {
+    val ringing =
+      NotificationChannelCompat.Builder(CHANNEL_RINGING, NotificationManagerCompat.IMPORTANCE_HIGH)
+        .setName(context.getString(R.string.channel_ringing))
+        // RingingService plays and vibrates itself, at alarm volume.
+        .setSound(null, null)
+        .setVibrationEnabled(false)
+        .build()
+    val missed =
+      NotificationChannelCompat.Builder(CHANNEL_MISSED, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+        .setName(context.getString(R.string.channel_missed))
+        .build()
+    NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed))
+  }
+
+  fun ringing(context: Context, ring: RingingState.Ring): Notification {
+    val screen = ringingScreenIntent(context)
+    return NotificationCompat.Builder(context, CHANNEL_RINGING)
+      .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+      .setContentTitle(formatTime(context, ring.startedAt))
+      .setContentText(ring.name)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setPriority(NotificationCompat.PRIORITY_MAX)
+      .setOngoing(true)
+      .setContentIntent(screen)
+      .setFullScreenIntent(screen, true)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .addAction(
+        0,
+        context.getString(R.string.action_snooze),
+        serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
+      )
+      .addAction(
+        0,
+        context.getString(R.string.action_stop),
+        serviceIntent(context, RingingService.ACTION_STOP, ring.alarmId),
+      )
+      .build()
+  }
+
+  fun postMissed(context: Context, missed: MissedAlarm) {
+    val text =
+      context.getString(R.string.missed_alarm, missed.name, formatTime(context, missed.dueAt))
+    val open =
+      PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
+    val notification =
+      NotificationCompat.Builder(context, CHANNEL_MISSED)
+        .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+        .setContentText(text)
+        .setContentIntent(open)
+        .setAutoCancel(true)
+        .build()
+    try {
+      NotificationManagerCompat.from(context).notify(missed.id.hashCode(), notification)
+    } catch (e: SecurityException) {
+      Log.w(LOG_TAG, "Notifications not allowed; missed alarm ${missed.id} not shown", e)
+    }
+  }
+
+  private fun ringingScreenIntent(context: Context): PendingIntent =
+    PendingIntent.getActivity(context, 0, Intent(context, RingingActivity::class.java), FLAGS)
+
+  private fun formatTime(context: Context, millis: Long): String =
+    DateFormat.getTimeFormat(context).format(Date(millis))
+
+  /** Stop or Snooze for [alarmId]'s ring only; each alarm's action is its own PendingIntent. */
+  private fun serviceIntent(context: Context, action: String, alarmId: String): PendingIntent =
+    PendingIntent.getService(
+      context,
+      0,
+      RingingService.commandIntent(context, action, alarmId),
+      FLAGS,
+    )
+}

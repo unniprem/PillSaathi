@@ -1,23 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    
-    <!-- Notification permissions -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
-    <!-- Full-screen intent permission for alarms (Android 14+) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    
-    <!-- Schedule exact alarms permission (Android 12+) -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    
-    <!-- Foreground service permission for alarms (Android 9+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Foreground service type for alarms (Android 14+) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
       android:name=".MainApplication"
@@ -34,13 +29,55 @@
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
-        android:exported="true"
-        android:showWhenLocked="true"
-        android:turnScreenOn="true">
+        android:exported="true">
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+
+      <!-- Everything that rings runs in its own process, so a React Native crash can't silence it. -->
+      <activity
+        android:name=".alarm.RingingActivity"
+        android:process=":ringing"
+        android:theme="@style/RingingTheme"
+        android:launchMode="singleInstance"
+        android:excludeFromRecents="true"
+        android:taskAffinity=""
+        android:directBootAware="true"
+        android:exported="false"
+        android:showWhenLocked="true"
+        android:turnScreenOn="true" />
+
+      <receiver
+        android:name=".alarm.AlarmFireReceiver"
+        android:process=":ringing"
+        android:directBootAware="true"
+        android:exported="false" />
+
+      <receiver
+        android:name=".alarm.SystemEventReceiver"
+        android:process=":ringing"
+        android:directBootAware="true"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            <action android:name="android.intent.action.BOOT_COMPLETED" />
+            <!-- Some makers' fast-boot modes send these instead of BOOT_COMPLETED. -->
+            <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            <action android:name="android.intent.action.TIME_SET" />
+            <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+        </intent-filter>
+      </receiver>
+
+      <service
+        android:name=".alarm.RingingService"
+        android:process=":ringing"
+        android:directBootAware="true"
+        android:exported="false"
+        android:foregroundServiceType="systemExempted" />
     </application>
 </manifest>
