@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
 import { renderApp } from '../helpers/renderApp';
@@ -88,6 +89,70 @@ test('reconciles on open and refreshes health and setup state', async () => {
   expect(alarms.getHealth).toHaveBeenCalled();
 });
 
+test('shows the first health issue in the banner and opens its setting on tap', async () => {
+  jest.mocked(alarms.getHealth).mockResolvedValue({
+    notificationsEnabled: true,
+    alarmChannelEnabled: true,
+    exactAlarmAllowed: true,
+    fullScreenAllowed: true,
+    ignoringBatteryOptimizations: false,
+    backgroundRestricted: true,
+    alarmVolumeLow: false,
+  });
+  jest.mocked(alarms.openSetting).mockResolvedValue(true);
+  await renderApp();
+  const banner = await screen.findByText(
+    'Background use is restricted, so alarms may not ring. Tap to fix. (+1 more)',
+  );
+  fireEvent.press(banner);
+  expect(alarms.openSetting).toHaveBeenCalledWith('backgroundRestricted');
+});
+
+test('shows no banner when there are no issues', async () => {
+  await renderApp();
+  await screen.findByText('No alarms yet. Tap + to add one.');
+  expect(screen.queryByText(/Tap to/)).toBeNull();
+});
+
+test('alarms missed while the app was stopped are reported once with a Fix this button', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const dueAt = new Date();
+  dueAt.setHours(7, 0, 0, 0);
+  jest
+    .mocked(alarms.reconcileOnAppOpen)
+    .mockResolvedValueOnce([
+      { id: 'a1', name: 'Morning tablet', dueAt: dueAt.getTime() },
+    ])
+    .mockResolvedValue([]);
+  await renderApp();
+  await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
+  expect(alert).toHaveBeenCalledWith(
+    'Alarm missed',
+    'PillSaathi was stopped by your phone and missed Morning tablet (7:00 AM).',
+    [
+      { text: 'Later', style: 'cancel' },
+      { text: 'Fix this', onPress: expect.any(Function) },
+    ],
+  );
+  const buttons = alert.mock.calls[0][2]!;
+  await act(async () => buttons[1].onPress!());
+  expect(
+    screen.getByText(
+      'Some phones stop apps in the background. Do these steps once so your alarms always ring.',
+    ),
+  ).toBeTruthy();
+  expect(alert).toHaveBeenCalledTimes(1);
+  alert.mockRestore();
+});
+
+test('no alert when nothing was missed', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await renderApp();
+  await screen.findByText('No alarms yet. Tap + to add one.');
+  expect(alert).not.toHaveBeenCalled();
+  alert.mockRestore();
+});
+
 describe('when a side call fails', () => {
   let warn: jest.SpyInstance;
   beforeEach(() => {
@@ -107,6 +172,13 @@ describe('when a side call fails', () => {
     jest.mocked(alarms.reconcileOnAppOpen).mockRejectedValue(new Error('x'));
     await renderApp();
     expect(await screen.findByText('Morning tablet')).toBeTruthy();
+  });
+
+  test('getHealth rejecting shows no banner', async () => {
+    jest.mocked(alarms.getHealth).mockRejectedValue(new Error('boom'));
+    await renderApp();
+    await screen.findByText('No alarms yet. Tap + to add one.');
+    expect(screen.queryByText(/Tap to/)).toBeNull();
   });
 
   test('listAlarms rejecting shows an error message', async () => {

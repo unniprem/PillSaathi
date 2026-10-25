@@ -56,7 +56,7 @@ export function RootNavigator({
       <Stack.Screen
         name="Setup"
         component={SetupScreen}
-        options={{ title: 'Set up' }}
+        options={{ title: 'Make alarms reliable' }}
       />
     </Stack.Navigator>
   );

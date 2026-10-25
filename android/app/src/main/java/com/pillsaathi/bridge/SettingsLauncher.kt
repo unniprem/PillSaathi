@@ -16,20 +16,29 @@ class SettingsLauncher(context: Context) {
 
   /** True if the specific page opened, false if it fell back to App info. */
   fun open(target: String): Boolean {
-    val intent = intentFor(target)
-    if (intent != null) {
+    for (intent in candidatesFor(target)) {
       try {
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         return true
       } catch (e: ActivityNotFoundException) {
-        Log.w(LOG_TAG, "No settings page for $target; opening App info", e)
+        Log.w(LOG_TAG, "No settings page for $target (${intent.component}); trying next", e)
       } catch (e: SecurityException) {
-        Log.w(LOG_TAG, "Settings page for $target is not allowed; opening App info", e)
+        Log.w(LOG_TAG, "Settings page for $target (${intent.component}) is not allowed; trying next", e)
+      } catch (e: RuntimeException) {
+        // Some ROMs throw other exceptions from their private activities.
+        Log.w(LOG_TAG, "Settings page for $target (${intent.component}) failed; trying next", e)
       }
     }
     context.startActivity(appInfo().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     return false
   }
+
+  private fun candidatesFor(target: String): List<Intent> =
+    when (target) {
+      "oemAutostart",
+      "oemBattery" -> OemIntents.candidates(context, Build.MANUFACTURER, target)
+      else -> listOfNotNull(intentFor(target))
+    }
 
   /** The page's intent, or null when this API level or target has none. */
   private fun intentFor(target: String): Intent? {
@@ -58,7 +67,6 @@ class SettingsLauncher(context: Context) {
       "alarmVolume" -> Intent(Settings.ACTION_SOUND_SETTINGS)
       "backgroundRestricted",
       "appInfo" -> appInfo()
-      // oemAutostart and oemBattery arrive with the setup screen; until then, App info.
       else -> null
     }
   }
