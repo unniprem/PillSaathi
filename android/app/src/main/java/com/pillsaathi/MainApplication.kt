@@ -13,6 +13,7 @@ import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.Notifications
+import com.pillsaathi.bridge.PillSaathiPackage
 import java.io.File
 
 class MainApplication : Application(), ReactApplication {
@@ -27,8 +28,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // The app's own TurboModules; autolinking only finds libraries.
+          add(PillSaathiPackage())
         },
     )
   }

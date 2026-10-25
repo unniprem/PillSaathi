@@ -38,5 +38,13 @@
   },
   "engines": {
     "node": ">= 22.11.0"
+  },
+  "codegenConfig": {
+    "name": "PillSaathiSpecs",
+    "type": "modules",
+    "jsSrcsDir": "specs",
+    "android": {
+      "javaPackageName": "com.pillsaathi.specs"
+    }
   }
 }
