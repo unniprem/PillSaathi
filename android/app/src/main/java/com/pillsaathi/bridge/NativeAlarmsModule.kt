@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import android.text.format.DateFormat
 import android.util.Log
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableMap
@@ -18,9 +19,6 @@ import com.pillsaathi.alarm.MissedAlarm
 import com.pillsaathi.alarm.ReconcileTrigger
 import com.pillsaathi.alarm.SetupState
 import com.pillsaathi.specs.NativeAlarmsSpec
-
-/** A call the module refuses, with the code JS sees in `error.code`. */
-class AlarmException(val code: String, message: String) : Exception(message)
 
 /**
  * Alarms, health checks, settings links, first-run setup and the time picker for JS.
@@ -51,14 +49,13 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   override fun saveAlarm(input: ReadableMap, promise: Promise) =
     onWorker(promise) {
-      val id = if (input.hasKey("id") && !input.isNull("id")) input.getString("id") else null
-      val hour = intField(input, "hour", 0..23)
-      val minute = intField(input, "minute", 0..59)
-      val days = daysField(input)
-      val name = if (input.hasKey("name") && !input.isNull("name")) input.getString("name") else ""
-      val soundId =
-        if (input.hasKey("soundId") && !input.isNull("soundId")) input.getString("soundId") else null
-      alarmToJs(engine.save(id, hour, minute, days, name.orEmpty(), soundId))
+      // Read as plain values so a wrong type is INVALID_ALARM, not a cast error.
+      val raw = input.toHashMap()
+      val valid = AlarmInputValidator.validate(raw["hour"], raw["minute"], raw["days"])
+      val id = raw["id"] as? String
+      val name = raw["name"] as? String
+      val soundId = raw["soundId"] as? String
+      alarmToJs(engine.save(id, valid.hour, valid.minute, valid.days, name.orEmpty(), soundId))
     }
 
   override fun setAlarmEnabled(id: String, enabled: Boolean, promise: Promise) =
@@ -131,39 +128,50 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       }
       // The dialog dismisses after OK as well as after cancel; only the first outcome counts.
       var settled = false
-      try {
-        TimePickerDialog(
-            activity,
-            { _, h, m ->
-              if (!settled) {
-                settled = true
-                promise.resolve(
-                  Arguments.createMap().apply {
-                    putInt("hour", h)
-                    putInt("minute", m)
-                  },
-                )
-              }
-            },
-            hour.toInt().coerceIn(0, 23),
-            minute.toInt().coerceIn(0, 59),
-            DateFormat.is24HourFormat(activity),
-          )
-          .apply {
-            setOnDismissListener {
-              if (!settled) {
-                settled = true
-                promise.resolve(null)
-              }
-            }
+      var dialog: TimePickerDialog? = null
+      var lifecycle: LifecycleEventListener? = null
+      fun settleWith(block: () -> Unit) {
+        if (settled) return
+        settled = true
+        lifecycle?.let { reactApplicationContext.removeLifecycleEventListener(it) }
+        block()
+      }
+      lifecycle =
+        object : LifecycleEventListener {
+          override fun onHostResume() {}
+
+          override fun onHostPause() {}
+
+          // The screen went away with the dialog open: nobody will answer it.
+          override fun onHostDestroy() {
+            settleWith { promise.resolve(null) }
+            dialog?.dismiss()
           }
-          .show()
+        }
+      try {
+        dialog =
+          TimePickerDialog(
+              activity,
+              { _, h, m ->
+                settleWith {
+                  promise.resolve(
+                    Arguments.createMap().apply {
+                      putInt("hour", h)
+                      putInt("minute", m)
+                    },
+                  )
+                }
+              },
+              hour.toInt().coerceIn(0, 23),
+              minute.toInt().coerceIn(0, 59),
+              DateFormat.is24HourFormat(activity),
+            )
+            .apply { setOnDismissListener { settleWith { promise.resolve(null) } } }
+        reactApplicationContext.addLifecycleEventListener(lifecycle)
+        dialog?.show()
       } catch (e: Exception) {
         Log.e(LOG_TAG, "Could not show the time picker", e)
-        if (!settled) {
-          settled = true
-          promise.reject(e)
-        }
+        settleWith { promise.reject(e) }
       }
     }
   }
@@ -178,31 +186,6 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
   private fun updateSetup(change: (SetupState) -> SetupState) {
     val store = engine.store
     store.locked { store.saveSetup(change(store.loadSetup())) }
-  }
-
-  /** Reads a whole number in [range] or throws INVALID_ALARM. */
-  private fun intField(input: ReadableMap, key: String, range: IntRange): Int {
-    val value = if (input.hasKey(key) && !input.isNull(key)) input.getDouble(key) else Double.NaN
-    if (value != Math.floor(value) || value.isInfinite() || value.toInt() !in range) {
-      throw AlarmException(INVALID_ALARM, "$key must be a whole number in $range")
-    }
-    return value.toInt()
-  }
-
-  /** Days must be whole numbers in 1..7 with no repeats; duplicates are rejected, not merged. */
-  private fun daysField(input: ReadableMap): Set<Int> {
-    val array = input.getArray("days") ?: throw AlarmException(INVALID_ALARM, "days is missing")
-    val days = LinkedHashSet<Int>()
-    for (i in 0 until array.size()) {
-      val value = array.getDouble(i)
-      if (value != Math.floor(value) || value.isInfinite() || value.toInt() !in 1..7) {
-        throw AlarmException(INVALID_ALARM, "days must be whole numbers from 1 to 7")
-      }
-      if (!days.add(value.toInt())) {
-        throw AlarmException(INVALID_ALARM, "days must not repeat")
-      }
-    }
-    return days
   }
 
   /**
@@ -253,7 +236,6 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   companion object {
     const val NAME = "NativeAlarms"
-    private const val INVALID_ALARM = "INVALID_ALARM"
     private const val NO_ACTIVITY = "NO_ACTIVITY"
     private const val NOT_FOUND = "NOT_FOUND"
   }
