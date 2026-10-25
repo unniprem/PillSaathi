@@ -36,7 +36,7 @@ Setup gotchas:
 ```sh
 npm test                                          # Jest: screens and lib
 npx tsc --noEmit && npm run lint                  # types and lint
-cd android && ./gradlew :app:testDebugUnitTest    # JVM tests for the alarm rules and JSON
+cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm rules, ring commands, JSON, file store
 ```
 
 ## Debug broadcasts (debug builds only)
@@ -47,14 +47,14 @@ cd android && ./gradlew :app:testDebugUnitTest    # JVM tests for the alarm rule
 adb shell am broadcast -a <ACTION> -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver [extras]
 ```
 
-| Action                                 | Extras                                                                                                                                                                              | Effect                                                              |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `com.pillsaathi.DEBUG_ADD_ALARM`       | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug`), optional `--es days "1,2"` (ISO 1 = Mon to 7 = Sun; omit for a one-time alarm), optional `--es sound_id ID` | Saves an alarm that fires N minutes from now                        |
-| `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                | Logs every alarm with its next trigger, snooze and last-fired times |
-| `com.pillsaathi.DEBUG_STOP`            | none                                                                                                                                                                                | Stops the current ring, as the Stop button does                     |
-| `com.pillsaathi.DEBUG_SNOOZE`          | none                                                                                                                                                                                | Snoozes the current ring, as the Snooze button does                 |
-| `com.pillsaathi.DEBUG_AUTO_SILENCE_MS` | `--el ms N`                                                                                                                                                                         | Overrides the 10-minute auto-silence for testing; `0` resets it     |
-| `com.pillsaathi.DEBUG_STOP_SERVICE`    | none                                                                                                                                                                                | Destroys `RingingService` mid-ring, simulating a system kill        |
+| Action                                 | Extras                                                                                                                                                                              | Effect                                                                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `com.pillsaathi.DEBUG_ADD_ALARM`       | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug`), optional `--es days "1,2"` (ISO 1 = Mon to 7 = Sun; omit for a one-time alarm), optional `--es sound_id ID` | Saves an alarm that fires N minutes from now                                          |
+| `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                | Logs every alarm with its next trigger, snooze and last-fired times                   |
+| `com.pillsaathi.DEBUG_STOP`            | optional `--es alarm_id ID`                                                                                                                                                         | Stops whatever rings now; with an id, only that alarm's ring, as the Stop button does |
+| `com.pillsaathi.DEBUG_SNOOZE`          | optional `--es alarm_id ID`                                                                                                                                                         | Snoozes whatever rings now; with an id, only that alarm's ring                        |
+| `com.pillsaathi.DEBUG_AUTO_SILENCE_MS` | `--el ms N`                                                                                                                                                                         | Overrides the 10-minute auto-silence for testing; `0` resets it                       |
+| `com.pillsaathi.DEBUG_STOP_SERVICE`    | none                                                                                                                                                                                | Destroys `RingingService` mid-ring, simulating a system kill                          |
 
 Example: `adb shell am broadcast -a com.pillsaathi.DEBUG_ADD_ALARM -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver --ei minutes_from_now 2 --es name Test`
 
@@ -75,16 +75,25 @@ Legend: `[x]` passed, `[ ]` pending (could not be run here).
 - [x] Swiped from recents: the ring kept playing after both PillSaathi tasks were removed from Recents.
 - [x] Reboot (`adb reboot`, and a power-off then cold start): the alarm rang before the first unlock, from the `:ringing` process alone. At that point the default tone's media URI can't be opened, and the engine fell back to the system alarm sound.
 - [x] Alarm time reached while powered off: the "Missed alarm: ..., 11:33 AM" notification appeared at boot, before unlock.
-- [x] Doze, light idle only (`deviceidle force-idle light`, screen off, app in the restricted standby bucket): rang on time. See "Not run" for deep Doze.
+- [x] Doze, light idle only (`deviceidle force-idle light`, screen off): rang on time. See "Pending" for deep Doze.
 - [x] Snooze three times in a row: re-rang about 10 minutes after each snooze (10:58:58, 11:09:16, 11:19:29), and Stop ended it.
 - [x] 10-minute auto-silence, real 10 minutes: the ring stopped by itself and posted a "Missed alarm" notification.
-- [x] Corrupt sound: the file was overwritten with `x`, the engine logged `Could not play sound file` and played the default alarm tone. Deleting a sound that an alarm uses also shows "Those alarms will use the default alarm tone".
+- [x] Corrupt sound: the file was overwritten with `x`, the engine logged `Could not play sound file` and played the default alarm tone. (The confirmation for deleting a sound that an alarm uses, "Those alarms will use the default alarm tone", is covered by the Jest tests only; it wasn't checked on the emulator.)
 - [x] Two alarms in the same minute: one rang, the other queued behind it and started when the first was stopped.
+- [x] Double tap on Stop with a second alarm queued (two `input tap`s back to back): the first alarm stopped, and the second started and kept ringing; the ringing screen ignores Stop and Snooze for 1.5 s after one ring replaces another.
+- [x] Three alarms in the same minute with a 20 s auto-silence: each rang in turn, each posted "Missed alarm", and all three ended switched off. Opening the app while the second rang left the queued third alone.
+- [x] A queued alarm whose stored times were edited by hand to look 20 minutes overdue was left alone by reconciles in both processes while it waited, then rang and was reported missed at its real time. An overdue alarm that wasn't queued was ended and reported missed.
 - [x] Force-stop kill detection: after `am force-stop` the alarm did not ring, and the next app open showed "PillSaathi was stopped by your phone and missed ..." with a "Fix this" button that opens the setup screen.
-- [x] Warning banners: notifications off, alarm notification channel off, full-screen intent denied, background use restricted, alarm volume at minimum, and battery optimization. Tapping a banner opens the matching settings screen.
+- [x] Warning banners: notifications off, alarm notification channel off, full-screen intent denied, background use restricted, alarm volume at minimum, and battery optimization. Tapping the notifications banner and the alarm-volume banner opened their settings screens; the other banners' links weren't tapped.
 - [x] Real permission dialogs: notifications at first launch and microphone on the first recording.
 
+**Observed**
+
+- One ring (screen off, loaded emulator) took about 9 s from the fire to the sound; other rings took 1–4 s. A possible cause is the phone sleeping between the alarm's delivery and the ringing service starting. The ring-start wake lock (`PillSaathi:ring-start`, held from the delivery until the sound plays) was added for that gap. Re-checking the latency on a real device is pending.
+
 **Pending, needs a real device or another image**
+
+- [ ] Fire-to-sound latency with the screen off and the phone idle, now with the ring-start wake lock (see "Observed").
 
 - [ ] Xiaomi/Redmi, setup steps done: swipe the app away, reboot, leave idle overnight, and confirm the alarm still rings.
 - [ ] Xiaomi/Redmi, setup steps skipped: confirm the kill is detected and reported on the next app open.
