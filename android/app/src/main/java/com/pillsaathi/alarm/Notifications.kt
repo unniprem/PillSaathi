@@ -35,14 +35,17 @@ object Notifications {
     NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed))
   }
 
-  fun ringing(context: Context, ring: RingingState.Ring): Notification =
-    NotificationCompat.Builder(context, CHANNEL_RINGING)
+  fun ringing(context: Context, ring: RingingState.Ring): Notification {
+    val screen = ringingScreenIntent(context)
+    return NotificationCompat.Builder(context, CHANNEL_RINGING)
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
       .setContentTitle(formatTime(context, ring.startedAt))
       .setContentText(ring.name)
       .setCategory(NotificationCompat.CATEGORY_ALARM)
       .setPriority(NotificationCompat.PRIORITY_MAX)
       .setOngoing(true)
+      .setContentIntent(screen)
+      .setFullScreenIntent(screen, true)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .addAction(
         0,
@@ -55,6 +58,7 @@ object Notifications {
         serviceIntent(context, RingingService.ACTION_STOP),
       )
       .build()
+  }
 
   fun postMissed(context: Context, missed: MissedAlarm) {
     val text =
@@ -74,6 +78,9 @@ object Notifications {
       Log.w(LOG_TAG, "Notifications not allowed; missed alarm ${missed.id} not shown", e)
     }
   }
+
+  private fun ringingScreenIntent(context: Context): PendingIntent =
+    PendingIntent.getActivity(context, 0, Intent(context, RingingActivity::class.java), FLAGS)
 
   private fun formatTime(context: Context, millis: Long): String =
     DateFormat.getTimeFormat(context).format(Date(millis))

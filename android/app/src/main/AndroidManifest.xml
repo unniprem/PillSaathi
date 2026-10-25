@@ -35,6 +35,17 @@
         </intent-filter>
       </activity>
 
+      <activity
+        android:name=".alarm.RingingActivity"
+        android:theme="@style/RingingTheme"
+        android:launchMode="singleInstance"
+        android:excludeFromRecents="true"
+        android:taskAffinity=""
+        android:directBootAware="true"
+        android:exported="false"
+        android:showWhenLocked="true"
+        android:turnScreenOn="true" />
+
       <receiver
         android:name=".alarm.AlarmFireReceiver"
         android:directBootAware="true"

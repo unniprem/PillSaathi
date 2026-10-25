@@ -6,4 +6,5 @@
     <string name="action_snooze">Snooze 10 min</string>
     <string name="action_stop">Stop</string>
     <string name="missed_alarm">Missed alarm: %1$s, %2$s</string>
+    <string name="ringing_sound">🔊 %1$s</string>
 </resources>
