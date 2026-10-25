@@ -50,12 +50,12 @@ object Notifications {
       .addAction(
         0,
         context.getString(R.string.action_snooze),
-        serviceIntent(context, RingingService.ACTION_SNOOZE),
+        serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
       )
       .addAction(
         0,
         context.getString(R.string.action_stop),
-        serviceIntent(context, RingingService.ACTION_STOP),
+        serviceIntent(context, RingingService.ACTION_STOP, ring.alarmId),
       )
       .build()
   }
@@ -85,11 +85,12 @@ object Notifications {
   private fun formatTime(context: Context, millis: Long): String =
     DateFormat.getTimeFormat(context).format(Date(millis))
 
-  private fun serviceIntent(context: Context, action: String): PendingIntent =
+  /** Stop or Snooze for [alarmId]'s ring only; each alarm's action is its own PendingIntent. */
+  private fun serviceIntent(context: Context, action: String, alarmId: String): PendingIntent =
     PendingIntent.getService(
       context,
       0,
-      Intent(context, RingingService::class.java).setAction(action),
+      RingingService.commandIntent(context, action, alarmId),
       FLAGS,
     )
 }

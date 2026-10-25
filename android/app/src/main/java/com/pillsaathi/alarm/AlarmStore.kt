@@ -5,11 +5,17 @@ import android.util.Log
 import java.io.File
 import java.io.IOException
 
+/** The alarm store couldn't be read or written, for example because the disk is full. */
+class StorageException(message: String, cause: Throwable?) : IOException(message, cause)
+
 /**
  * Alarm, sound and setup data, kept in device-protected storage so alarms can ring before the
  * first unlock after a reboot. Shared by the main and `:ringing` processes: each value is a JSON
  * file under `store/`, read fresh from disk every time, so one process always sees the other's
  * writes.
+ *
+ * Every load and save throws [StorageException] when the disk fails it. Callers decide: a user's
+ * change fails loudly, while the ringing path logs it and rings anyway.
  */
 class AlarmStore(context: Context) {
   private val storage: Context = context.createDeviceProtectedStorageContext()
@@ -49,16 +55,20 @@ class AlarmStore(context: Context) {
    * to a `<name>.corrupt-<epochMs>` backup first, so a later save never destroys it.
    */
   private fun <T> load(name: String, empty: T, parse: (String?) -> T): T =
-    files.readParsed(name, parse) { e ->
-      Log.e(LOG_TAG, "Stored $name is unreadable; backed it up and starting empty", e)
-      empty
+    try {
+      files.readParsed(name, parse) { e ->
+        Log.e(LOG_TAG, "Stored $name is unreadable; backed it up and starting empty", e)
+        empty
+      }
+    } catch (e: IOException) {
+      throw StorageException("Could not read $name", e)
     }
 
   private fun save(name: String, json: String?) {
     try {
       files.write(name, json)
     } catch (e: IOException) {
-      Log.e(LOG_TAG, "Could not write $name", e)
+      throw StorageException("Could not write $name", e)
     }
   }
 

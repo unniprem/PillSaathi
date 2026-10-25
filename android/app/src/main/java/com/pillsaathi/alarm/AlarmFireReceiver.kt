@@ -21,6 +21,7 @@ class AlarmFireReceiver : BroadcastReceiver() {
       return
     }
     val id = intent.getStringExtra(EXTRA_ALARM_ID) ?: intent.data?.lastPathSegment ?: return
+    // A stale or missed fire is settled inside onFired, while AlarmManager keeps the phone awake.
     val alarm =
       try {
         AlarmEngine.get(context).onFired(id)
@@ -28,12 +29,17 @@ class AlarmFireReceiver : BroadcastReceiver() {
         Log.e(LOG_TAG, "Could not handle the fire of $id", e)
         null
       } ?: return
+    val dueAt = AlarmRules.dueAt(alarm)
+    // AlarmManager's wake lock ends when this returns, and the phone may sleep before the service
+    // runs. RingingService releases this one once the sound plays or the fire is settled.
+    RingWakeLock.acquire(context)
     try {
-      RingingService.ring(context, alarm.id)
+      RingingService.ring(context, alarm.id, dueAt)
     } catch (e: Exception) {
+      RingWakeLock.release("could not start the ringing service")
       Log.e(LOG_TAG, "Could not start ringing ${alarm.id}; recording it as missed", e)
       try {
-        AlarmEngine.get(context).onRingEnded(alarm.id, autoSilenced = true)
+        AlarmEngine.get(context).onRingEnded(alarm.id, autoSilenced = true, dueAt = dueAt)
       } catch (e2: Exception) {
         Log.e(LOG_TAG, "Could not record ${alarm.id} as missed", e2)
       }

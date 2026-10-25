@@ -13,6 +13,7 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableMap
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.Sound
+import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.sound.SoundException
 import com.pillsaathi.sound.SoundImporter
 import com.pillsaathi.sound.SoundLibrary
@@ -168,7 +169,8 @@ class NativeSoundsModule(reactContext: ReactApplicationContext) : NativeSoundsSp
 
   /**
    * Runs [block] on the sound thread and settles [promise] exactly once: with its result, with a
-   * [SoundException]'s code, or with any other exception.
+   * [SoundException]'s code, with [SoundException.STORAGE_ERROR] when the store couldn't be read or
+   * written, or with any other exception.
    */
   private fun onSoundThread(promise: Promise, block: () -> Any?) {
     val posted =
@@ -178,6 +180,10 @@ class NativeSoundsModule(reactContext: ReactApplicationContext) : NativeSoundsSp
             block()
           } catch (e: SoundException) {
             promise.reject(e.code, e.message)
+            return@post
+          } catch (e: StorageException) {
+            Log.e(LOG_TAG, "Sound call failed on storage", e)
+            promise.reject(SoundException.STORAGE_ERROR, e.message, e)
             return@post
           } catch (e: Exception) {
             Log.e(LOG_TAG, "Sound call failed", e)

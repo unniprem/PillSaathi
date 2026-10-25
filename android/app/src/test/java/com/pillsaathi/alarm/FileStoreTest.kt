@@ -1,13 +1,16 @@
 package com.pillsaathi.alarm
 
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.util.Collections
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -168,6 +171,30 @@ class FileStoreTest {
     val probe = startChild(LockProbe::class.java, dir.path)
     val output = probe.inputStream.bufferedReader().readText()
     assertEquals("lock still held: $output", 0, probe.waitFor())
+  }
+
+  @Test(timeout = 10_000)
+  fun write_throws_whenTheDirectoryIsAFile() {
+    assertTrue(dir.delete())
+    dir.writeText("not a directory")
+
+    assertThrows(IOException::class.java) { store.write("alarms.json", "[]") }
+    assertEquals("not a directory", dir.readText())
+  }
+
+  @Test(timeout = 10_000)
+  fun write_throws_whenTheDirectoryIsReadOnly() {
+    store.write("alarms.json", "[1]")
+    assertTrue(dir.setWritable(false))
+    try {
+      assumeFalse("running as a user who can write anyway", dir.canWrite())
+
+      assertThrows(IOException::class.java) { store.write("alarms.json", "[2]") }
+      assertThrows(IOException::class.java) { store.write("alarms.json", null) }
+      assertEquals("[1]", store.read("alarms.json"))
+    } finally {
+      dir.setWritable(true)
+    }
   }
 
   @Test

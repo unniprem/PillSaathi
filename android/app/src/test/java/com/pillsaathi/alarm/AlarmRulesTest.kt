@@ -126,12 +126,57 @@ class AlarmRulesTest {
     assertEquals(at(2026, 10, 27, 7, 0), r.alarms[0].nextTriggerAt)
   }
 
-  @Test fun reconcile_stuckRing_endedNotReported() {
+  @Test fun reconcile_stuckRing_endedAndReportedMissed() {
+    // The ring's process died before its end was recorded, so the user may never have answered it.
     val due = at(2026, 10, 25, 7, 0)
     val a = alarm(next = due, lastFired = due)
     val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 25, 7, 13), IST)
-    assertTrue(r.missed.isEmpty())
+    assertEquals(listOf(MissedAlarm("a1", "Pills", due)), r.missed)
     assertFalse(r.alarms[0].enabled)
+  }
+
+  @Test fun reconcile_ownedQueuedAlarm_unchanged() {
+    // Fired at 07:00 and still waiting behind another ring at 07:20: not stuck, not missed.
+    val due = at(2026, 10, 25, 7, 0)
+    val a = alarm(next = due, lastFired = due)
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 25, 7, 20), IST, ownedIds = setOf("a1"))
+    assertEquals(listOf(a), r.alarms)
+    assertTrue(r.missed.isEmpty())
+  }
+
+  @Test fun reconcile_ownedCurrentAlarm_unchanged() {
+    // Due 07:00 and never stamped as fired (its fire's write was lost), ringing now at 07:05.
+    val a = alarm(WEEKDAYS, next = at(2026, 10, 26, 7, 0))
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 5), IST, ownedIds = setOf("a1"))
+    assertEquals(listOf(a), r.alarms)
+    assertTrue(r.missed.isEmpty())
+  }
+
+  @Test fun reconcile_ownedIds_leaveOtherAlarmsToTheRules() {
+    val due = at(2026, 10, 25, 7, 0)
+    val owned = alarm(next = due, lastFired = due)
+    val other = owned.copy(id = "a2", name = "Other")
+    val r =
+      AlarmRules.reconcile(listOf(owned, other), at(2026, 10, 25, 7, 20), IST, ownedIds = setOf("a1"))
+    assertEquals(owned, r.alarms[0])
+    assertFalse(r.alarms[1].enabled)
+    assertEquals(listOf(MissedAlarm("a2", "Other", due)), r.missed)
+  }
+
+  @Test fun ownedIds_freshMarker_ownsCurrentAndQueued() {
+    val started = at(2026, 10, 25, 7, 10)
+    val marker = RingingMarker("a1", started, listOf("a2", "a3"))
+    assertEquals(setOf("a1", "a2", "a3"), AlarmRules.ownedIds(marker, at(2026, 10, 25, 7, 21, 59)))
+    assertTrue(AlarmRules.isFresh(marker, at(2026, 10, 25, 7, 21, 59)))
+  }
+
+  @Test fun ownedIds_markerAsOldAsAnyRingCanLast_ownsNothing() {
+    val started = at(2026, 10, 25, 7, 10)
+    val marker = RingingMarker("a1", started, listOf("a2"))
+    val now = started + AlarmRules.AUTO_SILENCE_MS + AlarmRules.MISSED_GRACE_MS
+    assertFalse(AlarmRules.isFresh(marker, now))
+    assertEquals(emptySet<String>(), AlarmRules.ownedIds(marker, now))
+    assertEquals(emptySet<String>(), AlarmRules.ownedIds(null, now))
   }
 
   @Test fun reconcile_ringingNow_unchanged() {
@@ -224,6 +269,6 @@ class AlarmRulesTest {
     val a = alarm(WEEKDAYS, next = at(2026, 10, 26, 7, 0), lastFired = fired)
     val r = AlarmRules.reconcile(listOf(a), AlarmRules.recoveryAt(fired), IST)
     assertEquals(at(2026, 10, 27, 7, 0), r.alarms[0].nextTriggerAt)
-    assertTrue(r.missed.isEmpty())
+    assertEquals(listOf(MissedAlarm("a1", "Pills", at(2026, 10, 26, 7, 0))), r.missed)
   }
 }

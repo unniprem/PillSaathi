@@ -97,12 +97,21 @@ object AlarmJson {
   }
 
   fun ringingMarkerToJson(m: RingingMarker): String =
-    JSONObject().put("alarmId", m.alarmId).put("startedAt", m.startedAt).toString()
+    JSONObject()
+      .put("alarmId", m.alarmId)
+      .put("startedAt", m.startedAt)
+      .put("queued", JSONArray(m.queued))
+      .toString()
 
   fun ringingMarkerFromJson(json: String?): RingingMarker? {
     if (json.isNullOrBlank()) return null
     val o = JSONObject(json)
-    return RingingMarker(o.getString("alarmId"), o.getLong("startedAt"))
+    val queued = o.optJSONArray("queued")
+    return RingingMarker(
+      o.getString("alarmId"),
+      o.getLong("startedAt"),
+      if (queued == null) emptyList() else (0 until queued.length()).map { queued.getString(it) },
+    )
   }
 
   private fun longOrNull(o: JSONObject, key: String): Long? =

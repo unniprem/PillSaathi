@@ -18,6 +18,15 @@ import java.time.ZoneId
  */
 class DebugAlarmReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
+    // Runs in `:ringing`: a failure here (a full disk, say) must not take a ring down with it.
+    try {
+      handle(context, intent)
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Debug command ${intent.action} failed", e)
+    }
+  }
+
+  private fun handle(context: Context, intent: Intent) {
     val engine = AlarmEngine.get(context)
     when (intent.action) {
       "com.pillsaathi.DEBUG_ADD_ALARM" -> {
@@ -48,8 +57,11 @@ class DebugAlarmReceiver : BroadcastReceiver() {
         Log.i(LOG_TAG, "${alarms.size} alarm(s)")
         alarms.forEach { Log.i(LOG_TAG, describe(it)) }
       }
-      "com.pillsaathi.DEBUG_STOP" -> RingingService.stop(context)
-      "com.pillsaathi.DEBUG_SNOOZE" -> RingingService.snooze(context)
+      // With no alarm_id these act on whatever rings now; with one, only on that alarm's ring, as
+      // the ringing screen and the notification do.
+      "com.pillsaathi.DEBUG_STOP" -> RingingService.stop(context, intent.getStringExtra("alarm_id"))
+      "com.pillsaathi.DEBUG_SNOOZE" ->
+        RingingService.snooze(context, intent.getStringExtra("alarm_id"))
       // Simulates the system destroying RingingService mid-ring.
       "com.pillsaathi.DEBUG_STOP_SERVICE" ->
         context.stopService(Intent(context, RingingService::class.java))

@@ -76,10 +76,34 @@ object AlarmRules {
   /** When to reconcile a ring fired at [firedAt]: just after [reconcile] treats it as stuck. */
   fun recoveryAt(firedAt: Long): Long = firedAt + AUTO_SILENCE_MS + MISSED_GRACE_MS + 60_000L
 
-  fun reconcile(alarms: List<Alarm>, now: Long, zone: ZoneId): ReconcileResult {
+  /**
+   * Whether [marker] can still describe a live ring. A ring and each one queued behind it rewrite
+   * the marker when they start and last at most [AUTO_SILENCE_MS], so an older marker was left by a
+   * `:ringing` process that died.
+   */
+  fun isFresh(marker: RingingMarker, now: Long): Boolean =
+    now - marker.startedAt < AUTO_SILENCE_MS + MISSED_GRACE_MS
+
+  /** The alarms a live ring owns, the one ringing and those queued behind it, for [reconcile]. */
+  fun ownedIds(marker: RingingMarker?, now: Long): Set<String> =
+    if (marker == null || !isFresh(marker, now)) emptySet()
+    else (marker.queued + marker.alarmId).toSet()
+
+  /**
+   * Repairs the schedule: arms enabled alarms with no due time, reports and moves on alarms whose
+   * time passed unrung, ends rings whose end was never recorded (their process died; reported as
+   * missed, since nobody may have answered), and recomputes future times for the current zone.
+   * Alarms in [ownedIds] are ringing or queued right now, so they are left exactly as they are.
+   */
+  fun reconcile(
+    alarms: List<Alarm>,
+    now: Long,
+    zone: ZoneId,
+    ownedIds: Set<String> = emptySet(),
+  ): ReconcileResult {
     val missed = mutableListOf<MissedAlarm>()
     val result = alarms.map { a ->
-      if (!a.enabled) return@map a
+      if (!a.enabled || a.id in ownedIds) return@map a
       val due = dueAt(a)
       val last = a.lastFiredAt
       when {
@@ -88,8 +112,10 @@ object AlarmRules {
           missed.add(MissedAlarm(a.id, a.name, due))
           ringEnded(a, now, zone)
         }
-        last != null && last >= due && now - last > AUTO_SILENCE_MS + MISSED_GRACE_MS ->
+        last != null && last >= due && now - last > AUTO_SILENCE_MS + MISSED_GRACE_MS -> {
+          missed.add(MissedAlarm(a.id, a.name, due))
           ringEnded(a, now, zone)
+        }
         due > now && a.snoozeUntil == null ->
           a.copy(nextTriggerAt = nextTrigger(a.hour, a.minute, a.days, now, zone))
         else -> a

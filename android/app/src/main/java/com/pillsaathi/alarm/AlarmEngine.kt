@@ -14,6 +14,13 @@ enum class ReconcileTrigger { BOOT, CLOCK_CHANGED, APP_OPEN, PERMISSION_CHANGED,
 /**
  * The one entry point for changing alarms. Receivers, the ringing service and the React Native
  * modules all go through it, so every change is persisted and rescheduled under the store lock.
+ *
+ * Two kinds of caller, two rules for a failed write ([StorageException]):
+ * - A user's change ([save], [setEnabled], [delete], [clearSound]) is written first and scheduled
+ *   only after, and a failed write is thrown, so the app never reports a change it didn't keep.
+ * - The ringing path ([onFired], [onQueuedRingStarted], [onRingEnded], [onSnoozed], [reconcile])
+ *   logs a failed write and schedules and rings anyway. Ringing comes first; the next reconcile
+ *   repairs the lost bookkeeping.
  */
 class AlarmEngine private constructor(context: Context) {
   private val context: Context = context.applicationContext
@@ -73,17 +80,28 @@ class AlarmEngine private constructor(context: Context) {
 
   fun delete(id: String) {
     store.locked {
+      store.saveAlarms(store.loadAlarms().filterNot { it.id == id })
       scheduler.cancel(id)
       scheduler.cancelRecovery(id)
-      store.saveAlarms(store.loadAlarms().filterNot { it.id == id })
     }
     RingingService.stopIfRinging(context, id)
   }
 
+  /**
+   * Repairs the schedule ([AlarmRules.reconcile]) and reschedules every alarm. Alarms that the
+   * `:ringing` process is ringing or has queued, as its fresh marker says, are left alone: their
+   * time has passed, but they are not missed.
+   */
   fun reconcile(trigger: ReconcileTrigger): List<MissedAlarm> {
     val missed = store.locked {
-      val result = AlarmRules.reconcile(store.loadAlarms(), System.currentTimeMillis(), zone())
-      store.saveAlarms(result.alarms)
+      val now = System.currentTimeMillis()
+      val owned = AlarmRules.ownedIds(ringingMarker(), now)
+      val result = AlarmRules.reconcile(store.loadAlarms(), now, zone(), owned)
+      Log.i(
+        LOG_TAG,
+        "Reconcile ($trigger): ${owned.size} ringing or queued, ${result.missed.size} missed",
+      )
+      bestEffort("the reconciled alarms") { store.saveAlarms(result.alarms) }
       result.alarms.forEach { scheduler.sync(it) }
       result.missed
     }
@@ -114,13 +132,13 @@ class AlarmEngine private constructor(context: Context) {
         }
         FireDecision.MISSED -> {
           val ended = AlarmRules.ringEnded(alarm, now, zone())
-          store.saveAlarms(alarms.replace(ended))
+          bestEffort("the missed fire of $id") { store.saveAlarms(alarms.replace(ended)) }
           scheduler.sync(ended)
           null to AlarmRules.dueAt(alarm)?.let { MissedAlarm(alarm.id, alarm.name, it) }
         }
         FireDecision.RING -> {
           val fired = AlarmRules.fired(alarm, now)
-          store.saveAlarms(alarms.replace(fired))
+          bestEffort("the fire of $id") { store.saveAlarms(alarms.replace(fired)) }
           scheduler.scheduleRecovery(fired.id, AlarmRules.recoveryAt(now))
           fired to null
         }
@@ -130,17 +148,40 @@ class AlarmEngine private constructor(context: Context) {
     return ring
   }
 
-  fun onRingEnded(id: String, autoSilenced: Boolean) {
+  /**
+   * Stamps queued alarm [id] as fired now, when its ring starts after waiting behind another, and
+   * moves its recovery wakeup to count from now. Until then it was judged by the time it fired,
+   * and reconcile would have taken it for stuck. Returns the alarm, or null if it no longer exists.
+   * Rings whether or not it is still on: see [RingingService].
+   */
+  fun onQueuedRingStarted(id: String): Alarm? = store.locked {
+    val alarms = store.loadAlarms()
+    val alarm = alarms.firstOrNull { it.id == id } ?: return@locked null
+    val now = System.currentTimeMillis()
+    val fired = AlarmRules.fired(alarm, now)
+    bestEffort("the queued start of $id") { store.saveAlarms(alarms.replace(fired)) }
+    scheduler.scheduleRecovery(id, AlarmRules.recoveryAt(now))
+    fired
+  }
+
+  /**
+   * Records how [id]'s ring ended. An auto-silenced ring nobody answered is reported as missed
+   * whenever the alarm still exists, even if a reconcile has since switched it off or moved it on;
+   * [dueAt] is when it was due, as its fire saw it. The alarm itself moves on only if it is still
+   * on: one switched off or deleted while ringing has already been cancelled.
+   */
+  fun onRingEnded(id: String, autoSilenced: Boolean, dueAt: Long? = null) {
     val missed = store.locked {
       scheduler.cancelRecovery(id)
       val alarms = store.loadAlarms()
-      // Deleted or switched off while ringing: it has already been cancelled.
-      val alarm = alarms.firstOrNull { it.id == id && it.enabled } ?: return@locked null
-      val dueAt = AlarmRules.dueAt(alarm)
-      val ended = AlarmRules.ringEnded(alarm, System.currentTimeMillis(), zone())
-      store.saveAlarms(alarms.replace(ended))
-      scheduler.sync(ended)
-      if (autoSilenced && dueAt != null) MissedAlarm(alarm.id, alarm.name, dueAt) else null
+      val alarm = alarms.firstOrNull { it.id == id } ?: return@locked null
+      val due = dueAt ?: AlarmRules.dueAt(alarm) ?: alarm.lastFiredAt
+      if (alarm.enabled) {
+        val ended = AlarmRules.ringEnded(alarm, System.currentTimeMillis(), zone())
+        bestEffort("the end of $id's ring") { store.saveAlarms(alarms.replace(ended)) }
+        scheduler.sync(ended)
+      }
+      if (autoSilenced && due != null) MissedAlarm(alarm.id, alarm.name, due) else null
     }
     missed?.let { Notifications.postMissed(context, it) }
   }
@@ -151,7 +192,7 @@ class AlarmEngine private constructor(context: Context) {
       val alarms = store.loadAlarms()
       val alarm = alarms.firstOrNull { it.id == id && it.enabled } ?: return@locked
       val snoozed = AlarmRules.snoozed(alarm, System.currentTimeMillis())
-      store.saveAlarms(alarms.replace(snoozed))
+      bestEffort("the snooze of $id") { store.saveAlarms(alarms.replace(snoozed)) }
       scheduler.sync(snoozed)
     }
   }
@@ -176,6 +217,24 @@ class AlarmEngine private constructor(context: Context) {
   private fun soundOf(alarm: Alarm): Sound? {
     val soundId = alarm.soundId ?: return null
     return store.locked { store.loadSounds() }.firstOrNull { it.id == soundId }
+  }
+
+  /** The `:ringing` process's marker, or null if there is none or it can't be read. */
+  private fun ringingMarker(): RingingMarker? =
+    try {
+      store.loadRingingMarker()
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not read the ringing marker; reconciling as if nothing rings", e)
+      null
+    }
+
+  /** Runs a ringing-path [write]; a failure is logged and the caller carries on. */
+  private inline fun bestEffort(what: String, write: () -> Unit) {
+    try {
+      write()
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not save $what; carrying on, reconcile will repair it", e)
+    }
   }
 
   private fun zone(): ZoneId = ZoneId.systemDefault()

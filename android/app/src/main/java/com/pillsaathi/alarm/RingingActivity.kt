@@ -3,8 +3,12 @@ package com.pillsaathi.alarm
 import android.app.Activity
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.text.format.DateFormat
 import android.util.Log
+import android.view.View
 import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
@@ -14,6 +18,12 @@ import java.util.Date
 /** The full-screen ringing UI. Native only, so it works with no React Native runtime. */
 class RingingActivity : Activity() {
   private val listener: (RingingState.Ring?) -> Unit = { render(it) }
+  private val handler = Handler(Looper.getMainLooper())
+  private val enableButtons = Runnable { setButtonsEnabled(true) }
+  private lateinit var buttons: List<View>
+
+  /** The ring on screen; Stop and Snooze are sent for it, never for one that replaced it. */
+  private var rendered: RingingState.Ring? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -35,11 +45,14 @@ class RingingActivity : Activity() {
       ) {}
     }
     setContentView(R.layout.activity_ringing)
-    findViewById<TextView>(R.id.ringing_snooze).setOnClickListener {
-      RingingService.snooze(applicationContext)
+    val snooze = findViewById<TextView>(R.id.ringing_snooze)
+    val stop = findViewById<TextView>(R.id.ringing_stop)
+    buttons = listOf(snooze, stop)
+    snooze.setOnClickListener {
+      rendered?.let { RingingService.snooze(applicationContext, it.alarmId) }
     }
-    findViewById<TextView>(R.id.ringing_stop).setOnClickListener {
-      RingingService.stop(applicationContext)
+    stop.setOnClickListener {
+      rendered?.let { RingingService.stop(applicationContext, it.alarmId) }
     }
   }
 
@@ -54,6 +67,11 @@ class RingingActivity : Activity() {
   override fun onStop() {
     RingingState.removeListener(listener)
     super.onStop()
+  }
+
+  override fun onDestroy() {
+    handler.removeCallbacks(enableButtons)
+    super.onDestroy()
   }
 
   // Back must not dismiss the alarm (API 24-32; 33+ uses the callback in onCreate).
@@ -78,10 +96,30 @@ class RingingActivity : Activity() {
       finish()
       return
     }
+    if (ring != rendered && RingCommands.inGuard(ring, SystemClock.elapsedRealtime())) {
+      // This ring has just replaced the one on screen: a second tap meant for that one must not
+      // end it unseen.
+      Log.i(LOG_TAG, "Stop and Snooze paused ${RingCommands.GUARD_MS} ms: new ring ${ring.alarmId}")
+      setButtonsEnabled(false)
+      handler.removeCallbacks(enableButtons)
+      handler.postDelayed(enableButtons, RingCommands.GUARD_MS)
+    }
+    rendered = ring
     findViewById<TextView>(R.id.ringing_time).text =
       DateFormat.getTimeFormat(this).format(Date(ring.startedAt))
     findViewById<TextView>(R.id.ringing_name).text = ring.name
     findViewById<TextView>(R.id.ringing_sound).text =
       getString(R.string.ringing_sound, ring.soundName)
+  }
+
+  private fun setButtonsEnabled(enabled: Boolean) {
+    buttons.forEach {
+      it.isEnabled = enabled
+      it.alpha = if (enabled) 1f else DISABLED_ALPHA
+    }
+  }
+
+  private companion object {
+    const val DISABLED_ALPHA = 0.5f
   }
 }

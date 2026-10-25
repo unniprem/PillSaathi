@@ -41,4 +41,15 @@ class AlarmJsonTest {
     assertEquals(m, AlarmJson.ringingMarkerFromJson(AlarmJson.ringingMarkerToJson(m)))
     assertNull(AlarmJson.ringingMarkerFromJson(null))
   }
+
+  @Test fun ringingMarker_roundTrip_withQueue() {
+    val m = RingingMarker("a1", 1792890480992L, listOf("a3", "a2"))
+    assertEquals(m, AlarmJson.ringingMarkerFromJson(AlarmJson.ringingMarkerToJson(m)))
+  }
+
+  @Test fun ringingMarker_writtenBeforeQueues_readsWithEmptyQueue() =
+    assertEquals(
+      RingingMarker("a1", 5L, emptyList()),
+      AlarmJson.ringingMarkerFromJson("{\"alarmId\":\"a1\",\"startedAt\":5}"),
+    )
 }

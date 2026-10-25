@@ -18,6 +18,7 @@ import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.MissedAlarm
 import com.pillsaathi.alarm.ReconcileTrigger
 import com.pillsaathi.alarm.SetupState
+import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.specs.NativeAlarmsSpec
 
 /**
@@ -190,7 +191,8 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   /**
    * Runs [block] on the worker thread and settles [promise] exactly once: with its result, with an
-   * [AlarmException]'s code, or with any other exception.
+   * [AlarmException]'s code, with [STORAGE_ERROR] when the store couldn't be read or written, or
+   * with any other exception.
    */
   private fun onWorker(promise: Promise, block: () -> Any?) {
     val posted =
@@ -200,6 +202,10 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
             block()
           } catch (e: AlarmException) {
             promise.reject(e.code, e.message)
+            return@post
+          } catch (e: StorageException) {
+            Log.e(LOG_TAG, "Alarm call failed on storage", e)
+            promise.reject(STORAGE_ERROR, e.message, e)
             return@post
           } catch (e: Exception) {
             Log.e(LOG_TAG, "Alarm call failed", e)
@@ -238,5 +244,6 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     const val NAME = "NativeAlarms"
     private const val NO_ACTIVITY = "NO_ACTIVITY"
     private const val NOT_FOUND = "NOT_FOUND"
+    private const val STORAGE_ERROR = "STORAGE_ERROR"
   }
 }

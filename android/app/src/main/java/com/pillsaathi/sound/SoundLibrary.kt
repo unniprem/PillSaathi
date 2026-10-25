@@ -26,6 +26,7 @@ class SoundException(val code: String, message: String, cause: Throwable? = null
     const val BUSY = "BUSY"
     const val NOT_FOUND = "NOT_FOUND"
     const val MIC_PERMISSION = "MIC_PERMISSION"
+    const val STORAGE_ERROR = "STORAGE_ERROR"
   }
 }
 

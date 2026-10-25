@@ -5,7 +5,19 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /** What is ringing right now, in this process. Only [RingingService] changes it, on the main thread. */
 object RingingState {
-  data class Ring(val alarmId: String, val name: String, val soundName: String, val startedAt: Long)
+  /**
+   * One ring. [startedAt] is wall-clock time, for display; [startedElapsed] is
+   * `SystemClock.elapsedRealtime()` once it sounded, for [RingCommands]' input guard.
+   * [followsAnother] is true for a ring that came from the queue the moment another ended.
+   */
+  data class Ring(
+    val alarmId: String,
+    val name: String,
+    val soundName: String,
+    val startedAt: Long,
+    val startedElapsed: Long = 0L,
+    val followsAnother: Boolean = false,
+  )
 
   @Volatile
   var current: Ring? = null
