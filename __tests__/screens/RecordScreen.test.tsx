@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert, Linking, PermissionsAndroid } from 'react-native';
 import * as alarms from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
@@ -163,4 +163,87 @@ test('Use this sound saves with the typed name', async () => {
   );
   await fireEvent.press(screen.getByText('Use this sound'));
   expect(sounds.saveRecording).toHaveBeenCalledWith('Amma voice');
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+const savedSound = {
+  id: 's9',
+  name: 'Amma voice',
+  kind: 'recorded' as const,
+  durationMs: 5000,
+  createdAt: 1,
+  usedBy: [],
+};
+
+async function recordedScreen() {
+  await startRecording();
+  await fireEvent.press(screen.getByLabelText('Stop recording'));
+  await screen.findByText('Use this sound');
+}
+
+test('leaving while start is pending discards once start resolves', async () => {
+  const start = deferred<void>();
+  jest.mocked(sounds.startRecording).mockReturnValue(start.promise);
+  await renderApp('Record');
+  await fireEvent.press(await screen.findByLabelText('Start recording'));
+  await waitFor(() => expect(sounds.startRecording).toHaveBeenCalled());
+  await screen.unmount();
+  expect(sounds.discardRecording).not.toHaveBeenCalled();
+  await act(async () => start.resolve());
+  expect(sounds.discardRecording).toHaveBeenCalledTimes(1);
+});
+
+test('leaving while save is pending does not discard the saved take', async () => {
+  const save = deferred<typeof savedSound>();
+  jest.mocked(sounds.saveRecording).mockReturnValue(save.promise);
+  await recordedScreen();
+  await fireEvent.press(screen.getByText('Use this sound'));
+  await screen.unmount();
+  await act(async () => save.resolve(savedSound));
+  expect(sounds.discardRecording).not.toHaveBeenCalled();
+});
+
+test('leaving while save is pending then save fails discards the take', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const save = deferred<typeof savedSound>();
+  jest.mocked(sounds.saveRecording).mockReturnValue(save.promise);
+  await recordedScreen();
+  await fireEvent.press(screen.getByText('Use this sound'));
+  await screen.unmount();
+  expect(sounds.discardRecording).not.toHaveBeenCalled();
+  await act(async () => save.reject(new Error('disk full')));
+  expect(sounds.discardRecording).toHaveBeenCalledTimes(1);
+});
+
+test('a second tap on Use this sound saves only once', async () => {
+  const save = deferred<typeof savedSound>();
+  jest.mocked(sounds.saveRecording).mockReturnValue(save.promise);
+  await recordedScreen();
+  await fireEvent.press(screen.getByText('Use this sound'));
+  await fireEvent.press(screen.getByText('Use this sound'));
+  expect(sounds.saveRecording).toHaveBeenCalledTimes(1);
+  await act(async () => save.resolve(savedSound));
+});
+
+test('an unexpected stop failure discards the take and returns to idle', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest.mocked(sounds.stopRecording).mockRejectedValue(new Error('boom'));
+  await startRecording();
+  await fireEvent.press(screen.getByLabelText('Stop recording'));
+  expect(alert).toHaveBeenCalledWith(
+    'Could not save the recording',
+    'Please try again.',
+  );
+  expect(sounds.discardRecording).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText('Up to 2:00')).toBeTruthy();
 });

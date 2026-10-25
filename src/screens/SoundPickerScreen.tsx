@@ -134,16 +134,21 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          if (playingId === sound.id) {
+            setPlayingId(null);
+            stopPreview().catch(e => console.warn('Could not stop preview', e));
+          }
           try {
             await deleteSound(sound.id);
           } catch (e) {
             console.warn('Could not delete the sound', e);
             if (mounted.current) {
               Alert.alert('Could not delete the sound', 'Please try again.');
+              reload();
             }
+            return;
           }
           if (mounted.current) {
-            setPlayingId(current => (current === sound.id ? null : current));
             setSelectedId(current => (current === sound.id ? null : current));
             reload();
           }

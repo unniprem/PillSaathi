@@ -45,6 +45,14 @@ export default function RecordScreen({ navigation }: Props) {
   const phaseRef = useRef<Phase>('idle');
   const busy = useRef(false);
   const saved = useRef(false);
+  // True from the tap on "Use this sound" until the save settles.
+  const savingRef = useRef(false);
+
+  const discard = useCallback(() => {
+    discardRecording().catch(e =>
+      console.warn('Could not discard the recording', e),
+    );
+  }, []);
 
   const setPhase = useCallback((next: Phase) => {
     phaseRef.current = next;
@@ -62,14 +70,13 @@ export default function RecordScreen({ navigation }: Props) {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      if (!saved.current && phaseRef.current !== 'idle') {
-        discardRecording().catch(e =>
-          console.warn('Could not discard the recording', e),
-        );
+      // A save in flight owns the take: it discards itself if it fails.
+      if (!saved.current && !savingRef.current && phaseRef.current !== 'idle') {
+        discard();
       }
       stopPreview().catch(e => console.warn('Could not stop preview', e));
     };
-  }, []);
+  }, [discard]);
 
   useEffect(() => {
     const subs = [
@@ -150,6 +157,9 @@ export default function RecordScreen({ navigation }: Props) {
         setElapsedMs(0);
         setLevels([]);
         setPhase('recording');
+      } else {
+        // The user left while the start was pending; release the microphone.
+        discard();
       }
     } catch (e) {
       if (!mounted.current) {
@@ -188,6 +198,8 @@ export default function RecordScreen({ navigation }: Props) {
         console.warn('Could not stop recording', e);
         Alert.alert('Could not save the recording', 'Please try again.');
       }
+      // Whatever went wrong, make sure the microphone is released.
+      discard();
       backToIdle();
     } finally {
       busy.current = false;
@@ -215,15 +227,14 @@ export default function RecordScreen({ navigation }: Props) {
       stopPreview().catch(e => console.warn('Could not stop preview', e));
     }
     backToIdle();
-    discardRecording().catch(e =>
-      console.warn('Could not discard the recording', e),
-    );
+    discard();
   };
 
-  const useSound = async () => {
-    if (saving) {
+  const saveTake = async () => {
+    if (savingRef.current) {
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     try {
       const sound = await saveRecording(name.trim() || 'My recording');
@@ -237,9 +248,13 @@ export default function RecordScreen({ navigation }: Props) {
       }
     } catch (e) {
       console.warn('Could not save the recording', e);
+      savingRef.current = false;
       if (mounted.current) {
         Alert.alert('Could not save the recording', 'Please try again.');
         setSaving(false);
+      } else {
+        // The user left mid-save and it failed: the take is still unsaved.
+        discard();
       }
     }
   };
@@ -263,7 +278,9 @@ export default function RecordScreen({ navigation }: Props) {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Start recording"
-            onPress={start}
+            onPress={() => {
+              start();
+            }}
             style={styles.recordButton}
           >
             <View style={styles.recordDot} />
@@ -281,7 +298,9 @@ export default function RecordScreen({ navigation }: Props) {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Stop recording"
-            onPress={stop}
+            onPress={() => {
+              stop();
+            }}
             style={styles.recordButton}
           >
             <View style={styles.stopSquare} />
@@ -321,7 +340,9 @@ export default function RecordScreen({ navigation }: Props) {
           <Pressable
             accessibilityRole="button"
             disabled={saving}
-            onPress={useSound}
+            onPress={() => {
+              saveTake();
+            }}
             style={styles.primary}
           >
             <Text style={styles.primaryText}>Use this sound</Text>

@@ -129,3 +129,42 @@ test('the preview toggle plays, stops, and resets when playback ends', async () 
   await fireEvent.press(screen.getByTestId('preview-s1'));
   expect(sounds.stopPreview).toHaveBeenCalled();
 });
+
+test('a failed delete alerts, keeps the selection and reloads', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest.mocked(sounds.deleteSound).mockRejectedValue(new Error('boom'));
+  await renderApp('SoundPicker', { selectedSoundId: 's1' });
+  await fireEvent(await screen.findByText('My voice'), 'longPress');
+  const buttons = alert.mock.calls[0][2]!;
+  await act(async () => {
+    buttons.find(b => b.style === 'destructive')!.onPress!();
+  });
+  expect(alert).toHaveBeenLastCalledWith(
+    'Could not delete the sound',
+    'Please try again.',
+  );
+  expect(
+    screen.getAllByRole('radio').find(r => r.props.accessibilityState.checked),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getAllByRole('radio')
+      .filter(r => r.props.accessibilityState.checked),
+  ).toHaveLength(1);
+  expect(sounds.listSounds).toHaveBeenCalledTimes(2);
+});
+
+test('deleting the sound that is previewing stops the preview first', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await renderApp('SoundPicker', { selectedSoundId: null });
+  await fireEvent.press(await screen.findByTestId('preview-s1'));
+  jest.mocked(sounds.stopPreview).mockClear();
+  await fireEvent(screen.getByText('My voice'), 'longPress');
+  const buttons = alert.mock.calls[0][2]!;
+  await act(async () => {
+    buttons.find(b => b.style === 'destructive')!.onPress!();
+  });
+  expect(sounds.stopPreview).toHaveBeenCalledTimes(1);
+  expect(sounds.deleteSound).toHaveBeenCalledWith('s1');
+});
