@@ -3,6 +3,7 @@ package com.pillsaathi
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import androidx.lifecycle.Lifecycle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,8 @@ import com.pillsaathi.alarm.AlarmRules
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.RingingActivity
 import com.swmansion.rnscreens.fragment.restoration.RNScreensFragmentFactory
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class MainActivity : ReactActivity() {
 
@@ -38,9 +41,15 @@ class MainActivity : ReactActivity() {
 
   override fun onResume() {
     super.onResume()
-    // Notifications may be denied or swiped away; never leave a ring without Stop/Snooze.
-    if (isRinging()) {
-      startActivity(Intent(this, RingingActivity::class.java))
+    // Notifications may be denied or swiped away; never leave a ring without Stop/Snooze. The
+    // store can wait seconds for its lock, so it is read off the UI thread.
+    markerReader.execute {
+      if (!isRinging()) return@execute
+      runOnUiThread {
+        if (!isDestroyed && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+          startActivity(Intent(this, RingingActivity::class.java))
+        }
+      }
     }
   }
 
@@ -51,11 +60,17 @@ class MainActivity : ReactActivity() {
   private fun isRinging(): Boolean =
     try {
       val marker = AlarmEngine.get(this).store.loadRingingMarker()
-      marker != null &&
-        System.currentTimeMillis() - marker.startedAt <
-          AlarmRules.AUTO_SILENCE_MS + AlarmRules.MISSED_GRACE_MS
+      marker != null && AlarmRules.isFresh(marker, System.currentTimeMillis())
     } catch (e: Exception) {
       Log.e(LOG_TAG, "Could not read the ringing marker", e)
       false
     }
+
+  private companion object {
+    /** One background thread for the marker reads, shared by every MainActivity. */
+    val markerReader: ExecutorService =
+      Executors.newSingleThreadExecutor { task ->
+        Thread(task, "PillSaathiRingingMarker").apply { isDaemon = true }
+      }
+  }
 }

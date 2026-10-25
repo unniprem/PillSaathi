@@ -47,8 +47,9 @@ class HealthChecker(context: Context) {
     val channel =
       service<NotificationManager>(Context.NOTIFICATION_SERVICE)
         .getNotificationChannel(Notifications.CHANNEL_RINGING)
-    // A channel that doesn't exist yet isn't blocked.
-    return channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE
+    // A channel that doesn't exist yet isn't blocked. Below HIGH (silenced, or "Pop on screen"
+    // off), the system no longer shows the ringing screen over other apps or the lock screen.
+    return channel == null || channel.importance >= NotificationManager.IMPORTANCE_HIGH
   }
 
   private fun alarmVolumeLow(): Boolean {

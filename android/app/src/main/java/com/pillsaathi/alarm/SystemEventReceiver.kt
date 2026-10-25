@@ -13,6 +13,8 @@ class SystemEventReceiver : BroadcastReceiver() {
       when (intent.action) {
         Intent.ACTION_LOCKED_BOOT_COMPLETED,
         Intent.ACTION_BOOT_COMPLETED,
+        ACTION_QUICKBOOT_POWERON,
+        ACTION_HTC_QUICKBOOT_POWERON,
         Intent.ACTION_MY_PACKAGE_REPLACED -> ReconcileTrigger.BOOT
         Intent.ACTION_TIME_CHANGED,
         Intent.ACTION_TIMEZONE_CHANGED -> ReconcileTrigger.CLOCK_CHANGED
@@ -26,5 +28,11 @@ class SystemEventReceiver : BroadcastReceiver() {
     } catch (e: Exception) {
       Log.e(LOG_TAG, "Reconcile on ${intent.action} failed", e)
     }
+  }
+
+  private companion object {
+    /** Sent instead of BOOT_COMPLETED by some makers' fast-boot modes. */
+    const val ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON"
+    const val ACTION_HTC_QUICKBOOT_POWERON = "com.htc.intent.action.QUICKBOOT_POWERON"
   }
 }
