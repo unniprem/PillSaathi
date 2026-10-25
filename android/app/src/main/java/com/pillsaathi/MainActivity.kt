@@ -11,6 +11,7 @@ import com.pillsaathi.alarm.AlarmEngine
 import com.pillsaathi.alarm.AlarmRules
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.RingingActivity
+import com.swmansion.rnscreens.fragment.restoration.RNScreensFragmentFactory
 
 class MainActivity : ReactActivity() {
 
@@ -30,6 +31,8 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     // The process may have started before the first unlock, without React Native.
     (application as MainApplication).ensureReactNativeLoaded()
+    // react-native-screens: restores its fragments after process death.
+    supportFragmentManager.fragmentFactory = RNScreensFragmentFactory()
     super.onCreate(savedInstanceState)
   }
 
