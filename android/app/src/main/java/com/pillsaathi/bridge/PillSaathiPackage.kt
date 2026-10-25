@@ -10,12 +10,15 @@ import com.facebook.react.module.model.ReactModuleInfoProvider
 class PillSaathiPackage : BaseReactPackage() {
   override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? =
     when (name) {
+      NativeAlarmsModule.NAME -> NativeAlarmsModule(reactContext)
       NativeSoundsModule.NAME -> NativeSoundsModule(reactContext)
       else -> null
     }
 
   override fun getReactModuleInfoProvider(): ReactModuleInfoProvider = ReactModuleInfoProvider {
     mapOf(
+      NativeAlarmsModule.NAME to
+        turboModule(NativeAlarmsModule.NAME, NativeAlarmsModule::class.java),
       NativeSoundsModule.NAME to
         turboModule(NativeSoundsModule.NAME, NativeSoundsModule::class.java),
     )
