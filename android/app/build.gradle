@@ -78,6 +78,9 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.pillsaathi"
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+    }
     defaultConfig {
         applicationId "com.pillsaathi"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -116,4 +119,9 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
