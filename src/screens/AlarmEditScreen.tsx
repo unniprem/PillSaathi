@@ -127,6 +127,10 @@ export default function AlarmEditScreen({ navigation, route }: Props) {
     if (pickedSoundId !== undefined) {
       setDraft(d => ({ ...d, soundId: pickedSoundId }));
       navigation.setParams({ pickedSoundId: undefined });
+      // The sound may have just been recorded or imported.
+      listSounds()
+        .then(list => mounted.current && setSounds(list))
+        .catch(e => console.warn('Could not load sounds', e));
     }
   }, [pickedSoundId, navigation]);
 

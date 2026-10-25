@@ -8,3 +8,9 @@ export function formatTime(hour: number, minute: number, is24h: boolean) {
   const h = hour % 12 === 0 ? 12 : hour % 12;
   return `${h}:${pad(minute)} ${hour < 12 ? 'AM' : 'PM'}`;
 }
+
+/** `0:12` or `2:00`: a length in milliseconds as m:ss, rounded down. */
+export function formatDuration(ms: number) {
+  const total = Math.floor(ms / 1000);
+  return `${Math.floor(total / 60)}:${pad(total % 60)}`;
+}

@@ -41,7 +41,7 @@ export function RootNavigator({
       <Stack.Screen
         name="SoundPicker"
         component={SoundPickerScreen}
-        options={{ title: 'Alarm sound' }}
+        options={{ title: 'Sound' }}
         initialParams={
           initialRouteName === 'SoundPicker'
             ? (initialParams as RootStackParamList['SoundPicker'])

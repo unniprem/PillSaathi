@@ -157,3 +157,9 @@ test('Delete asks for confirmation, then deletes', async () => {
   expect(alarms.deleteAlarm).toHaveBeenCalledWith('a1');
   alert.mockRestore();
 });
+
+test('a sound created while picking is named once it is returned', async () => {
+  jest.mocked(sounds.listSounds).mockResolvedValueOnce([]);
+  await renderApp('AlarmEdit', { pickedSoundId: 's1' });
+  expect(await screen.findByText('My voice')).toBeTruthy();
+});

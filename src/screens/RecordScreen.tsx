@@ -1,3 +1,417 @@
-export default function RecordScreen() {
-  return null;
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Linking,
+  PermissionsAndroid,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { formatDuration } from '../lib/time';
+import {
+  discardRecording,
+  onPreviewEnded,
+  onRecordingAutoStopped,
+  onRecordingLevel,
+  previewRecording,
+  saveRecording,
+  SoundErrors,
+  startRecording,
+  stopPreview,
+  stopRecording,
+} from '../native/sounds';
+import type { RootStackParamList } from '../navigation/RootNavigator';
+import { colors, spacing } from '../theme';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Record'>;
+type Phase = 'idle' | 'recording' | 'recorded';
+
+const BAR_COUNT = 24;
+const MAX_BAR_HEIGHT = 60;
+
+export default function RecordScreen({ navigation }: Props) {
+  const [phase, setPhaseState] = useState<Phase>('idle');
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [levels, setLevels] = useState<number[]>([]);
+  const [name, setName] = useState('My recording');
+  const [listening, setListening] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const mounted = useRef(true);
+  // Mirrors `phase` for the event callbacks and the unmount cleanup.
+  const phaseRef = useRef<Phase>('idle');
+  const busy = useRef(false);
+  const saved = useRef(false);
+
+  const setPhase = useCallback((next: Phase) => {
+    phaseRef.current = next;
+    setPhaseState(next);
+  }, []);
+
+  const backToIdle = useCallback(() => {
+    setPhase('idle');
+    setElapsedMs(0);
+    setLevels([]);
+    setListening(false);
+  }, [setPhase]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (!saved.current && phaseRef.current !== 'idle') {
+        discardRecording().catch(e =>
+          console.warn('Could not discard the recording', e),
+        );
+      }
+      stopPreview().catch(e => console.warn('Could not stop preview', e));
+    };
+  }, []);
+
+  useEffect(() => {
+    const subs = [
+      onRecordingLevel(level => {
+        if (phaseRef.current === 'recording') {
+          setLevels(l => [...l, level].slice(-BAR_COUNT));
+        }
+      }),
+      onRecordingAutoStopped(durationMs => {
+        if (phaseRef.current !== 'recording') {
+          return;
+        }
+        if (durationMs <= 0) {
+          // The take couldn't be finalised, so it is lost.
+          Alert.alert("That recording couldn't be saved. Try again.");
+          backToIdle();
+          return;
+        }
+        setElapsedMs(durationMs);
+        setPhase('recorded');
+      }),
+      onPreviewEnded(() => setListening(false)),
+    ];
+    return () => subs.forEach(s => s.remove());
+  }, [backToIdle, setPhase]);
+
+  // The m:ss counter, running only while recording.
+  useEffect(() => {
+    if (phase !== 'recording') {
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), 250);
+    return () => clearInterval(timer);
+  }, [phase]);
+
+  const micOff = useCallback(() => {
+    Alert.alert(
+      'Microphone access is off',
+      'PillSaathi needs the microphone to record your alarm sound.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open settings',
+          onPress: () =>
+            Linking.openSettings().catch(e =>
+              console.warn('Could not open settings', e),
+            ),
+        },
+      ],
+    );
+  }, []);
+
+  const start = async () => {
+    if (busy.current) {
+      return;
+    }
+    busy.current = true;
+    try {
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        {
+          title: 'Allow microphone',
+          message:
+            'PillSaathi needs the microphone to record your alarm sound.',
+          buttonPositive: 'OK',
+        },
+      );
+      if (!mounted.current) {
+        return;
+      }
+      if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+        micOff();
+        return;
+      }
+      await startRecording();
+      if (mounted.current) {
+        setElapsedMs(0);
+        setLevels([]);
+        setPhase('recording');
+      }
+    } catch (e) {
+      if (!mounted.current) {
+        return;
+      }
+      if ((e as { code?: string })?.code === SoundErrors.MicPermission) {
+        micOff();
+      } else {
+        console.warn('Could not start recording', e);
+        Alert.alert('Could not start recording', 'Please try again.');
+      }
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  const stop = async () => {
+    if (busy.current) {
+      return;
+    }
+    busy.current = true;
+    try {
+      const durationMs = await stopRecording();
+      if (mounted.current && phaseRef.current === 'recording') {
+        setElapsedMs(durationMs);
+        setPhase('recorded');
+      }
+    } catch (e) {
+      // An auto-stop may already have moved on; then there is nothing to show.
+      if (!mounted.current || phaseRef.current !== 'recording') {
+        return;
+      }
+      if ((e as { code?: string })?.code === SoundErrors.TooShort) {
+        Alert.alert('That recording was too short. Try again.');
+      } else {
+        console.warn('Could not stop recording', e);
+        Alert.alert('Could not save the recording', 'Please try again.');
+      }
+      backToIdle();
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  const toggleListen = () => {
+    if (listening) {
+      setListening(false);
+      stopPreview().catch(e => console.warn('Could not stop preview', e));
+      return;
+    }
+    setListening(true);
+    previewRecording().catch(e => {
+      console.warn('Could not play the recording', e);
+      if (mounted.current) {
+        setListening(false);
+        Alert.alert('Could not play the recording', 'Please try again.');
+      }
+    });
+  };
+
+  const redo = () => {
+    if (listening) {
+      stopPreview().catch(e => console.warn('Could not stop preview', e));
+    }
+    backToIdle();
+    discardRecording().catch(e =>
+      console.warn('Could not discard the recording', e),
+    );
+  };
+
+  const useSound = async () => {
+    if (saving) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const sound = await saveRecording(name.trim() || 'My recording');
+      saved.current = true;
+      if (mounted.current) {
+        navigation.navigate(
+          'AlarmEdit',
+          { pickedSoundId: sound.id },
+          { merge: true, pop: true },
+        );
+      }
+    } catch (e) {
+      console.warn('Could not save the recording', e);
+      if (mounted.current) {
+        Alert.alert('Could not save the recording', 'Please try again.');
+        setSaving(false);
+      }
+    }
+  };
+
+  const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
+    const level = levels[i - (BAR_COUNT - levels.length)] ?? 0;
+    return Math.max(4, level * MAX_BAR_HEIGHT);
+  });
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text style={styles.timer}>{formatDuration(elapsedMs)}</Text>
+
+      {phase === 'idle' ? (
+        <>
+          <Text style={styles.hint}>Up to 2:00</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Start recording"
+            onPress={start}
+            style={styles.recordButton}
+          >
+            <View style={styles.recordDot} />
+          </Pressable>
+        </>
+      ) : null}
+
+      {phase === 'recording' ? (
+        <>
+          <View style={styles.bars}>
+            {bars.map((h, i) => (
+              <View key={i} style={[styles.bar, { height: h }]} />
+            ))}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Stop recording"
+            onPress={stop}
+            style={styles.recordButton}
+          >
+            <View style={styles.stopSquare} />
+          </Pressable>
+          <Text style={styles.hint}>Tap to stop</Text>
+        </>
+      ) : null}
+
+      {phase === 'recorded' ? (
+        <>
+          <View style={styles.actions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={toggleListen}
+              style={styles.secondary}
+            >
+              <Text style={styles.secondaryText}>
+                {listening ? '■ Stop' : '▶ Listen'}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={redo}
+              style={styles.secondary}
+            >
+              <Text style={styles.secondaryText}>↺ Redo</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="My recording"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={saving}
+            onPress={useSound}
+            style={styles.primary}
+          >
+            <Text style={styles.primaryText}>Use this sound</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </ScrollView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.md, alignItems: 'stretch' },
+  timer: {
+    fontSize: 64,
+    fontWeight: '300',
+    color: colors.text,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+  hint: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginVertical: spacing.md,
+  },
+  bars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: MAX_BAR_HEIGHT,
+    gap: 3,
+    marginVertical: spacing.lg,
+  },
+  bar: { width: 6, borderRadius: 3, backgroundColor: colors.primary },
+  recordButton: {
+    alignSelf: 'center',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 4,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordDot: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.danger,
+  },
+  stopSquare: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    backgroundColor: colors.danger,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  secondary: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  secondaryText: { fontSize: 18, color: colors.text },
+  label: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    fontSize: 18,
+    color: colors.text,
+  },
+  primary: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  primaryText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
+});
