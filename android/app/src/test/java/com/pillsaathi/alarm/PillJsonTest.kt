@@ -20,6 +20,25 @@ class PillJsonTest {
     assertEquals(pills, PillJson.pillsFromJson(json))
   }
 
+  @Test fun pill_photo_roundTrip() {
+    val pill = Pill(
+      "p1", "Telma 40", PillForm.TABLET, 1.0, listOf(DoseTime(8, 0)), LocalDate.of(2026, 10, 26), null, 100L,
+      photo = "3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg",
+    )
+    val json = PillJson.pillsToJson(listOf(pill))
+    assertTrue(json.contains("\"photo\":\"3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg\""))
+    assertEquals(listOf(pill), PillJson.pillsFromJson(json))
+    val none = pill.copy(photo = null)
+    assertEquals(listOf(none), PillJson.pillsFromJson(PillJson.pillsToJson(listOf(none))))
+  }
+
+  @Test fun pill_missingPhoto_null() {
+    val json =
+      "[{\"id\":\"p1\",\"name\":\"A\",\"form\":\"tablet\",\"amount\":1,\"times\":[{\"hour\":8,\"minute\":0}]," +
+        "\"startDate\":\"2026-10-26\",\"days\":null,\"createdAt\":1}]"
+    assertNull(PillJson.pillsFromJson(json).single().photo)
+  }
+
   @Test fun doses_roundTrip() {
     val doses = listOf(
       DoseRecord(

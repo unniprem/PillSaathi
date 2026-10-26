@@ -6,6 +6,7 @@ import type {
   NativePill,
   NativeTodayCard,
   NativeTodayPill,
+  PickedPhoto,
   PickedTime,
   PillInput as NativePillInput,
   SetupState,
@@ -13,7 +14,15 @@ import type {
 } from '../../specs/NativeAlarms';
 import type { PillForm } from '../lib/amount';
 
-export type { DoseTime, Health, MissedAlarm, PickedTime, PillForm, SetupState };
+export type {
+  DoseTime,
+  Health,
+  MissedAlarm,
+  PickedPhoto,
+  PickedTime,
+  PillForm,
+  SetupState,
+};
 
 /** A dose's state on the Today screen. */
 export type DoseStatus =
@@ -52,6 +61,8 @@ export const AlarmErrors = {
   InvalidPill: 'INVALID_PILL',
   NoActivity: 'NO_ACTIVITY',
   NotFound: 'NOT_FOUND',
+  /** A photo couldn't be taken in, or another pick is still open. */
+  PhotoError: 'PHOTO_ERROR',
   /** The app's storage couldn't be read or written, often because the phone is full. */
   StorageError: 'STORAGE_ERROR',
 } as const;
@@ -142,4 +153,14 @@ export async function pickTime(
 /** The phone's 12/24-hour setting. */
 export function is24HourFormat(): boolean {
   return native().is24HourFormat();
+}
+
+/**
+ * Takes a pill photo with the phone's camera or picks one from the gallery, and stores it. Saving
+ * the pill with its `name` keeps it. Null if cancelled; rejects `PHOTO_ERROR` or `NO_ACTIVITY`.
+ */
+export async function pickPhoto(
+  source: 'camera' | 'gallery',
+): Promise<PickedPhoto | null> {
+  return native().pickPhoto(source);
 }

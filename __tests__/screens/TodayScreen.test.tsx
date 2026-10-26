@@ -26,6 +26,7 @@ function pill(
     days: 5,
     exists: true,
     fromTomorrow: false,
+    photoUri: null,
     ...more,
   };
 }
@@ -180,6 +181,8 @@ test('opens the pill page from a pill row', async () => {
       times: [{ hour: 8, minute: 0 }],
       startDate: '2026-10-26',
       days: 5,
+      photo: null,
+      photoUri: null,
     },
   ]);
   await renderApp();

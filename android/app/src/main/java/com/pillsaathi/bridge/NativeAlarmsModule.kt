@@ -1,11 +1,19 @@
 package com.pillsaathi.bridge
 
+import android.app.Activity
 import android.app.TimePickerDialog
+import android.content.ClipData
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.MediaStore
 import android.text.format.DateFormat
 import android.util.Log
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -21,13 +29,14 @@ import com.pillsaathi.alarm.SetupState
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.alarm.TodayCard
 import com.pillsaathi.alarm.TodayPill
+import com.pillsaathi.photo.PillPhotos
 import com.pillsaathi.specs.NativeAlarmsSpec
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
 /**
- * Pills, today's doses, card sounds, health checks, settings links, first-run setup and the time
- * picker for JS.
+ * Pills and their photos, today's doses, card sounds, health checks, settings links, first-run
+ * setup and the time picker for JS.
  *
  * The engine and store are used fresh on every call, never cached, because the `:ringing` process
  * changes the same data. They can wait on the store lock, so they only ever run on one background
@@ -41,6 +50,45 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   private val engine: AlarmEngine
     get() = AlarmEngine.get(reactApplicationContext)
+
+  private val photos by lazy { PillPhotos(reactApplicationContext, engine.store.photosDir) }
+
+  /** The photo pick waiting for the camera or the photo picker. Main thread only. */
+  private var pendingPick: Promise? = null
+
+  private val photoListener =
+    object : BaseActivityEventListener() {
+      override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != REQUEST_CAMERA && requestCode != REQUEST_GALLERY) return
+        val promise = pendingPick ?: return
+        pendingPick = null
+        val camera = requestCode == REQUEST_CAMERA
+        val uri = if (camera) Uri.fromFile(photos.captureFile) else data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+          promise.resolve(null)
+          return
+        }
+        onWorker(promise) {
+          val name =
+            try {
+              photos.importFrom(uri)
+            } catch (e: Exception) {
+              Log.e(LOG_TAG, "Could not take in the photo", e)
+              throw AlarmException(PHOTO_ERROR, "Couldn't add the photo")
+            } finally {
+              if (camera) photos.captureFile.delete()
+            }
+          Arguments.createMap().apply {
+            putString("name", name)
+            putString("uri", photos.fileUri(name))
+          }
+        }
+      }
+    }
+
+  init {
+    reactContext.addActivityEventListener(photoListener)
+  }
 
   override fun getName() = NAME
 
@@ -101,10 +149,55 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   override fun reconcileOnAppOpen(promise: Promise) =
     onWorker(promise) {
-      Arguments.createArray().apply {
-        engine.reconcile(ReconcileTrigger.APP_OPEN).forEach { pushMap(missedToJs(it)) }
+      val missed = engine.reconcile(ReconcileTrigger.APP_OPEN)
+      try {
+        engine.cleanUpPhotos(System.currentTimeMillis())
+      } catch (e: Exception) {
+        Log.w(LOG_TAG, "Could not clean up unused photos", e)
+      }
+      Arguments.createArray().apply { missed.forEach { pushMap(missedToJs(it)) } }
+    }
+
+  override fun pickPhoto(source: String, promise: Promise) {
+    UiThreadUtil.runOnUiThread {
+      if (pendingPick != null) {
+        promise.reject(PHOTO_ERROR, "A photo is already being picked")
+        return@runOnUiThread
+      }
+      val activity = reactApplicationContext.currentActivity
+      if (activity == null) {
+        promise.reject(NO_ACTIVITY, "There is no screen to pick a photo on")
+        return@runOnUiThread
+      }
+      try {
+        val (intent, request) =
+          when (source) {
+            "camera" -> {
+              val output = photos.captureUri()
+              Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                .putExtra(MediaStore.EXTRA_OUTPUT, output)
+                .apply {
+                  clipData = ClipData.newRawUri("", output)
+                  addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } to REQUEST_CAMERA
+            }
+            "gallery" ->
+              PickVisualMedia()
+                .createIntent(
+                  activity,
+                  PickVisualMediaRequest.Builder().setMediaType(PickVisualMedia.ImageOnly).build(),
+                ) to REQUEST_GALLERY
+            else -> throw IllegalArgumentException("Unknown photo source $source")
+          }
+        pendingPick = promise
+        activity.startActivityForResult(intent, request)
+      } catch (e: Exception) {
+        Log.e(LOG_TAG, "Could not open the $source for a photo", e)
+        pendingPick = null
+        promise.reject(PHOTO_ERROR, "Couldn't open the $source")
       }
     }
+  }
 
   override fun getHealth(promise: Promise) =
     onWorker(promise) {
@@ -205,6 +298,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
   override fun is24HourFormat(): Boolean = DateFormat.is24HourFormat(reactApplicationContext)
 
   override fun invalidate() {
+    reactApplicationContext.removeActivityEventListener(photoListener)
     thread.quitSafely() // After the work already queued.
     super.invalidate()
   }
@@ -263,6 +357,8 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       )
       putString("startDate", pill.startDate.toString())
       pill.days?.let { putInt("days", it) } ?: putNull("days")
+      putString("photo", pill.photo)
+      putString("photoUri", pill.photo?.let(photos::fileUri))
     }
 
   private fun cardToJs(card: TodayCard): WritableMap =
@@ -286,6 +382,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       pill.days?.let { putInt("days", it) } ?: putNull("days")
       putBoolean("exists", pill.exists)
       putBoolean("fromTomorrow", pill.fromTomorrow)
+      putString("photoUri", pill.photo?.let(photos::fileUri))
     }
 
   private fun missedToJs(missed: MissedAlarm): WritableMap =
@@ -300,5 +397,8 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     private const val NO_ACTIVITY = "NO_ACTIVITY"
     private const val NOT_FOUND = "NOT_FOUND"
     private const val STORAGE_ERROR = "STORAGE_ERROR"
+    private const val PHOTO_ERROR = "PHOTO_ERROR"
+    private const val REQUEST_CAMERA = 4_801
+    private const val REQUEST_GALLERY = 4_802
   }
 }

@@ -75,6 +75,10 @@ class AlarmStore(context: Context) {
   val soundsDir: File
     get() = File(storage.filesDir, SOUNDS_DIR).apply { mkdirs() }
 
+  /** Pill photos ([PhotoRules]), here so a ring before the first unlock can show them. */
+  val photosDir: File
+    get() = File(storage.filesDir, PHOTOS_DIR).apply { mkdirs() }
+
   /**
    * Parses [name], or returns [empty] if the stored value can't be read. Unreadable data is moved
    * to a `<name>.corrupt-<epochMs>` backup first, so a later save never destroys it.
@@ -107,5 +111,6 @@ class AlarmStore(context: Context) {
     const val SETTINGS = "settings.json"
     const val RINGING = "ringing.json"
     const val SOUNDS_DIR = "sounds"
+    const val PHOTOS_DIR = "photos"
   }
 }

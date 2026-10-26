@@ -269,7 +269,10 @@ object DoseRules {
       } else {
         record.pills.map { snap ->
           val live = pills.firstOrNull { it.id == snap.pillId }
-          TodayPill(snap.pillId, snap.name, snap.form, snap.amount, live?.startDate, live?.days, live != null, false)
+          TodayPill(
+            snap.pillId, snap.name, snap.form, snap.amount, live?.startDate, live?.days, live != null, false,
+            live?.photo,
+          )
         } + onTime.filter { p -> record.pills.none { it.pillId == p.id } }.map { todayPill(it, fromTomorrow = true) }
       }
       val (status, statusAt) = statusOf(alarm, record, ringingIds, today, zone)
@@ -304,7 +307,7 @@ object DoseRules {
   }
 
   private fun todayPill(p: Pill, fromTomorrow: Boolean) =
-    TodayPill(p.id, p.name, p.form, p.amount, p.startDate, p.days, exists = true, fromTomorrow = fromTomorrow)
+    TodayPill(p.id, p.name, p.form, p.amount, p.startDate, p.days, exists = true, fromTomorrow = fromTomorrow, photo = p.photo)
 
   private fun updated(
     alarm: Alarm,

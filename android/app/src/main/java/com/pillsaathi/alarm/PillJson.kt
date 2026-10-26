@@ -17,7 +17,8 @@ object PillJson {
           .put("times", timesToJson(p.times))
           .put("startDate", p.startDate.toString())
           .put("days", p.days ?: JSONObject.NULL)
-          .put("createdAt", p.createdAt),
+          .put("createdAt", p.createdAt)
+          .put("photo", p.photo ?: JSONObject.NULL),
       )
     }
     return arr.toString()
@@ -37,6 +38,8 @@ object PillJson {
         startDate = LocalDate.parse(o.getString("startDate")),
         days = if (o.isNull("days")) null else o.getInt("days"),
         createdAt = o.getLong("createdAt"),
+        // Missing in pills saved before photos.
+        photo = if (o.isNull("photo")) null else o.getString("photo"),
       )
     }
   }

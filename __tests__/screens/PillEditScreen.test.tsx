@@ -18,6 +18,8 @@ const telma: Pill = {
   times: [{ hour: 21, minute: 0 }],
   startDate: '2026-10-20',
   days: 12,
+  photo: null,
+  photoUri: null,
 };
 
 beforeEach(() => {
@@ -102,6 +104,7 @@ test('saves a new pill with what was entered', async () => {
     times: [{ hour: 8, minute: 0 }],
     startsTomorrow: false,
     days: 5,
+    photo: null,
   });
 });
 
@@ -220,7 +223,23 @@ test('loads an existing pill and saves it with its id', async () => {
     times: [{ hour: 21, minute: 0 }],
     startsTomorrow: false,
     days: 12,
+    photo: null,
   });
+});
+
+test('an edit keeps the pill photo', async () => {
+  const photo = '3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg';
+  jest
+    .mocked(alarms.listPills)
+    .mockResolvedValue([
+      { ...telma, photo, photoUri: `file:///photos/${photo}` },
+    ]);
+  await renderApp('PillEdit', { pillId: 'p1' });
+  expect(await screen.findByDisplayValue('Telma 40')).toBeTruthy();
+  await save();
+  expect(alarms.savePill).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'p1', photo }),
+  );
 });
 
 test('a pill that no longer exists leaves the page', async () => {

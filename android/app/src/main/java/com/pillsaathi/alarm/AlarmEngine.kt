@@ -42,8 +42,9 @@ class AlarmEngine private constructor(context: Context) {
 
   /**
    * Adds a pill ([PillDraft.id] null) or edits one, then runs housekeeping. A new pill starts today,
-   * or tomorrow when asked; an edit keeps its start date. Throws [NoSuchElementException] for an
-   * unknown id and [StorageException] when either write fails.
+   * or tomorrow when asked; an edit keeps its start date. The draft's photo is kept only if its file
+   * exists, and a photo it replaces is deleted. Throws [NoSuchElementException] for an unknown id
+   * and [StorageException] when either write fails.
    */
   fun savePill(draft: PillDraft): Pill {
     val (pill, removed) = store.locked {
@@ -52,6 +53,11 @@ class AlarmEngine private constructor(context: Context) {
       val existing = draft.id?.let { id ->
         pills.firstOrNull { it.id == id } ?: throw NoSuchElementException("No pill $id")
       }
+      val photo = draft.photo?.takeIf { name ->
+        File(store.photosDir, name).exists().also {
+          if (!it) Log.w(LOG_TAG, "Photo $name is gone; saving the pill without one")
+        }
+      }
       val pill =
         existing?.copy(
           name = draft.name,
@@ -59,6 +65,7 @@ class AlarmEngine private constructor(context: Context) {
           amount = draft.amount,
           times = draft.times,
           days = draft.days,
+          photo = photo,
         )
           ?: Pill(
             id = UUID.randomUUID().toString(),
@@ -69,21 +76,46 @@ class AlarmEngine private constructor(context: Context) {
             startDate = dateOf(now).plusDays(if (draft.startsTomorrow) 1L else 0L),
             days = draft.days,
             createdAt = now,
+            photo = photo,
           )
-      store.savePills(if (existing == null) pills + pill else pills.map { if (it.id == pill.id) pill else it })
+      val saved = if (existing == null) pills + pill else pills.map { if (it.id == pill.id) pill else it }
+      store.savePills(saved)
+      existing?.photo?.takeIf { it != photo }?.let { deletePhotoUnlessUsed(it, saved) }
       pill to syncCards(now)
     }
     stopRings(removed)
     return pill
   }
 
-  /** Deletes pill [id], then runs housekeeping: a card left with no pills goes, ring and all. */
+  /**
+   * Deletes pill [id] and its photo, then runs housekeeping: a card left with no pills goes, ring
+   * and all.
+   */
   fun deletePill(id: String) {
     val removed = store.locked {
-      store.savePills(store.loadPills().filterNot { it.id == id })
+      val pills = store.loadPills()
+      val left = pills.filterNot { it.id == id }
+      store.savePills(left)
+      pills.firstOrNull { it.id == id }?.photo?.let { deletePhotoUnlessUsed(it, left) }
       syncCards(System.currentTimeMillis())
     }
     stopRings(removed)
+  }
+
+  /**
+   * Deletes photos no pill uses once they are a day old ([PhotoRules.orphans]): photos picked for
+   * a pill page that was then left without saving, for example.
+   */
+  fun cleanUpPhotos(now: Long) {
+    store.locked {
+      val used = store.loadPills().mapNotNull { it.photo }.toSet()
+      val dir = store.photosDir
+      val files = dir.listFiles().orEmpty().filter { it.isFile }.map { it.name to it.lastModified() }
+      PhotoRules.orphans(files, used, now).forEach { name ->
+        if (File(dir, name).delete()) Log.i(LOG_TAG, "Deleted unused photo $name")
+        else Log.w(LOG_TAG, "Could not delete unused photo $name")
+      }
+    }
   }
 
   /** Sets card [alarmId]'s sound; null is the default alarm tone. */
@@ -423,6 +455,15 @@ class AlarmEngine private constructor(context: Context) {
     }
     if (record == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
     return record
+  }
+
+  /**
+   * Deletes photo [name] after a user's change no longer needs it, unless one of [pills] still
+   * does. The change is already saved, so a failure is only logged; cleanup gets it later.
+   */
+  private fun deletePhotoUnlessUsed(name: String, pills: List<Pill>) {
+    if (!PhotoRules.isPhotoName(name) || pills.any { it.photo == name }) return
+    if (!File(store.photosDir, name).delete()) Log.w(LOG_TAG, "Could not delete photo $name")
   }
 
   private fun stillMissed(doses: List<DoseRecord>, record: DoseRecord): Boolean =

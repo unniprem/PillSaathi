@@ -483,6 +483,18 @@ class DoseRulesTest {
     assertTrue(card.pills[1].exists)
   }
 
+  @Test fun todayCards_photoFromLivePill_nullWhenDeleted() {
+    val a = pill("a", listOf(t(8, 0)), name = "A").copy(photo = "a-new.jpg")
+    val b = pill("b", listOf(t(8, 0)), name = "B").copy(photo = "b.jpg")
+    val gone = pill("gone", listOf(t(8, 0)), name = "Gone").copy(photo = "gone.jpg")
+    // The record was made with a, b and a pill deleted since; a's photo has changed since too.
+    val rec = record(8, 0, DoseOutcome.TAKEN, oct(26, 8, 1), listOf(a.copy(photo = "a-old.jpg"), b, gone))
+    val recorded = DoseRules.todayCards(listOf(card("c8", 8, 0)), listOf(a, b), listOf(rec), emptySet(), NOW, IST)
+    assertEquals(listOf("a-new.jpg", "b.jpg", null), recorded.single().pills.map { it.photo })
+    val live = DoseRules.todayCards(listOf(card("c8", 8, 0)), listOf(a, b), emptyList(), emptySet(), NOW, IST)
+    assertEquals(listOf("a-new.jpg", "b.jpg"), live.single().pills.map { it.photo })
+  }
+
   @Test fun todayCards_cardGoneButRecordToday_stillShown() {
     val gone = pill("X", listOf(t(8, 0)))
     val records = listOf(record(8, 0, DoseOutcome.TAKEN, oct(26, 8, 2), listOf(gone)))

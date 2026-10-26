@@ -102,6 +102,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
   const [startsTomorrow, setStartsTomorrow] = useState(false);
   // An edit keeps the pill's start date; it is known once the pill has loaded.
   const [startDate, setStartDate] = useState<string | null>(null);
+  // The photo's file name; saving without it would delete the pill's photo.
+  const [photo, setPhoto] = useState<string | null>(null);
   // Editing: Save waits for the pill, or it would overwrite it with the new-pill defaults.
   const [loaded, setLoaded] = useState(!pillId);
   const [saving, setSaving] = useState(false);
@@ -160,6 +162,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         setAmount(pill.amount);
         setTimes([...pill.times].sort(byTime));
         setStartDate(pill.startDate);
+        setPhoto(pill.photo);
         if (pill.days === null) {
           setDuration('none');
         } else if ((PRESETS as number[]).includes(pill.days)) {
@@ -240,6 +243,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         times,
         startsTomorrow: pillId ? false : startsTomorrow,
         days,
+        photo,
       });
     } catch (e) {
       console.warn('Could not save the pill', e);
@@ -290,6 +294,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
     amount,
     times,
     startsTomorrow,
+    photo,
     finish,
   ]);
 

@@ -73,6 +73,17 @@
         </intent-filter>
       </receiver>
 
+      <!-- Lends the camera app one file to write a pill photo to. No storage or camera permission. -->
+      <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.photos"
+        android:exported="false"
+        android:grantUriPermissions="true">
+        <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/photo_paths" />
+      </provider>
+
       <service
         android:name=".alarm.RingingService"
         android:process=":ringing"
