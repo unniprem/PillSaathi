@@ -40,30 +40,30 @@ import { listSounds } from '../native/sounds';
 import type { Sound } from '../native/sounds';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
+import type { Strings } from '../i18n';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Today'>;
 
 /** One line per missed dose: "8:00 AM: Azithromycin 500, Telma 40". */
-function alertMissed(missed: MissedAlarm[], onFix: () => void) {
+function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
   const is24h = is24HourFormat();
   const lines = missed.map(m => {
     const due = new Date(m.dueAt);
     return `${formatTime(due.getHours(), due.getMinutes(), is24h)}: ${m.name}`;
   });
-  Alert.alert(
-    'Missed medicines',
-    `PillSaathi was stopped by your phone and missed:\n${lines.join('\n')}`,
-    [
-      { text: 'Later', style: 'cancel' },
-      { text: 'Fix this', onPress: onFix },
-    ],
-  );
+  Alert.alert(t.today.missedTitle, t.today.missedBody(lines.join('\n')), [
+    { text: t.today.later, style: 'cancel' },
+    { text: t.today.fixThis, onPress: onFix },
+  ]);
 }
 
 export default function TodayScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
+  // Read by the refresh and mount effects, which must not re-run when the language changes.
+  const words = useRef(t);
+  words.current = t;
   const [issues, setIssues] = useState<Issue[]>([]);
   const [today, setToday] = useState<Today | null>(null);
   const [sounds, setSounds] = useState<Sound[]>([]);
@@ -82,7 +82,11 @@ export default function TodayScreen({ navigation }: Props) {
           // skip reconcile so the alert can't repeat.
           const missed = await reconcileOnAppOpen();
           if (mounted.current && missed.length > 0) {
-            alertMissed(missed, () => navigation.navigate('Setup'));
+            alertMissed(
+              missed,
+              () => navigation.navigate('Setup'),
+              words.current,
+            );
           }
         } catch (e) {
           console.warn('Could not reconcile alarms', e);
@@ -93,7 +97,14 @@ export default function TodayScreen({ navigation }: Props) {
       Promise.all([getHealth(), getSetupState()])
         .then(([health, setup]) => {
           if (mounted.current && request === latest.current) {
-            setIssues(healthIssues(health, setup, currentManufacturer()));
+            setIssues(
+              healthIssues(
+                health,
+                setup,
+                currentManufacturer(),
+                words.current,
+              ),
+            );
           }
         })
         .catch(e => {
@@ -138,10 +149,9 @@ export default function TodayScreen({ navigation }: Props) {
       PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
         {
-          title: 'Allow notifications',
-          message:
-            'PillSaathi needs notifications to show your medicines when they ring.',
-          buttonPositive: 'OK',
+          title: words.current.today.notificationsTitle,
+          message: words.current.today.notificationsMessage,
+          buttonPositive: words.current.common.ok,
         },
       ).catch(e => console.warn('Notification permission request failed', e));
     }
@@ -176,17 +186,17 @@ export default function TodayScreen({ navigation }: Props) {
     }
     const time = formatTime(card.hour, card.minute, is24HourFormat());
     const names = card.pills.map(p => p.name).join(', ');
-    Alert.alert('Mark as taken?', `${time} · ${names}`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t.today.markTakenTitle, `${time} · ${names}`, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Mark as taken',
+        text: t.today.markTaken,
         onPress: async () => {
           try {
             await markDoseTaken(date, card.hour, card.minute);
           } catch (e) {
             console.warn('Could not mark the dose taken', e);
             if (mounted.current) {
-              Alert.alert('Could not mark it taken', 'Please try again.');
+              Alert.alert(t.today.markFailed, t.common.tryAgain);
             }
           }
           refresh(false);
@@ -235,13 +245,9 @@ export default function TodayScreen({ navigation }: Props) {
         )}
         ListEmptyComponent={
           loadFailed ? (
-            <Text style={styles.empty}>
-              Couldn't load your pills. Reopen the app to try again.
-            </Text>
+            <Text style={styles.empty}>{t.today.loadFailed}</Text>
           ) : loaded ? (
-            <Text style={styles.empty}>
-              No pills yet. Tap + Add pill to add one.
-            </Text>
+            <Text style={styles.empty}>{t.today.empty}</Text>
           ) : undefined
         }
       />

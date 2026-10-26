@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +29,7 @@ import {
   listPills,
   markSetupSeen,
   openSetting,
+  pickPhoto,
   pickTime,
   savePill,
 } from '../native/alarms';
@@ -106,6 +108,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
   const [startDate, setStartDate] = useState<string | null>(null);
   // The photo's file name; saving without it would delete the pill's photo.
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const picking = useRef(false);
   // Editing: Save waits for the pill, or it would overwrite it with the new-pill defaults.
   const [loaded, setLoaded] = useState(!pillId);
   const [saving, setSaving] = useState(false);
@@ -132,18 +136,18 @@ export default function PillEditScreen({ navigation, route }: Props) {
   const renderCancel = useCallback(
     () => (
       <Pressable accessibilityRole="button" onPress={leave}>
-        <Text style={styles.headerButton}>Cancel</Text>
+        <Text style={styles.headerButton}>{t.common.cancel}</Text>
       </Pressable>
     ),
-    [leave],
+    [leave, t],
   );
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: pillId ? 'Edit pill' : 'Add pill',
+      title: pillId ? t.pill.editTitle : t.pill.addTitle,
       headerLeft: renderCancel,
     });
-  }, [navigation, pillId, renderCancel]);
+  }, [navigation, pillId, renderCancel, t]);
 
   useEffect(() => {
     if (!pillId) {
@@ -165,6 +169,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         setTimes([...pill.times].sort(byTime));
         setStartDate(pill.startDate);
         setPhoto(pill.photo);
+        setPhotoUri(pill.photoUri);
         if (pill.days === null) {
           setDuration('none');
         } else if ((PRESETS as number[]).includes(pill.days)) {
@@ -199,7 +204,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
       return;
     }
     if (times.some((time, i) => i !== index && sameTime(time, picked))) {
-      Alert.alert('That time is already added.');
+      Alert.alert(t.pill.timeTaken);
       return;
     }
     const next =
@@ -211,6 +216,33 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
   const removeTime = (index: number) =>
     setTimes(list => list.filter((_, i) => i !== index));
+
+  /** A new photo from the camera or gallery; a cancelled pick keeps the one there is. */
+  const choosePhoto = async (source: 'camera' | 'gallery') => {
+    if (picking.current) {
+      return;
+    }
+    picking.current = true;
+    try {
+      const picked = await pickPhoto(source);
+      if (picked && mounted.current) {
+        setPhoto(picked.name);
+        setPhotoUri(picked.uri);
+      }
+    } catch (e) {
+      console.warn('Could not add the photo', e);
+      if (mounted.current) {
+        Alert.alert(t.pill.photoFailed);
+      }
+    } finally {
+      picking.current = false;
+    }
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoUri(null);
+  };
 
   const days = daysOf(duration, otherDays);
   const ready =
@@ -250,7 +282,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
     } catch (e) {
       console.warn('Could not save the pill', e);
       if (mounted.current) {
-        Alert.alert('Could not save the pill', 'Please try again.');
+        Alert.alert(t.pill.saveFailed, t.common.tryAgain);
         setSaving(false);
       }
       return;
@@ -264,12 +296,12 @@ export default function PillEditScreen({ navigation, route }: Props) {
     }
     if (!exactAlarmAllowed) {
       Alert.alert(
-        'PillSaathi needs permission to set alarms',
-        'Without it, Android may not ring your medicines on time.',
+        t.pill.exactAlarmTitle,
+        t.pill.exactAlarmBody,
         [
-          { text: 'Not now', style: 'cancel', onPress: () => finish() },
+          { text: t.pill.notNow, style: 'cancel', onPress: () => finish() },
           {
-            text: 'Allow',
+            text: t.pill.allow,
             onPress: () => {
               openSetting('exactAlarm').catch(e =>
                 console.warn('Could not open settings', e),
@@ -298,16 +330,17 @@ export default function PillEditScreen({ navigation, route }: Props) {
     startsTomorrow,
     photo,
     finish,
+    t,
   ]);
 
   const confirmDelete = useCallback(() => {
     if (!pillId) {
       return;
     }
-    Alert.alert('Delete this pill?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t.pill.deleteConfirm, undefined, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Delete',
+        text: t.common.delete,
         style: 'destructive',
         onPress: async () => {
           try {
@@ -316,13 +349,13 @@ export default function PillEditScreen({ navigation, route }: Props) {
           } catch (e) {
             console.warn('Could not delete the pill', e);
             if (mounted.current) {
-              Alert.alert('Could not delete the pill', 'Please try again.');
+              Alert.alert(t.pill.deleteFailed, t.common.tryAgain);
             }
           }
         },
       },
     ]);
-  }, [pillId, leave]);
+  }, [pillId, leave, t]);
 
   const renderActions = useCallback(
     () => (
@@ -333,7 +366,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
             onPress={confirmDelete}
             hitSlop={spacing.sm}
           >
-            <Text style={styles.headerDelete}>Delete</Text>
+            <Text style={styles.headerDelete}>{t.common.delete}</Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -344,12 +377,12 @@ export default function PillEditScreen({ navigation, route }: Props) {
           hitSlop={spacing.sm}
         >
           <Text style={[styles.headerSave, !ready && styles.disabled]}>
-            Save
+            {t.common.save}
           </Text>
         </Pressable>
       </View>
     ),
-    [pillId, confirmDelete, ready, saving, save],
+    [pillId, confirmDelete, ready, saving, save, t],
   );
 
   useLayoutEffect(() => {
@@ -362,17 +395,55 @@ export default function PillEditScreen({ navigation, route }: Props) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.label}>Name</Text>
+      <Text style={styles.label}>{t.pill.name}</Text>
       <TextInput
         value={name}
         onChangeText={setName}
         maxLength={60}
-        placeholder="Medicine name"
+        placeholder={t.pill.namePlaceholder}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
       />
 
-      <Text style={styles.label}>Type</Text>
+      <Text style={styles.label}>{t.pill.photo}</Text>
+      <View style={styles.photoRow}>
+        {photoUri ? (
+          <Image
+            testID="pill-photo"
+            source={{ uri: photoUri }}
+            style={styles.photo}
+          />
+        ) : null}
+        <View style={styles.photoButtons}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => choosePhoto('camera')}
+            style={styles.photoButton}
+          >
+            <Text style={styles.link}>
+              {photoUri ? t.pill.retake : t.pill.takePhoto}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => choosePhoto('gallery')}
+            style={styles.photoButton}
+          >
+            <Text style={styles.link}>{t.pill.chooseGallery}</Text>
+          </Pressable>
+          {photoUri ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={removePhoto}
+              style={styles.photoButton}
+            >
+              <Text style={styles.link}>{t.pill.removePhoto}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      <Text style={styles.label}>{t.pill.type}</Text>
       <View style={styles.chips}>
         {FORMS.map(f => (
           <Chip
@@ -384,10 +455,10 @@ export default function PillEditScreen({ navigation, route }: Props) {
         ))}
       </View>
 
-      <Text style={styles.label}>How much each time</Text>
+      <Text style={styles.label}>{t.pill.howMuch}</Text>
       <AmountStepper form={form} amount={amount} onChange={setAmount} />
 
-      <Text style={styles.label}>When to remind</Text>
+      <Text style={styles.label}>{t.pill.when}</Text>
       {times.map((time, i) => {
         const label = formatTime(time.hour, time.minute, is24h);
         return (
@@ -398,11 +469,11 @@ export default function PillEditScreen({ navigation, route }: Props) {
               onPress={() => chooseTime(i)}
               style={styles.timeButton}
             >
-              <Text style={styles.link}>Change</Text>
+              <Text style={styles.link}>{t.pill.change}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Remove ${label}`}
+              accessibilityLabel={t.pill.removeTime(label)}
               onPress={() => removeTime(i)}
               style={styles.timeButton}
             >
@@ -417,27 +488,27 @@ export default function PillEditScreen({ navigation, route }: Props) {
           onPress={() => chooseTime()}
           style={styles.addTime}
         >
-          <Text style={styles.link}>+ Add a time</Text>
+          <Text style={styles.link}>{t.pill.addTime}</Text>
         </Pressable>
       ) : null}
 
-      <Text style={styles.label}>For how long</Text>
+      <Text style={styles.label}>{t.pill.howLong}</Text>
       <View style={styles.chips}>
         {PRESETS.map(n => (
           <Chip
             key={n}
-            label={`${n} days`}
+            label={t.pill.nDays(n)}
             selected={duration === n}
             onPress={() => setDuration(n)}
           />
         ))}
         <Chip
-          label="Other…"
+          label={t.pill.otherDays}
           selected={duration === 'other'}
           onPress={() => setDuration('other')}
         />
         <Chip
-          label="No end"
+          label={t.pill.noEnd}
           selected={duration === 'none'}
           onPress={() => setDuration('none')}
         />
@@ -446,8 +517,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
         <TextInput
           value={otherDays}
           onChangeText={setOtherDays}
-          accessibilityLabel="Days"
-          placeholder="Days"
+          accessibilityLabel={t.pill.days}
+          placeholder={t.pill.days}
           placeholderTextColor={colors.textMuted}
           keyboardType="number-pad"
           maxLength={3}
@@ -457,15 +528,15 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
       {pillId ? null : (
         <>
-          <Text style={styles.label}>Starts</Text>
+          <Text style={styles.label}>{t.pill.starts}</Text>
           <View style={styles.chips}>
             <Chip
-              label="Today"
+              label={t.pill.startsToday}
               selected={!startsTomorrow}
               onPress={() => setStartsTomorrow(false)}
             />
             <Chip
-              label="Tomorrow"
+              label={t.pill.startsTomorrow}
               selected={startsTomorrow}
               onPress={() => setStartsTomorrow(true)}
             />
@@ -475,7 +546,14 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
       {times.length > 0 && days !== undefined ? (
         <Text style={styles.summary}>
-          {courseSummary({ startDate: courseStart, days, times, today, is24h })}
+          {courseSummary({
+            startDate: courseStart,
+            days,
+            times,
+            today,
+            is24h,
+            t,
+          })}
         </Text>
       ) : null}
     </ScrollView>
@@ -529,6 +607,10 @@ const styles = StyleSheet.create({
   link: { fontSize: 16, color: colors.primary },
   remove: { fontSize: 18, color: colors.textMuted },
   addTime: { paddingVertical: spacing.sm },
+  photoRow: { flexDirection: 'row', alignItems: 'center' },
+  photo: { width: 72, height: 72, borderRadius: 12, marginRight: spacing.md },
+  photoButtons: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
+  photoButton: { paddingVertical: spacing.sm, paddingRight: spacing.md },
   summary: { marginTop: spacing.md, fontSize: 15, color: colors.text },
   headerActions: {
     flexDirection: 'row',

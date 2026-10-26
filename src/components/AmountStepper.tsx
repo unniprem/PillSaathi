@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useI18n } from '../i18n';
 import { AMOUNT_RULES, formatAmount, stepAmount } from '../lib/amount';
 import type { PillForm } from '../lib/amount';
 import { colors, spacing } from '../theme';
@@ -12,12 +13,13 @@ type Props = {
 
 /** − amount + : steps by the type's step, within its range. */
 export default function AmountStepper({ form, amount, onChange }: Props) {
+  const { lang, t } = useI18n();
   const { min, max } = AMOUNT_RULES[form];
   return (
     <View style={styles.row}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Less"
+        accessibilityLabel={t.pill.less}
         accessibilityState={{ disabled: amount <= min }}
         disabled={amount <= min}
         onPress={() => onChange(stepAmount(form, amount, -1))}
@@ -25,10 +27,10 @@ export default function AmountStepper({ form, amount, onChange }: Props) {
       >
         <Text style={styles.sign}>−</Text>
       </Pressable>
-      <Text style={styles.amount}>{formatAmount(form, amount)}</Text>
+      <Text style={styles.amount}>{formatAmount(form, amount, lang)}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="More"
+        accessibilityLabel={t.pill.more}
         accessibilityState={{ disabled: amount >= max }}
         disabled={amount >= max}
         onPress={() => onChange(stepAmount(form, amount, 1))}

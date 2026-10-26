@@ -1,3 +1,5 @@
+import { en } from '../i18n/en';
+import type { Strings } from '../i18n/en';
 import type { Health, SettingTarget, SetupState } from '../native/alarms';
 import { isAggressiveMaker, stepsFor } from '../setup/oemSteps';
 
@@ -17,11 +19,12 @@ export type Issue = {
   action: SettingTarget | 'setup';
 };
 
-/** What is wrong, most important first. Empty when alarms should ring fine. */
+/** What is wrong, most important first, in [t]'s language. Empty when alarms should ring fine. */
 export function healthIssues(
   health: Health,
   setup: SetupState,
   manufacturer: string,
+  t: Strings = en,
 ): Issue[] {
   const issues: Issue[] = [];
   const add = (
@@ -37,37 +40,21 @@ export function healthIssues(
   add(
     !health.notificationsEnabled,
     'notifications',
-    "Notifications are off, so alarms can't show. Tap to turn them on.",
+    t.health.notifications,
   );
-  add(
-    !health.alarmChannelEnabled,
-    'alarmChannel',
-    'Alarm notifications are turned off. Tap to turn them on.',
-  );
-  add(
-    !health.exactAlarmAllowed,
-    'exactAlarm',
-    "PillSaathi isn't allowed to set alarms. Tap to allow it.",
-  );
-  add(
-    !health.fullScreenAllowed,
-    'fullScreen',
-    "Alarms can't show on the lock screen. Tap to allow it.",
-  );
+  add(!health.alarmChannelEnabled, 'alarmChannel', t.health.alarmChannel);
+  add(!health.exactAlarmAllowed, 'exactAlarm', t.health.exactAlarm);
+  add(!health.fullScreenAllowed, 'fullScreen', t.health.fullScreen);
   add(
     health.backgroundRestricted,
     'backgroundRestricted',
-    'Background use is restricted, so alarms may not ring. Tap to fix.',
+    t.health.backgroundRestricted,
   );
-  add(
-    health.alarmVolumeLow,
-    'alarmVolume',
-    'Alarm volume is off. Tap to turn it up.',
-  );
+  add(health.alarmVolumeLow, 'alarmVolume', t.health.alarmVolume);
   add(
     !health.ignoringBatteryOptimizations,
     'batteryOptimization',
-    'Battery saving may stop alarms. Tap to allow unrestricted battery use.',
+    t.health.batteryOptimization,
   );
   add(
     isAggressiveMaker(manufacturer) &&
@@ -75,7 +62,7 @@ export function healthIssues(
         s => !s.autoDone && !setup.doneSteps.includes(s.key),
       ),
     'setup',
-    'Finish setting up so alarms ring reliably on this phone.',
+    t.health.setup,
     'setup',
   );
   return issues;

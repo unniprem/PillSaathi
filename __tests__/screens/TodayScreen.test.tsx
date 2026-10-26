@@ -3,8 +3,9 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type { Today, TodayPill } from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
+import { hi } from '../../src/i18n/hi';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
-import { renderApp } from '../helpers/renderApp';
+import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
@@ -127,6 +128,43 @@ test('shows each time card with its pills, amounts, sound and status', async () 
   expect(screen.getByText('from tomorrow')).toBeTruthy();
   expect(screen.getAllByText('♪ Default alarm tone')).toHaveLength(3);
   expect(screen.getByText('+ Add pill')).toBeTruthy();
+});
+
+test('shows a pill photo when it has one', async () => {
+  const withPhoto = pill('p1', 'Azithromycin 500', {
+    photoUri: 'file:///p/a.jpg',
+  });
+  jest.mocked(alarms.getToday).mockResolvedValue({
+    ...today,
+    cards: [{ ...today.cards[1], pills: [withPhoto] }],
+  });
+  await renderApp();
+  const photo = await screen.findByTestId('pill-photo-p1');
+  expect(photo.props.source).toEqual({ uri: 'file:///p/a.jpg' });
+  expect(screen.queryByTestId('pill-icon-p1')).toBeNull();
+  // A photo that can't be read shows the type icon instead.
+  await fireEvent(photo, 'error');
+  expect(screen.getByTestId('pill-icon-p1').props.children).toBe('⚪');
+});
+
+test('shows the type icon without a photo', async () => {
+  await renderApp();
+  expect((await screen.findByTestId('pill-icon-p1')).props.children).toBe(
+    '⚪',
+  );
+  expect(screen.getByTestId('pill-icon-p3').props.children).toBe('💊');
+  expect(screen.queryByTestId('pill-photo-p1')).toBeNull();
+});
+
+test('shows Today in Hindi', async () => {
+  jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
+  await renderApp();
+  expect(await screen.findByText(hi.status.missed)).toBeTruthy();
+  expect(screen.getByText('1 कैप्सूल')).toBeTruthy();
+  expect(screen.getByText(hi.course.dayOf(1, 5))).toBeTruthy();
+  expect(screen.getByText(hi.status.takenAt('8:02 AM'))).toBeTruthy();
+  expect(screen.getAllByText(`♪ ${hi.common.defaultTone}`)).toHaveLength(3);
+  expect(headerTitles()[0]).toContain('आज');
 });
 
 test('marks a missed dose taken after confirming', async () => {

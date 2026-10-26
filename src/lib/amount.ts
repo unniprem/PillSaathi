@@ -5,6 +5,14 @@ export type PillForm = 'tablet' | 'capsule' | 'syrup' | 'drops';
 
 export const FORMS: PillForm[] = ['tablet', 'capsule', 'syrup', 'drops'];
 
+/** Shown wherever a pill has no photo, the same icons as the ringing screen. */
+export const FORM_ICONS: Record<PillForm, string> = {
+  tablet: '⚪',
+  capsule: '💊',
+  syrup: '🧴',
+  drops: '💧',
+};
+
 /** How each type's amount steps on the − / + stepper, and where it starts. */
 export const AMOUNT_RULES: Record<
   PillForm,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { useI18n } from '../i18n';
 import type { Issue } from '../lib/health';
 import { colors, spacing } from '../theme';
 
@@ -9,11 +10,12 @@ type Props = {
 };
 
 export default function HealthBanner({ issues, onAction }: Props) {
+  const { t } = useI18n();
   if (issues.length === 0) {
     return null;
   }
   const first = issues[0];
-  const more = issues.length > 1 ? ` (+${issues.length - 1} more)` : '';
+  const more = issues.length > 1 ? t.health.more(issues.length - 1) : '';
   return (
     <Pressable
       accessibilityRole="button"

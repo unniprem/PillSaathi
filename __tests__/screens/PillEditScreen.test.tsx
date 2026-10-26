@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { ml } from '../../src/i18n/ml';
 import { courseSummary, toISODate } from '../../src/lib/course';
 import * as alarms from '../../src/native/alarms';
 import type { Pill } from '../../src/native/alarms';
@@ -240,6 +241,102 @@ test('an edit keeps the pill photo', async () => {
   expect(alarms.savePill).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'p1', photo }),
   );
+});
+
+const PHOTO = '3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg';
+const PHOTO_URI = `file:///photos/${PHOTO}`;
+
+test('takes a photo and saves its name', async () => {
+  jest
+    .mocked(alarms.pickPhoto)
+    .mockResolvedValue({ name: PHOTO, uri: PHOTO_URI });
+  await renderApp('PillEdit', { pillId: 'p1' });
+  await screen.findByDisplayValue('Telma 40');
+  await fireEvent.press(screen.getByText('Take a photo'));
+  expect(alarms.pickPhoto).toHaveBeenCalledWith('camera');
+  expect((await screen.findByTestId('pill-photo')).props.source).toEqual({
+    uri: PHOTO_URI,
+  });
+  expect(screen.getByText('Retake')).toBeTruthy();
+  expect(screen.getByText('Remove')).toBeTruthy();
+  await save();
+  expect(alarms.savePill).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'p1', photo: PHOTO }),
+  );
+});
+
+test('picks a photo from the gallery for a new pill', async () => {
+  jest
+    .mocked(alarms.pickPhoto)
+    .mockResolvedValue({ name: PHOTO, uri: PHOTO_URI });
+  await newPill();
+  await fireEvent.press(screen.getByText('Choose from gallery'));
+  expect(alarms.pickPhoto).toHaveBeenCalledWith('gallery');
+  await screen.findByTestId('pill-photo');
+  await fireEvent.press(screen.getByText('5 days'));
+  await save();
+  expect(alarms.savePill).toHaveBeenCalledWith(
+    expect.objectContaining({ id: null, photo: PHOTO }),
+  );
+});
+
+test('removes a photo', async () => {
+  jest
+    .mocked(alarms.listPills)
+    .mockResolvedValue([{ ...telma, photo: PHOTO, photoUri: PHOTO_URI }]);
+  await renderApp('PillEdit', { pillId: 'p1' });
+  await screen.findByTestId('pill-photo');
+  await fireEvent.press(screen.getByText('Remove'));
+  expect(screen.queryByTestId('pill-photo')).toBeNull();
+  expect(screen.getByText('Take a photo')).toBeTruthy();
+  await save();
+  expect(alarms.savePill).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'p1', photo: null }),
+  );
+});
+
+test('keeps the photo when a pick is cancelled', async () => {
+  jest
+    .mocked(alarms.listPills)
+    .mockResolvedValue([{ ...telma, photo: PHOTO, photoUri: PHOTO_URI }]);
+  jest.mocked(alarms.pickPhoto).mockResolvedValue(null);
+  await renderApp('PillEdit', { pillId: 'p1' });
+  await screen.findByTestId('pill-photo');
+  await fireEvent.press(screen.getByText('Retake'));
+  expect(alarms.pickPhoto).toHaveBeenCalledWith('camera');
+  expect(screen.getByTestId('pill-photo').props.source).toEqual({
+    uri: PHOTO_URI,
+  });
+  await save();
+  expect(alarms.savePill).toHaveBeenCalledWith(
+    expect.objectContaining({ photo: PHOTO }),
+  );
+});
+
+test('says when a photo could not be added', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest
+    .mocked(alarms.pickPhoto)
+    .mockRejectedValue(
+      Object.assign(new Error('decode'), { code: 'PHOTO_ERROR' }),
+    );
+  await renderApp('PillEdit', { pillId: 'p1' });
+  await screen.findByDisplayValue('Telma 40');
+  await fireEvent.press(screen.getByText('Choose from gallery'));
+  await waitFor(() =>
+    expect(alert).toHaveBeenCalledWith("Couldn't add the photo"),
+  );
+  expect(screen.queryByTestId('pill-photo')).toBeNull();
+});
+
+test('shows the pill page in Malayalam', async () => {
+  jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
+  await renderApp('PillEdit', { pillId: 'p1' });
+  expect(await screen.findByText('പേര്')).toBeTruthy();
+  expect(screen.getByText('½ ഗുളിക')).toBeTruthy();
+  expect(screen.getByText(ml.pill.takePhoto)).toBeTruthy();
+  expect(screen.getByText(ml.common.save)).toBeTruthy();
+  expect(screen.getByText(ml.forms.capsule)).toBeTruthy();
 });
 
 test('a pill that no longer exists leaves the page', async () => {
