@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react-native';
+import { AppState } from 'react-native';
+import { act, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import { en } from '../../src/i18n/en';
 import { hi } from '../../src/i18n/hi';
@@ -31,6 +32,10 @@ beforeEach(() => {
   mockAlarmsDefaults();
 });
 
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 test('has every key in every language', () => {
   expect(shape(ml)).toEqual(shape(en));
   expect(shape(hi)).toEqual(shape(en));
@@ -51,15 +56,32 @@ test('starts in the language native reports', async () => {
 // phone's language or English, and anything it can't name is English too.
 test('starts in English when native reports an unlisted language', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('ta');
-  const first = await renderApp();
+  await renderApp();
   expect(await screen.findByText('+ Add pill')).toBeTruthy();
   expect(headerTitles()).toEqual(['Today · Mon 26 Oct']);
-  first.unmount();
+});
 
+test('starts in English when native cannot say', async () => {
   jest.mocked(alarms.currentLanguage).mockImplementation(() => {
     throw new Error('no module');
   });
   await renderApp();
   expect(await screen.findByText('+ Add pill')).toBeTruthy();
   expect(headerTitles()).toEqual(['Today · Mon 26 Oct']);
+});
+
+// Following the phone: the ringing process reads the phone's language at every ring, so the app
+// reads it again whenever it comes back, or the two could differ.
+test('reads the language again when the app comes back', async () => {
+  const listeners: ((state: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, cb) => {
+    listeners.push(cb as (state: string) => void);
+    return { remove: jest.fn() } as never;
+  });
+  await renderApp();
+  expect(await screen.findByText('+ Add pill')).toBeTruthy();
+  jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
+  await act(async () => listeners.forEach(l => l('active')));
+  await waitFor(() => expect(screen.getByText(hi.today.addPill)).toBeTruthy());
+  expect(headerTitles()).toEqual(['आज · सोम 26 अक्टू']);
 });

@@ -2,9 +2,11 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
+import { AppState } from 'react-native';
 import { currentLanguage, setLanguage as saveLanguage } from '../native/alarms';
 import { en } from './en';
 import type { Strings } from './en';
@@ -61,6 +63,16 @@ const I18nContext = createContext<I18n>({
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Lang>(startingLanguage);
+  // A phone-language change (or one made while the app was away) reaches the next ring at once;
+  // read it again on coming back, so the app never speaks another language than the ring.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        setLang(startingLanguage());
+      }
+    });
+    return () => sub.remove();
+  }, []);
   const setLanguage = useCallback(async (next: Lang) => {
     await saveLanguage(next);
     setLang(next);
