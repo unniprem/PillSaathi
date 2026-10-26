@@ -136,6 +136,14 @@ class DoseRulesTest {
     }
   }
 
+  // Shown wherever a pill has no photo.
+  @Test fun pillForm_icons() {
+    assertEquals("⚪", PillForm.TABLET.icon)
+    assertEquals("💊", PillForm.CAPSULE.icon)
+    assertEquals("🧴", PillForm.SYRUP.icon)
+    assertEquals("💧", PillForm.DROPS.icon)
+  }
+
   @Test fun spokenAmount_halves() {
     assertEquals("half a tablet", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.EN))
     assertEquals("1 and a half tablets", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.EN))

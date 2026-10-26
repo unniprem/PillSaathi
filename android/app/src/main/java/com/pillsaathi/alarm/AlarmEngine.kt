@@ -315,12 +315,15 @@ class AlarmEngine private constructor(context: Context) {
     try {
       val date = dateOf(alarm.nextTriggerAt ?: System.currentTimeMillis())
       val lang = language()
+      val photos = store.photosDir
       DoseRules.pillsDue(store.locked { store.loadPills() }, alarm.hour, alarm.minute, date).map {
         RingPill(
           it.name,
           DoseRules.amountText(it.form, it.amount, lang),
           DoseRules.spokenAmount(it.form, it.amount, lang),
           DoseRules.spokenAmount(it.form, it.amount, AppLanguage.EN),
+          it.form,
+          it.photo?.let { name -> File(photos, name).absolutePath },
         )
       }
     } catch (e: Exception) {

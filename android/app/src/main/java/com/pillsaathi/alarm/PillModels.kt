@@ -2,18 +2,22 @@ package com.pillsaathi.alarm
 
 import java.time.LocalDate
 
-/** A pill's type, with how its amount steps on the − / + stepper. */
+/**
+ * A pill's type, with how its amount steps on the − / + stepper, and the [icon] shown where a pill
+ * has no photo.
+ */
 enum class PillForm(
   val json: String,
   val step: Double,
   val min: Double,
   val max: Double,
   val initial: Double,
+  val icon: String,
 ) {
-  TABLET("tablet", 0.5, 0.5, 10.0, 1.0),
-  CAPSULE("capsule", 1.0, 1.0, 10.0, 1.0),
-  SYRUP("syrup", 2.5, 2.5, 50.0, 5.0),
-  DROPS("drops", 1.0, 1.0, 30.0, 2.0);
+  TABLET("tablet", 0.5, 0.5, 10.0, 1.0, "⚪"),
+  CAPSULE("capsule", 1.0, 1.0, 10.0, 1.0, "💊"),
+  SYRUP("syrup", 2.5, 2.5, 50.0, 5.0, "🧴"),
+  DROPS("drops", 1.0, 1.0, 30.0, 2.0, "💧");
 
   companion object {
     fun fromJson(s: String): PillForm? = values().firstOrNull { it.json == s }

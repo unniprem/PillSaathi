@@ -2,6 +2,9 @@ package com.pillsaathi.alarm
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Outline
 import android.graphics.Paint
 import android.os.Build
 import android.os.Bundle
@@ -14,7 +17,10 @@ import android.graphics.Color
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.window.OnBackInvokedDispatcher
@@ -77,6 +83,7 @@ class RingingActivity : Activity() {
     skip.setOnClickListener {
       rendered?.let { RingingService.skip(applicationContext, it.alarmId) }
     }
+    findViewById<ImageView>(R.id.ringing_photo_large).setOnClickListener { hideLargePhoto() }
   }
 
   override fun onStart() {
@@ -127,6 +134,7 @@ class RingingActivity : Activity() {
       handler.removeCallbacks(enableButtons)
       handler.postDelayed(enableButtons, RingCommands.GUARD_MS)
     }
+    if (ring.alarmId != rendered?.alarmId) hideLargePhoto()
     rendered = ring
     // In the phone's format, not the app language's, so a time looks the same in every language.
     findViewById<TextView>(R.id.ringing_time).text =
@@ -136,7 +144,10 @@ class RingingActivity : Activity() {
       getString(R.string.ringing_sound, ring.soundName)
   }
 
-  /** One row per due pill, its name and amount; the card's name alone if there are none. */
+  /**
+   * One row per due pill: its photo (or its type's icon), name and amount. The card's name alone
+   * if there are none.
+   */
   private fun renderPills(ring: RingingState.Ring) {
     val list = findViewById<LinearLayout>(R.id.ringing_pills)
     list.removeAllViews()
@@ -147,16 +158,91 @@ class RingingActivity : Activity() {
       row.gravity = Gravity.CENTER_VERTICAL
       val pad = dp(8)
       row.setPadding(0, pad, 0, pad)
+      if (ring.pills.isNotEmpty()) {
+        row.addView(
+          pictureOf(pill),
+          LinearLayout.LayoutParams(dp(PHOTO_DP), dp(PHOTO_DP)).apply { marginEnd = dp(16) },
+        )
+      }
+      // At a large text size the amount goes under the name, so a name never breaks mid-word.
+      val stacked = resources.configuration.fontScale >= STACK_FONT_SCALE
+      val words = LinearLayout(this).apply { orientation = if (stacked) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
       val name = text(pill.name, 24f, Color.WHITE)
-      row.addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+      words.addView(
+        name,
+        if (stacked) LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        else LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+      )
       if (pill.amount.isNotEmpty()) {
         val amount = text(pill.amount, 22f, MUTED)
-        amount.setPadding(dp(16), 0, 0, 0)
-        row.addView(amount)
+        if (!stacked) amount.setPadding(dp(16), 0, 0, 0)
+        words.addView(amount)
       }
+      row.addView(words, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
       list.addView(row)
     }
   }
+
+  /**
+   * [pill]'s photo, rounded, opening full width when tapped; or its type's icon when it has none
+   * or the photo can't be read, which never stops the screen from showing.
+   */
+  private fun pictureOf(pill: RingPill): View {
+    val photo = pill.photoPath?.let { decode(it, dp(PHOTO_DP) * 2) }
+    if (photo == null) {
+      return FrameLayout(this).apply {
+        addView(
+          text(pill.form.icon, 32f, Color.WHITE).apply { gravity = Gravity.CENTER },
+          FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
+        )
+      }
+    }
+    return ImageView(this).apply {
+      setImageBitmap(photo)
+      scaleType = ImageView.ScaleType.CENTER_CROP
+      contentDescription = pill.name
+      val radius = dp(12).toFloat()
+      outlineProvider =
+        object : ViewOutlineProvider() {
+          override fun getOutline(view: View, outline: Outline) =
+            outline.setRoundRect(0, 0, view.width, view.height, radius)
+        }
+      clipToOutline = true
+      setOnClickListener { showLargePhoto(pill) }
+    }
+  }
+
+  private fun showLargePhoto(pill: RingPill) {
+    val path = pill.photoPath ?: return
+    val photo = decode(path, resources.displayMetrics.widthPixels) ?: return
+    val large = findViewById<ImageView>(R.id.ringing_photo_large)
+    large.setImageBitmap(photo)
+    large.contentDescription = pill.name
+    large.visibility = View.VISIBLE
+  }
+
+  private fun hideLargePhoto() {
+    val large = findViewById<ImageView>(R.id.ringing_photo_large)
+    large.visibility = View.GONE
+    large.setImageDrawable(null)
+  }
+
+  /** The photo at [path], sampled down to no more than about [maxSide] px, or null if unreadable. */
+  private fun decode(path: String, maxSide: Int): Bitmap? =
+    try {
+      val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+      BitmapFactory.decodeFile(path, bounds)
+      if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+        null
+      } else {
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxSide) sample *= 2
+        BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+      }
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not show the photo $path; showing the icon", e)
+      null
+    }
 
   private fun text(value: String, sp: Float, color: Int) =
     TextView(this).apply {
@@ -177,6 +263,8 @@ class RingingActivity : Activity() {
 
   private companion object {
     const val DISABLED_ALPHA = 0.5f
+    const val PHOTO_DP = 64
+    const val STACK_FONT_SCALE = 1.3f
     val MUTED = Color.parseColor("#B0B0B8")
   }
 }
