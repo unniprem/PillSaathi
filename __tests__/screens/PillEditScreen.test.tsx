@@ -47,6 +47,27 @@ async function newPill(name = 'Azithromycin 500') {
 
 const save = () => fireEvent.press(screen.getByText('Save'));
 
+/** Whether [el] sits in the page's scrolling content rather than the fixed top bar. */
+function scrollsWithPage(el: { parent: unknown }): boolean {
+  for (let n = el.parent as { type?: unknown; parent: unknown } | null; n; ) {
+    if (n.type === 'RCTScrollView') {
+      return true;
+    }
+    n = n.parent as typeof n;
+  }
+  return false;
+}
+
+test('Save and Delete sit in the top bar, not at the end of the page', async () => {
+  await renderApp('PillEdit', { pillId: 'p1' });
+  await screen.findByDisplayValue('Telma 40');
+  expect(scrollsWithPage(screen.getByPlaceholderText('Medicine name'))).toBe(
+    true,
+  );
+  expect(scrollsWithPage(screen.getByText('Save'))).toBe(false);
+  expect(scrollsWithPage(screen.getByText('Delete'))).toBe(false);
+});
+
 test('starts with no duration chosen and Save disabled', async () => {
   await newPill();
   for (const label of [

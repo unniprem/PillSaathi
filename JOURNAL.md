@@ -4,6 +4,31 @@ Session log, newest first.
 
 ---
 
+## 2026-10-26 16:00 IST — Session: First real phone, smaller APK, pill page top bar
+
+### Summary
+
+The user asked how to test on a real phone, for a standalone build they could install on other phones, for a smaller file, and for Save and Delete at the top of the pill page. A Redmi Note 10 (Android 12, MIUI 14) was already connected over wireless debugging. The debug build went on first, then a release build that carries its own JS bundle. The user's first two pills rang on time (0.3 s and 0.2 s from fire to sound), one with a recording made on the phone, and both recorded Taken. The 64 MB APK was mostly native code for four CPU types. Splitting it per ABI brought the arm64 file to 23 MB. Save and Delete moved into the pill page's top bar.
+
+### Changes Made
+
+| Commit    | Type  | Description                                 |
+| --------- | ----- | ------------------------------------------- |
+| `f2cb005` | feat  | Save and Delete in the pill page's top bar  |
+| `a1fdc14` | build | One APK per CPU type (arm64: 64 MB → 23 MB) |
+
+### Key Decisions
+
+- **Split per ABI instead of dropping CPU types**: all four still build, so the emulator keeps working, and a tester with an old 32-bit phone gets its own file. Code shrinking (R8) would save about 4 MB more, but it can strip classes the native modules reach by reflection, so it waits for a full device retest.
+- **Save and Delete in the top bar, not at the top of the page**: the top bar never scrolls, so both stay in reach on a long page. The Save callback is memoised with every field it reads, so the top bar always saves what is on screen (the existing save tests cover it).
+
+### Issues Encountered
+
+- MIUI refuses `adb shell input` ("Injecting to another application requires INJECT_EVENTS permission") unless "USB debugging (Security settings)" is on, so UI checks on the phone need the user's hands. Screenshots and `uiautomator dump` still work.
+- MIUI's "clear all" in Recents kills the app (`OneKeyClean`). The swipe-away, reboot and overnight cases are still to be run.
+
+---
+
 ## 2026-10-26 08:50 IST — Session: Pills, merged dose alarms and dose records
 
 ### Summary
