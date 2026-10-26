@@ -135,23 +135,22 @@ class AlarmEngine private constructor(context: Context) {
       )
       bestEffort("the reconciled alarms") { store.saveAlarms(result.alarms) }
       result.alarms.forEach { scheduler.sync(it) }
-      val records = mutableListOf<DoseRecord>()
       val missedDoses = mutableListOf<MissedAlarm>()
       bestEffort("the missed doses") {
         val pills = store.loadPills()
+        var doses = store.loadDoses()
         result.missed.forEach { m ->
           val alarm = result.alarms.first { it.id == m.id }
           val record = DoseRules.doseRecord(alarm, pills, m.dueAt, DoseOutcome.MISSED, now, zone())
           if (record == null) {
             Log.i(LOG_TAG, "Missed ${m.id}: nothing was due, not recorded")
-          } else {
-            records.add(record)
-            missedDoses.add(m.copy(name = namesOf(record)))
+            return@forEach
           }
+          doses = DoseRules.withRecord(doses, record, dateOf(now))
+          // A dose already taken stays taken, and isn't reported missed.
+          if (stillMissed(doses, record)) missedDoses.add(m.copy(name = namesOf(record)))
         }
-        if (records.isNotEmpty()) {
-          store.saveDoses(records.fold(store.loadDoses()) { acc, r -> DoseRules.withRecord(acc, r, dateOf(now)) })
-        }
+        if (result.missed.isNotEmpty()) store.saveDoses(doses)
       }
       missedDoses to housekeeping(now)
     }
@@ -188,11 +187,13 @@ class AlarmEngine private constructor(context: Context) {
           val occurrence = alarm.nextTriggerAt ?: AlarmRules.dueAt(alarm)
           val record = occurrence?.let { recordDose(alarm, it, DoseOutcome.MISSED, now) }
           housekeeping(now)
-          null to record?.let { MissedAlarm(alarm.id, namesOf(it), occurrence) }
+          null to record?.takeIf { it.outcome == DoseOutcome.MISSED }?.let {
+            MissedAlarm(alarm.id, namesOf(it), occurrence)
+          }
         }
         FireDecision.RING -> {
-          if (nothingDue(alarm, now)) {
-            Log.i(LOG_TAG, "Fire $id: nothing due")
+          if (!shouldRing(alarm, now)) {
+            Log.i(LOG_TAG, "Fire $id: nothing to ring (nothing due, or already taken)")
             val ended = AlarmRules.ringEnded(alarm, now, zone())
             bestEffort("the empty fire of $id") { store.saveAlarms(alarms.replace(ended)) }
             scheduler.sync(ended)
@@ -240,7 +241,7 @@ class AlarmEngine private constructor(context: Context) {
       val alarms = store.loadAlarms()
       val alarm = alarms.firstOrNull { it.id == id } ?: return@locked null to emptyList()
       val now = System.currentTimeMillis()
-      val occurrence = alarm.nextTriggerAt ?: dueAt ?: alarm.snoozeUntil ?: alarm.lastFiredAt
+      val occurrence = AlarmRules.occurrence(alarm, dueAt, now)
       val record = occurrence?.let { recordDose(alarm, it, outcome, now) }
       if (alarm.enabled) {
         val ended = AlarmRules.ringEnded(alarm, now, zone())
@@ -248,7 +249,7 @@ class AlarmEngine private constructor(context: Context) {
         scheduler.sync(ended)
       }
       val missed =
-        if (outcome == DoseOutcome.MISSED && record != null) {
+        if (outcome == DoseOutcome.MISSED && record?.outcome == DoseOutcome.MISSED) {
           MissedAlarm(alarm.id, namesOf(record), occurrence)
         } else {
           null
@@ -336,31 +337,37 @@ class AlarmEngine private constructor(context: Context) {
     removedIds.forEach { RingingService.stopIfRinging(context, it) }
 
   /**
-   * Whether no pill is due on [alarm]'s occurrence: the date it was first due, so a dose snoozed
-   * past midnight still rings. If the pills can't be read, it rings anyway.
+   * Whether [alarm]'s fire should ring ([DoseRules.shouldRing]): judged on its occurrence's date,
+   * so a dose snoozed past midnight still rings. If the store can't be read, it rings anyway.
    */
-  private fun nothingDue(alarm: Alarm, now: Long): Boolean {
-    val pills =
-      try {
-        store.loadPills()
-      } catch (e: Exception) {
-        Log.e(LOG_TAG, "Could not read the pills; ringing ${alarm.id} anyway", e)
-        return false
-      }
-    val date = dateOf(alarm.nextTriggerAt ?: now)
-    return DoseRules.pillsDue(pills, alarm.hour, alarm.minute, date).isEmpty()
-  }
+  private fun shouldRing(alarm: Alarm, now: Long): Boolean =
+    try {
+      DoseRules.shouldRing(alarm, store.loadPills(), store.loadDoses(), alarm.nextTriggerAt ?: now, zone())
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not read the pills or doses; ringing ${alarm.id} anyway", e)
+      true
+    }
 
-  /** Records [alarm]'s dose at [occurrenceAt] on the ringing path; null when nothing was due. */
+  /**
+   * Records [alarm]'s dose at [occurrenceAt] on the ringing path. Returns the dose as it now
+   * stands, which stays taken if it already was, or null when nothing was due.
+   */
   private fun recordDose(alarm: Alarm, occurrenceAt: Long, outcome: DoseOutcome, now: Long): DoseRecord? {
     var record: DoseRecord? = null
     bestEffort("the $outcome dose of ${alarm.id}") {
       record = DoseRules.doseRecord(alarm, store.loadPills(), occurrenceAt, outcome, now, zone())
-      record?.let { r -> store.saveDoses(DoseRules.withRecord(store.loadDoses(), r, dateOf(now))) }
+      record?.let { r ->
+        val doses = DoseRules.withRecord(store.loadDoses(), r, dateOf(now))
+        store.saveDoses(doses)
+        record = DoseRules.recordOf(doses, r.date, r.hour, r.minute) ?: r
+      }
     }
     if (record == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
     return record
   }
+
+  private fun stillMissed(doses: List<DoseRecord>, record: DoseRecord): Boolean =
+    DoseRules.recordOf(doses, record.date, record.hour, record.minute)?.outcome == DoseOutcome.MISSED
 
   private fun namesOf(record: DoseRecord): String = record.pills.joinToString(", ") { it.name }
 

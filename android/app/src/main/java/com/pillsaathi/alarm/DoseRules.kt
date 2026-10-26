@@ -130,6 +130,27 @@ object DoseRules {
     )
   }
 
+  /** The record of the dose at [date] [hour]:[minute], or null. */
+  fun recordOf(records: List<DoseRecord>, date: LocalDate, hour: Int, minute: Int): DoseRecord? =
+    records.firstOrNull { it.date == date && it.hour == hour && it.minute == minute }
+
+  /**
+   * Whether [alarm]'s fire for [occurrenceAt] should ring: a pill is due then, and that dose isn't
+   * already taken. A clock moved back (a westward time-zone change, say) brings a taken time round
+   * again; ringing it would ask for a second dose.
+   */
+  fun shouldRing(
+    alarm: Alarm,
+    pills: List<Pill>,
+    records: List<DoseRecord>,
+    occurrenceAt: Long,
+    zone: ZoneId,
+  ): Boolean {
+    val date = dateOf(occurrenceAt, zone)
+    if (pillsDue(pills, alarm.hour, alarm.minute, date).isEmpty()) return false
+    return recordOf(records, date, alarm.hour, alarm.minute)?.outcome != DoseOutcome.TAKEN
+  }
+
   /**
    * [records] with [record] added, or replacing the one for the same date and time unless that was
    * taken: a dose someone marked taken stays taken. Records older than [RECORD_KEEP_DAYS] go.

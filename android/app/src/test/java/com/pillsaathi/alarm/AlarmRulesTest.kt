@@ -337,4 +337,48 @@ class AlarmRulesTest {
     val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 20), IST)
     assertEquals(listOf(MissedAlarm("a1", "Pills", at(2026, 10, 26, 7, 0))), r.missed)
   }
+
+  // An early delivery (within EARLY_FIRE_TOLERANCE_MS) is the dose's fire, not a fire before it.
+
+  @Test fun fireDecision_refireAfterEarlyFire_rings() =
+    assertEquals(
+      FireDecision.RING,
+      AlarmRules.fireDecision(
+        alarm(next = at(2026, 10, 26, 7, 0), lastFired = at(2026, 10, 26, 6, 59, 30)),
+        at(2026, 10, 26, 7, 5),
+      ),
+    )
+
+  @Test fun reconcile_earlyFiredRingNotStuckYet_unchanged() {
+    val a = alarm(next = at(2026, 10, 26, 7, 0), lastFired = at(2026, 10, 26, 6, 59, 30))
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 5), IST)
+    assertEquals(listOf(a), r.alarms)
+    assertTrue(r.missed.isEmpty())
+  }
+
+  @Test fun reconcile_earlyFiredStuckRing_endedAndReportedMissed() {
+    val due = at(2026, 10, 26, 7, 0)
+    val a = alarm(EVERY_DAY, next = due, lastFired = at(2026, 10, 26, 6, 59, 30))
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 13), IST)
+    assertEquals(listOf(MissedAlarm("a1", "Pills", due)), r.missed)
+    assertEquals(at(2026, 10, 27, 7, 0), r.alarms[0].nextTriggerAt)
+  }
+
+  @Test fun occurrence_ringingCard_isItsNextTrigger() {
+    val a = card8(next = at(2026, 10, 30, 23, 55), until = LocalDate.of(2026, 10, 30))
+      .copy(snoozeUntil = at(2026, 10, 31, 0, 5))
+    assertEquals(at(2026, 10, 30, 23, 55), AlarmRules.occurrence(a, at(2026, 10, 31, 0, 5), at(2026, 10, 31, 0, 7)))
+  }
+
+  @Test fun occurrence_cardMovedOnDuringRing_usesTheFiresDueAt() {
+    val a = card8(next = at(2026, 10, 27, 8, 0))
+    assertEquals(at(2026, 10, 26, 8, 0), AlarmRules.occurrence(a, at(2026, 10, 26, 8, 0), at(2026, 10, 26, 8, 6)))
+  }
+
+  @Test fun occurrence_disarmedCard_fallsBackToDueAtThenLastFired() {
+    val a = card8().copy(enabled = false, lastFiredAt = at(2026, 10, 26, 8, 0))
+    assertEquals(at(2026, 10, 26, 8, 0), AlarmRules.occurrence(a, null, at(2026, 10, 26, 8, 6)))
+    assertEquals(at(2026, 10, 26, 7, 59), AlarmRules.occurrence(a, at(2026, 10, 26, 7, 59), at(2026, 10, 26, 8, 6)))
+  }
 }
+

@@ -451,4 +451,38 @@ class DoseRulesTest {
     val records = listOf(record(8, 0, DoseOutcome.TAKEN, oct(25, 8, 2), listOf(a), date = date(25)))
     assertTrue(DoseRules.todayCards(listOf(c8), listOf(a), records, emptySet(), NOW, IST).isEmpty())
   }
+
+  // Whether a fire should ring
+
+  @Test fun shouldRing_dueAndNotTaken_true() {
+    val a = pill("A", listOf(t(8, 0)))
+    val missed = record(8, 0, DoseOutcome.MISSED, oct(26, 8, 12), listOf(a))
+    val c = card("c8", 8, 0, next = oct(26, 8, 0))
+    assertTrue(DoseRules.shouldRing(c, listOf(a), emptyList(), oct(26, 8, 0), IST))
+    assertTrue(DoseRules.shouldRing(c, listOf(a), listOf(missed), oct(26, 8, 0), IST))
+  }
+
+  @Test fun shouldRing_doseAlreadyTaken_false() {
+    // Taken at 08:02, then the clock went back (a westward time-zone change): 08:00 comes again.
+    val a = pill("A", listOf(t(8, 0)))
+    val taken = record(8, 0, DoseOutcome.TAKEN, oct(26, 8, 2), listOf(a))
+    val c = card("c8", 8, 0, next = oct(26, 8, 0))
+    assertFalse(DoseRules.shouldRing(c, listOf(a), listOf(taken), oct(26, 8, 0), IST))
+    val yesterday = record(8, 0, DoseOutcome.TAKEN, oct(25, 8, 2), listOf(a), date = date(25))
+    assertTrue(DoseRules.shouldRing(c, listOf(a), listOf(yesterday), oct(26, 8, 0), IST))
+  }
+
+  @Test fun shouldRing_nothingDue_false() {
+    val finished = pill("F", listOf(t(8, 0)), start = date(20), days = 3)
+    assertFalse(DoseRules.shouldRing(card("c8", 8, 0), listOf(finished), emptyList(), oct(26, 8, 0), IST))
+  }
+
+  @Test fun recordOf_findsTheDoseAtThatDateAndTime() {
+    val a = pill("A", listOf(t(8, 0)))
+    val taken = record(8, 0, DoseOutcome.TAKEN, oct(26, 8, 2), listOf(a))
+    val other = record(21, 0, DoseOutcome.MISSED, oct(26, 21, 12), listOf(a))
+    assertEquals(taken, DoseRules.recordOf(listOf(other, taken), TODAY, 8, 0))
+    assertNull(DoseRules.recordOf(listOf(other), TODAY, 8, 0))
+  }
 }
+

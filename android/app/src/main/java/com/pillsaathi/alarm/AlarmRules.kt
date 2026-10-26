@@ -60,11 +60,28 @@ object AlarmRules {
 
   fun snoozed(alarm: Alarm, now: Long): Alarm = alarm.copy(snoozeUntil = now + SNOOZE_MS)
 
+  /**
+   * The occurrence a ring of [alarm] ending at [now] belongs to: the time it was first due, even if
+   * snoozed since. That is its next trigger while the ring lasts; if the alarm has already moved on
+   * to a later one (a fire handled it as missed mid-ring), the ring's own [dueAt] instead.
+   */
+  fun occurrence(alarm: Alarm, dueAt: Long?, now: Long): Long? =
+    alarm.nextTriggerAt?.takeIf { it <= now + EARLY_FIRE_TOLERANCE_MS }
+      ?: dueAt
+      ?: alarm.snoozeUntil
+      ?: alarm.lastFiredAt
+
   fun isMissed(alarm: Alarm, now: Long): Boolean {
     val due = dueAt(alarm) ?: return false
-    val last = alarm.lastFiredAt
-    return due < now - MISSED_GRACE_MS && (last == null || last < due)
+    return due < now - MISSED_GRACE_MS && !firedFor(alarm.lastFiredAt, due)
   }
+
+  /**
+   * Whether a fire at [lastFiredAt] was the one for [due]. A delivery may come up to
+   * [EARLY_FIRE_TOLERANCE_MS] early and still ring, so that early fire counts too.
+   */
+  private fun firedFor(lastFiredAt: Long?, due: Long): Boolean =
+    lastFiredAt != null && lastFiredAt >= due - EARLY_FIRE_TOLERANCE_MS
 
   /**
    * Decides whether a delivery for [alarm] at [now] should ring. A delivery for an alarm that is
@@ -120,7 +137,7 @@ object AlarmRules {
           missed.add(MissedAlarm(a.id, a.name, a.nextTriggerAt ?: due))
           ringEnded(a, now, zone)
         }
-        last != null && last >= due && now - last > AUTO_SILENCE_MS + MISSED_GRACE_MS -> {
+        last != null && firedFor(last, due) && now - last > AUTO_SILENCE_MS + MISSED_GRACE_MS -> {
           missed.add(MissedAlarm(a.id, a.name, a.nextTriggerAt ?: due))
           ringEnded(a, now, zone)
         }
