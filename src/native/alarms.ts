@@ -58,7 +58,8 @@ export type SettingTarget =
   | 'alarmVolume'
   | 'appInfo'
   | 'oemAutostart'
-  | 'oemBattery';
+  | 'oemBattery'
+  | 'tts';
 
 /** The codes the native module rejects its promises with. */
 export const AlarmErrors = {
@@ -188,4 +189,18 @@ export async function setLanguage(code: string): Promise<void> {
 
 export async function setReadAloud(on: boolean): Promise<void> {
   return native().setReadAloud(on);
+}
+
+/**
+ * How Try it went: `spoken` in the app's language, `english` because the phone has no voice for
+ * it, or `none` because it has no voice at all.
+ */
+export type TryResult = 'spoken' | 'english' | 'none';
+
+/**
+ * Reads today's first pills aloud as a ring would, at alarm volume. Resolves once the voice
+ * starts, or at once with `none`.
+ */
+export async function tryReadAloud(): Promise<TryResult> {
+  return (await native().tryReadAloud()) as TryResult;
 }

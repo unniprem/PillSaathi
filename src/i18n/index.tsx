@@ -17,6 +17,13 @@ export type { Strings };
 
 const TABLES: Record<Lang, Strings> = { en, ml, hi };
 
+/** Each language's name as its own readers write it, the same as the native side's. */
+export const LANGUAGE_LABELS: Record<Lang, string> = {
+  en: 'English',
+  ml: 'മലയാളം',
+  hi: 'हिन्दी',
+};
+
 export function isLang(code: unknown): code is Lang {
   return code === 'en' || code === 'ml' || code === 'hi';
 }

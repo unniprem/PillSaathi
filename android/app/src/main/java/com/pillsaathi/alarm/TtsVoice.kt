@@ -8,6 +8,8 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * [Voice] on the phone's text-to-speech engine, at alarm volume and through silent mode like the
@@ -19,6 +21,7 @@ import java.util.Locale
 class TtsVoice(context: Context) : Voice {
   private val main = Handler(Looper.getMainLooper())
   @Volatile private var ready = false
+  private val initialised = CountDownLatch(1)
 
   /** Bumped by every [speak] and [stop]; callbacks for an older one are ignored. */
   private var generation = 0
@@ -32,6 +35,7 @@ class TtsVoice(context: Context) : Voice {
       ready = status == TextToSpeech.SUCCESS
       if (ready) Log.i(LOG_TAG, "Text-to-speech ready")
       else Log.w(LOG_TAG, "Text-to-speech didn't start ($status); this ring is sound only")
+      initialised.countDown()
     }
 
   init {
@@ -70,6 +74,24 @@ class TtsVoice(context: Context) : Voice {
       } catch (e: Exception) {
         false
       }
+
+  /**
+   * What the phone can say in [lang], waiting up to [INIT_WAIT_MS] for the engine to start.
+   * Blocks: never call it on the main thread, which delivers the engine's start.
+   */
+  fun availability(lang: AppLanguage): VoiceAvailability {
+    if (!initialised.await(INIT_WAIT_MS, TimeUnit.MILLISECONDS) || !ready) return VoiceAvailability.NONE
+    return try {
+      VoiceAvailability.of(
+        lang,
+        hasLanguage = tts.isLanguageAvailable(localeOf(lang)) >= TextToSpeech.LANG_AVAILABLE,
+        hasEnglish = tts.isLanguageAvailable(Locale.ENGLISH) >= TextToSpeech.LANG_AVAILABLE,
+      )
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not ask text-to-speech for its voices", e)
+      VoiceAvailability.NONE
+    }
+  }
 
   override fun speak(parts: List<SpeechPart>, listener: Voice.Listener): Boolean {
     generation++
@@ -154,6 +176,8 @@ class TtsVoice(context: Context) : Voice {
   }
 
   companion object {
+    private const val INIT_WAIT_MS = 3_000L
+
     fun localeOf(lang: AppLanguage): Locale = Locale(lang.code, "IN")
   }
 }

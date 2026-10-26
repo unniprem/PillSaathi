@@ -53,7 +53,6 @@ export const hi: Strings = {
     notificationsTitle: 'सूचनाओं की अनुमति दें',
     notificationsMessage:
       'दवा का समय होने पर दिखाने के लिए PillSaathi को सूचनाओं की ज़रूरत है।',
-    settings: 'सेटिंग्स',
   },
   status: {
     taken: '✓ ले ली',

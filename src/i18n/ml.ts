@@ -28,8 +28,9 @@ export const ml: Strings = {
   },
   common: {
     cancel: 'റദ്ദാക്കുക',
-    delete: 'നീക്കം ചെയ്യുക',
-    save: 'സേവ് ചെയ്യുക',
+    // Short: Delete and Save share the pill page's top bar with its title.
+    delete: 'നീക്കുക',
+    save: 'സേവ്',
     ok: 'ശരി',
     tryAgain: 'വീണ്ടും ശ്രമിക്കുക.',
     openSettings: 'ക്രമീകരണങ്ങൾ തുറക്കുക',
@@ -54,7 +55,6 @@ export const ml: Strings = {
     notificationsTitle: 'അറിയിപ്പുകൾ അനുവദിക്കുക',
     notificationsMessage:
       'മരുന്നിന്റെ സമയമാകുമ്പോൾ കാണിക്കാൻ PillSaathi-ക്ക് അറിയിപ്പുകൾ വേണം.',
-    settings: 'ക്രമീകരണങ്ങൾ',
   },
   status: {
     taken: '✓ കഴിച്ചു',

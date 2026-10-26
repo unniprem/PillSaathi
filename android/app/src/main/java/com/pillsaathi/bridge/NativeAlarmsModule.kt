@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.provider.MediaStore
 import android.text.format.DateFormat
 import android.util.Log
@@ -22,21 +23,28 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableMap
 import com.pillsaathi.alarm.AlarmEngine
 import com.pillsaathi.alarm.AppLanguage
+import com.pillsaathi.alarm.DoseRules
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.LanguageRules
 import com.pillsaathi.alarm.MissedAlarm
 import com.pillsaathi.alarm.Notifications
 import com.pillsaathi.alarm.Pill
+import com.pillsaathi.alarm.PillForm
 import com.pillsaathi.alarm.ReconcileTrigger
 import com.pillsaathi.alarm.SetupState
+import com.pillsaathi.alarm.SpokenPill
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.alarm.TodayCard
 import com.pillsaathi.alarm.TodayPill
+import com.pillsaathi.alarm.TtsVoice
+import com.pillsaathi.alarm.Voice
+import com.pillsaathi.alarm.VoiceAvailability
 import com.pillsaathi.photo.PillPhotos
 import com.pillsaathi.specs.NativeAlarmsSpec
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Pills and their photos, today's doses, card sounds, the app's language and read-aloud settings,
@@ -56,6 +64,11 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     get() = AlarmEngine.get(reactApplicationContext)
 
   private val photos by lazy { PillPhotos(reactApplicationContext, engine.store.photosDir) }
+
+  private val main = Handler(Looper.getMainLooper())
+
+  /** Try it's voice, kept so the engine starts once. Made on the worker; speaks on the main thread. */
+  private var tryVoice: TtsVoice? = null
 
   /** The photo pick waiting for the camera or the photo picker. Main thread only. */
   private var pendingPick: Promise? = null
@@ -217,6 +230,55 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       null
     }
 
+  /**
+   * Try it: reads today's first card's pills aloud as a ring would (or a sample pill), at alarm
+   * volume. Resolves once the voice starts: "spoken", or "english" when the phone has no voice for
+   * the app's language; "none" at once when it has no voice at all, or if speech never starts.
+   */
+  override fun tryReadAloud(promise: Promise) {
+    val posted =
+      handler.post {
+        try {
+          val lang = engine.language()
+          val voice = tryVoice ?: TtsVoice(reactApplicationContext).also { tryVoice = it }
+          val availability = voice.availability(lang)
+          if (availability == VoiceAvailability.NONE) {
+            promise.resolve(TRY_NONE)
+            return@post
+          }
+          val say = if (availability == VoiceAvailability.FULL) lang else AppLanguage.EN
+          val parts = engine.speech(say, samplePills(say))
+          val result = if (say == lang) TRY_SPOKEN else TRY_ENGLISH
+          val settled = AtomicBoolean(false)
+          val settle = { value: String -> if (settled.compareAndSet(false, true)) promise.resolve(value) }
+          main.post {
+            val queued =
+              voice.speak(
+                parts,
+                object : Voice.Listener {
+                  override fun onStarted() = settle(result)
+
+                  override fun onFinished() = settle(TRY_NONE)
+                },
+              )
+            if (!queued) settle(TRY_NONE)
+          }
+          main.postDelayed({ settle(TRY_NONE) }, TRY_START_TIMEOUT_MS)
+        } catch (e: Exception) {
+          Log.e(LOG_TAG, "Could not try reading aloud", e)
+          promise.reject(e)
+        }
+      }
+    if (!posted) promise.reject(IllegalStateException("The alarm module has shut down"))
+  }
+
+  /** Today's first card's pills as they are read aloud in [lang], or "Telma 40, 1 tablet". */
+  private fun samplePills(lang: AppLanguage): List<SpokenPill> =
+    engine.today().cards.firstOrNull()?.pills.orEmpty()
+      .filterNot { it.fromTomorrow }
+      .map { SpokenPill(it.name, DoseRules.spokenAmount(it.form, it.amount, lang)) }
+      .ifEmpty { listOf(SpokenPill(SAMPLE_PILL, DoseRules.spokenAmount(PillForm.TABLET, 1.0, lang))) }
+
   override fun pickPhoto(source: String, promise: Promise) {
     UiThreadUtil.runOnUiThread {
       if (pendingPick != null) {
@@ -358,6 +420,12 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   override fun invalidate() {
     reactApplicationContext.removeActivityEventListener(photoListener)
+    // After any try still queued on the worker, so its voice is shut down too.
+    handler.post {
+      val voice = tryVoice
+      tryVoice = null
+      main.post { voice?.shutdown() }
+    }
     thread.quitSafely() // After the work already queued.
     super.invalidate()
   }
@@ -458,6 +526,11 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     private const val STORAGE_ERROR = "STORAGE_ERROR"
     private const val PHOTO_ERROR = "PHOTO_ERROR"
     private const val INVALID_LANGUAGE = "INVALID_LANGUAGE"
+    private const val TRY_SPOKEN = "spoken"
+    private const val TRY_ENGLISH = "english"
+    private const val TRY_NONE = "none"
+    private const val TRY_START_TIMEOUT_MS = 8_000L
+    private const val SAMPLE_PILL = "Telma 40"
     private const val REQUEST_CAMERA = 4_801
     private const val REQUEST_GALLERY = 4_802
   }

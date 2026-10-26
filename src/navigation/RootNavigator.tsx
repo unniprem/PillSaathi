@@ -6,6 +6,7 @@ import PillEditScreen from '../screens/PillEditScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
 import RecordScreen from '../screens/RecordScreen';
 import SetupScreen from '../screens/SetupScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   Today: undefined;
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   SoundPicker: { alarmId: string; selectedSoundId: string | null };
   Record: { alarmId: string };
   Setup: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -65,6 +67,11 @@ function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
         name="Setup"
         component={SetupScreen}
         options={{ title: t.setup.title }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: t.settings.title }}
       />
     </Stack.Navigator>
   );

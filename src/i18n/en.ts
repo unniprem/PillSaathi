@@ -51,7 +51,6 @@ export const en = {
     notificationsTitle: 'Allow notifications',
     notificationsMessage:
       'PillSaathi needs notifications to show your medicines when they ring.',
-    settings: 'Settings',
   },
   status: {
     taken: '✓ Taken',

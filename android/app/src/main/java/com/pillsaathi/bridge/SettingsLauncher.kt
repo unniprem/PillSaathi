@@ -64,6 +64,8 @@ class SettingsLauncher(context: Context) {
           Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, packageUri())
         else null
       "batteryOptimization" -> Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+      // The phone's text-to-speech voices; no public constant, but every Android has the page.
+      "tts" -> Intent(TTS_SETTINGS)
       "alarmVolume" -> Intent(Settings.ACTION_SOUND_SETTINGS)
       "backgroundRestricted",
       "appInfo" -> appInfo()
@@ -74,4 +76,8 @@ class SettingsLauncher(context: Context) {
   private fun appInfo() = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri())
 
   private fun packageUri(): Uri = Uri.parse("package:${context.packageName}")
+
+  private companion object {
+    const val TTS_SETTINGS = "com.android.settings.TTS_SETTINGS"
+  }
 }

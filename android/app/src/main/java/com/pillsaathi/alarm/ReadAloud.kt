@@ -40,6 +40,23 @@ interface Voice {
   }
 }
 
+/** What a phone can say in the app's language: all of it, only English, or nothing. */
+enum class VoiceAvailability {
+  FULL,
+  ENGLISH_ONLY,
+  NONE;
+
+  companion object {
+    /** From whether the phone has a voice for [lang] and one for plain English. */
+    fun of(lang: AppLanguage, hasLanguage: Boolean, hasEnglish: Boolean): VoiceAvailability =
+      when {
+        hasLanguage || (lang == AppLanguage.EN && hasEnglish) -> FULL
+        hasEnglish -> ENGLISH_ONLY
+        else -> NONE
+      }
+  }
+}
+
 /** A clock and timer, so the controller can be tested without Android. */
 interface Ticker {
   fun now(): Long

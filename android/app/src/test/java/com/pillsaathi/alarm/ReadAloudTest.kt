@@ -169,6 +169,16 @@ class ReadAloudTest {
     assertEquals(listOf(ml.english), voice.spoken)
   }
 
+  // Try it: what the phone can say for the app's language.
+  @Test fun voiceAvailability_fallsBackToEnglishThenNone() {
+    assertEquals(VoiceAvailability.FULL, VoiceAvailability.of(AppLanguage.ML, hasLanguage = true, hasEnglish = false))
+    assertEquals(VoiceAvailability.ENGLISH_ONLY, VoiceAvailability.of(AppLanguage.ML, hasLanguage = false, hasEnglish = true))
+    assertEquals(VoiceAvailability.NONE, VoiceAvailability.of(AppLanguage.HI, hasLanguage = false, hasEnglish = false))
+    // Plain English is English: an app in English is fully spoken without an en-IN voice.
+    assertEquals(VoiceAvailability.FULL, VoiceAvailability.of(AppLanguage.EN, hasLanguage = false, hasEnglish = true))
+    assertEquals(VoiceAvailability.NONE, VoiceAvailability.of(AppLanguage.EN, hasLanguage = false, hasEnglish = false))
+  }
+
   // Fakes
 
   private val SPEECH = RingSpeech(

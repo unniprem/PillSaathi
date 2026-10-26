@@ -172,12 +172,27 @@ export default function TodayScreen({ navigation }: Props) {
     }, [refresh]),
   );
 
+  const renderGear = useCallback(
+    () => (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t.settings.title}
+        onPress={() => navigation.navigate('Settings')}
+        hitSlop={spacing.sm}
+      >
+        <Text style={styles.gear}>⚙</Text>
+      </Pressable>
+    ),
+    [navigation, t],
+  );
+
   const date = today?.date;
   useLayoutEffect(() => {
     navigation.setOptions({
       title: date ? t.today.titleOn(formatDay(date, t)) : t.today.title,
+      headerRight: renderGear,
     });
-  }, [navigation, date, t]);
+  }, [navigation, date, t, renderGear]);
 
   // Only a missed or skipped dose: someone took it but didn't tap Taken.
   const confirmTaken = (card: TodayCard) => {
@@ -280,4 +295,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
+  gear: { fontSize: 26, color: colors.text },
 });

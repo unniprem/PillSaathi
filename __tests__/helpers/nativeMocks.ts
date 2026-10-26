@@ -35,4 +35,5 @@ export function mockAlarmsDefaults() {
   });
   jest.mocked(alarms.setLanguage).mockResolvedValue();
   jest.mocked(alarms.setReadAloud).mockResolvedValue();
+  jest.mocked(alarms.tryReadAloud).mockResolvedValue('spoken');
 }

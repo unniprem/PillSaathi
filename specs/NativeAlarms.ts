@@ -92,6 +92,8 @@ export interface Spec extends TurboModule {
   currentLanguage(): string; // never throws; read without waiting on the store
   setLanguage(code: string): Promise<void>; // INVALID_LANGUAGE
   setReadAloud(on: boolean): Promise<void>;
+  // spoken | english (no voice for the app's language) | none (no voice at all)
+  tryReadAloud(): Promise<string>;
 }
 
 export default TurboModuleRegistry.get<Spec>('NativeAlarms');

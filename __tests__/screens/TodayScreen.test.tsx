@@ -167,6 +167,14 @@ test('shows Today in Hindi', async () => {
   expect(headerTitles()[0]).toContain('आज');
 });
 
+test('opens Settings from the gear', async () => {
+  await renderApp();
+  await fireEvent.press(await screen.findByLabelText('Settings'));
+  await waitFor(() =>
+    expect(headerTitles()).toEqual(['Today · Mon 26 Oct', 'Settings']),
+  );
+});
+
 test('marks a missed dose taken after confirming', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await renderApp();
