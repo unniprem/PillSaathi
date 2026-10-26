@@ -1,6 +1,7 @@
 package com.pillsaathi.alarm
 
 import android.app.Activity
+import android.content.Context
 import android.graphics.Paint
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +30,18 @@ class RingingActivity : Activity() {
 
   /** The ring on screen; Taken, Skip and Snooze are sent for it, never for one that replaced it. */
   private var rendered: RingingState.Ring? = null
+
+  /** The screen's words in the app's language, not the phone's; the phone's if that fails. */
+  override fun attachBaseContext(newBase: Context) {
+    val base =
+      try {
+        newBase.localized(AlarmEngine.get(newBase).language())
+      } catch (e: Exception) {
+        Log.e(LOG_TAG, "Could not localise the ringing screen; using the phone's language", e)
+        newBase
+      }
+    super.attachBaseContext(base)
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -115,8 +128,9 @@ class RingingActivity : Activity() {
       handler.postDelayed(enableButtons, RingCommands.GUARD_MS)
     }
     rendered = ring
+    // In the phone's format, not the app language's, so a time looks the same in every language.
     findViewById<TextView>(R.id.ringing_time).text =
-      DateFormat.getTimeFormat(this).format(Date(ring.startedAt))
+      DateFormat.getTimeFormat(applicationContext).format(Date(ring.startedAt))
     renderPills(ring)
     findViewById<TextView>(R.id.ringing_sound).text =
       getString(R.string.ringing_sound, ring.soundName)

@@ -96,6 +96,43 @@ class DoseRulesTest {
     )
     table.forEach { (form, amount, text) ->
       assertEquals("$form $amount", text, DoseRules.amountText(form, amount))
+      assertEquals("$form $amount", text, DoseRules.amountText(form, amount, AppLanguage.EN))
+    }
+  }
+
+  @Test fun amountText_malayalam() {
+    val table = listOf(
+      Triple(PillForm.TABLET, 0.5, "½ ഗുളിക"),
+      Triple(PillForm.TABLET, 1.0, "1 ഗുളിക"),
+      Triple(PillForm.TABLET, 1.5, "1½ ഗുളിക"),
+      Triple(PillForm.TABLET, 2.0, "2 ഗുളിക"),
+      Triple(PillForm.CAPSULE, 1.0, "1 ക്യാപ്സ്യൂൾ"),
+      Triple(PillForm.CAPSULE, 2.0, "2 ക്യാപ്സ്യൂൾ"),
+      Triple(PillForm.SYRUP, 7.5, "7.5 ml"),
+      Triple(PillForm.SYRUP, 10.0, "10 ml"),
+      Triple(PillForm.DROPS, 1.0, "1 തുള്ളി"),
+      Triple(PillForm.DROPS, 2.0, "2 തുള്ളി"),
+    )
+    table.forEach { (form, amount, text) ->
+      assertEquals("$form $amount", text, DoseRules.amountText(form, amount, AppLanguage.ML))
+    }
+  }
+
+  @Test fun amountText_hindi() {
+    val table = listOf(
+      Triple(PillForm.TABLET, 0.5, "½ गोली"),
+      Triple(PillForm.TABLET, 1.0, "1 गोली"),
+      Triple(PillForm.TABLET, 1.5, "1½ गोली"),
+      Triple(PillForm.TABLET, 2.0, "2 गोलियाँ"),
+      Triple(PillForm.CAPSULE, 1.0, "1 कैप्सूल"),
+      Triple(PillForm.CAPSULE, 2.0, "2 कैप्सूल"),
+      Triple(PillForm.SYRUP, 7.5, "7.5 ml"),
+      Triple(PillForm.SYRUP, 10.0, "10 ml"),
+      Triple(PillForm.DROPS, 1.0, "1 बूंद"),
+      Triple(PillForm.DROPS, 2.0, "2 बूंदें"),
+    )
+    table.forEach { (form, amount, text) ->
+      assertEquals("$form $amount", text, DoseRules.amountText(form, amount, AppLanguage.HI))
     }
   }
 

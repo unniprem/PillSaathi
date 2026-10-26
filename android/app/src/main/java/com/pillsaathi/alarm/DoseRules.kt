@@ -28,8 +28,12 @@ object DoseRules {
       .filter { DoseTime(hour, minute) in it.times && isDueOn(it, date) }
       .sortedBy { it.createdAt }
 
-  /** "½ tablet", "1½ tablets", "7.5 ml", "2 drops": the same text wherever an amount shows. */
-  fun amountText(form: PillForm, amount: Double): String {
+  /**
+   * "½ tablet", "1½ tablets", "7.5 ml", "2 drops": the same text wherever an amount shows, in
+   * [lang]. Digits stay Western in every language. English is plural above 1, Hindi from 2, and
+   * Malayalam never.
+   */
+  fun amountText(form: PillForm, amount: Double, lang: AppLanguage = AppLanguage.EN): String {
     val whole = amount.toLong()
     val half = amount - whole >= 0.25
     val number = when {
@@ -37,14 +41,38 @@ object DoseRules {
       half -> amount.toString()
       else -> whole.toString()
     }
-    val plural = amount > 1.0
-    return when (form) {
-      PillForm.TABLET -> "$number ${if (plural) "tablets" else "tablet"}"
-      PillForm.CAPSULE -> "$number ${if (plural) "capsules" else "capsule"}"
-      PillForm.SYRUP -> "$number ml"
-      PillForm.DROPS -> "$number ${if (plural) "drops" else "drop"}"
+    if (form == PillForm.SYRUP) return "$number ml"
+    val (one, many) = unitWords(form, lang)
+    val plural = when (lang) {
+      AppLanguage.EN -> amount > 1.0
+      AppLanguage.ML -> false
+      AppLanguage.HI -> amount >= 2.0
     }
+    return "$number ${if (plural) many else one}"
   }
+
+  /** The unit of [form] in [lang], singular then plural. */
+  private fun unitWords(form: PillForm, lang: AppLanguage): Pair<String, String> =
+    when (lang) {
+      AppLanguage.EN -> when (form) {
+        PillForm.TABLET -> "tablet" to "tablets"
+        PillForm.CAPSULE -> "capsule" to "capsules"
+        PillForm.SYRUP -> "ml" to "ml"
+        PillForm.DROPS -> "drop" to "drops"
+      }
+      AppLanguage.ML -> when (form) {
+        PillForm.TABLET -> "ഗുളിക" to "ഗുളിക"
+        PillForm.CAPSULE -> "ക്യാപ്സ്യൂൾ" to "ക്യാപ്സ്യൂൾ"
+        PillForm.SYRUP -> "ml" to "ml"
+        PillForm.DROPS -> "തുള്ളി" to "തുള്ളി"
+      }
+      AppLanguage.HI -> when (form) {
+        PillForm.TABLET -> "गोली" to "गोलियाँ"
+        PillForm.CAPSULE -> "कैप्सूल" to "कैप्सूल"
+        PillForm.SYRUP -> "ml" to "ml"
+        PillForm.DROPS -> "बूंद" to "बूंदें"
+      }
+    }
 
   /**
    * Housekeeping: the time cards [pills] need, made from [alarms].

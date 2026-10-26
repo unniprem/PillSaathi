@@ -1,0 +1,14 @@
+<!-- DRAFT: Hindi drafted by the implementer, not yet checked by a Hindi reader. It stays hidden in
+     release builds (LanguageRules.CHECKED) until someone who reads Hindi checks it. -->
+<resources>
+    <string name="app_name">PillSaathi</string>
+    <string name="default_alarm_tone">डिफ़ॉल्ट अलार्म टोन</string>
+    <string name="channel_ringing">बज रहे अलार्म</string>
+    <string name="channel_missed">छूटे हुए अलार्म</string>
+    <string name="action_snooze">10 मिनट बाद</string>
+    <string name="action_taken">ले ली</string>
+    <string name="action_skip">इस बार छोड़ें</string>
+    <string name="ringing_title">दवा लेने का समय हो गया</string>
+    <string name="missed_alarm">छूट गई: %1$s, %2$s</string>
+    <string name="ringing_sound">🔊 %1$s</string>
+</resources>

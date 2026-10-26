@@ -276,14 +276,15 @@ class AlarmEngine private constructor(context: Context) {
 
   /**
    * The pills due on [alarm]'s ring, with their amounts: those due on its occurrence's date, so a
-   * dose snoozed past midnight still lists its pills. Empty if the pills can't be read; the ring
-   * then shows the card's name.
+   * dose snoozed past midnight still lists its pills, with amounts in the app's language. Empty if
+   * the pills can't be read; the ring then shows the card's name.
    */
   fun ringPills(alarm: Alarm): List<RingPill> =
     try {
       val date = dateOf(alarm.nextTriggerAt ?: System.currentTimeMillis())
+      val lang = language()
       DoseRules.pillsDue(store.locked { store.loadPills() }, alarm.hour, alarm.minute, date).map {
-        RingPill(it.name, DoseRules.amountText(it.form, it.amount))
+        RingPill(it.name, DoseRules.amountText(it.form, it.amount, lang))
       }
     } catch (e: Exception) {
       Log.e(LOG_TAG, "Could not read the pills of ${alarm.id}; ringing with its name", e)
@@ -313,8 +314,14 @@ class AlarmEngine private constructor(context: Context) {
     return File(store.soundsDir, sound.fileName)
   }
 
-  fun soundNameFor(alarm: Alarm): String =
-    soundOf(alarm)?.name ?: context.getString(R.string.default_alarm_tone)
+  /** The name of [alarm]'s sound; the default tone's in the app's language. */
+  fun soundNameFor(alarm: Alarm): String = soundOf(alarm)?.name ?: defaultToneName()
+
+  /** "Default alarm tone" in the app's language. */
+  fun defaultToneName(): String = words().getString(R.string.default_alarm_tone)
+
+  /** The app context in the app's language ([language]), for the app's own words. */
+  fun words(): Context = context.localized(language())
 
   /** Points every alarm that uses [soundId] back at the default tone. */
   fun clearSound(soundId: String) {

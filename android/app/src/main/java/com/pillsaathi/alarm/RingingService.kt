@@ -391,9 +391,18 @@ class RingingService : Service() {
     RingingState.Ring(
       alarmId.orEmpty(),
       AlarmEngine.DEFAULT_NAME,
-      getString(R.string.default_alarm_tone),
+      defaultToneName(),
       System.currentTimeMillis(),
     )
+
+  /** The default tone's name in the app's language, or the phone's if that fails. */
+  private fun defaultToneName(): String =
+    try {
+      engine.defaultToneName()
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not name the default tone in the app's language", e)
+      getString(R.string.default_alarm_tone)
+    }
 
   /** Nothing on the ringing path may crash the process; on failure, end cleanly if silent. */
   private fun guarded(action: String?, alarmId: String?, block: () -> Unit) {
