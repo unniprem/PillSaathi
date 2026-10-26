@@ -3,6 +3,12 @@ package com.pillsaathi.alarm
 /** A stretch of speech in one voice. */
 data class SpeechPart(val text: String, val lang: AppLanguage)
 
+/**
+ * What a ring says: [parts] in the app's language [lang], and [english], the same all in English,
+ * for a phone with no voice for [lang].
+ */
+data class RingSpeech(val lang: AppLanguage, val parts: List<SpeechPart>, val english: List<SpeechPart>)
+
 /** A pill as it is read aloud: its name as typed, and its amount in words. */
 data class SpokenPill(val name: String, val spokenAmount: String)
 
