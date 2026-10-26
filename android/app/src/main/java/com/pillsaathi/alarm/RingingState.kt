@@ -3,8 +3,8 @@ package com.pillsaathi.alarm
 import android.util.Log
 import java.util.concurrent.CopyOnWriteArrayList
 
-/** A pill on a ring, with its amount as text ("½ tablet", "5 ml"). */
-data class RingPill(val name: String, val amount: String)
+/** A pill on a ring, with its amount as text ("½ tablet", "5 ml") and as read aloud. */
+data class RingPill(val name: String, val amount: String, val spokenAmount: String = "")
 
 /** What is ringing right now, in this process. Only [RingingService] changes it, on the main thread. */
 object RingingState {

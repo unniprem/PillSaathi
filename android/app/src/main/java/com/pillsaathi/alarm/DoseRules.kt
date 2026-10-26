@@ -51,6 +51,40 @@ object DoseRules {
     return "$number ${if (plural) many else one}"
   }
 
+  /**
+   * An amount as it is read aloud in [lang]: half tablets in words ("half a tablet", "ഒന്നര
+   * ഗുളിക", "ढाई गोलियाँ"), syrup in millilitres, and everything else as [amountText].
+   */
+  fun spokenAmount(form: PillForm, amount: Double, lang: AppLanguage): String {
+    val whole = amount.toLong()
+    val half = amount - whole >= 0.25
+    if (form == PillForm.TABLET && half) {
+      return when (lang) {
+        AppLanguage.EN -> if (whole == 0L) "half a tablet" else "$whole and a half tablets"
+        AppLanguage.ML -> "${ML_HALVES[whole.toInt()]} ഗുളിക"
+        AppLanguage.HI -> "${HI_HALVES[whole.toInt()]} ${if (amount >= 2.0) "गोलियाँ" else "गोली"}"
+      }
+    }
+    if (form == PillForm.SYRUP) {
+      val number = if (half) amount.toString() else whole.toString()
+      return when (lang) {
+        AppLanguage.EN -> "$number millilitres"
+        AppLanguage.ML -> "$number മില്ലിലിറ്റർ"
+        AppLanguage.HI -> "$number मिलीलीटर"
+      }
+    }
+    return amountText(form, amount, lang)
+  }
+
+  /** ½, 1½ … 9½ in words, indexed by the whole part. */
+  private val ML_HALVES =
+    listOf("അര", "ഒന്നര", "രണ്ടര", "മൂന്നര", "നാലര", "അഞ്ചര", "ആറര", "ഏഴര", "എട്ടര", "ഒമ്പതര")
+  private val HI_HALVES =
+    listOf(
+      "आधी", "डेढ़", "ढाई", "साढ़े तीन", "साढ़े चार", "साढ़े पाँच", "साढ़े छह", "साढ़े सात", "साढ़े आठ",
+      "साढ़े नौ",
+    )
+
   /** The unit of [form] in [lang], singular then plural. */
   private fun unitWords(form: PillForm, lang: AppLanguage): Pair<String, String> =
     when (lang) {

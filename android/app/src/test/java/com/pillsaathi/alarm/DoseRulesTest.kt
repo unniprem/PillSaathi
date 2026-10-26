@@ -136,6 +136,27 @@ class DoseRulesTest {
     }
   }
 
+  @Test fun spokenAmount_halves() {
+    assertEquals("half a tablet", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.EN))
+    assertEquals("1 and a half tablets", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.EN))
+    assertEquals("ഒന്നര ഗുളിക", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.ML))
+    assertEquals("അര ഗുളിക", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.ML))
+    assertEquals("ഒമ്പതര ഗുളിക", DoseRules.spokenAmount(PillForm.TABLET, 9.5, AppLanguage.ML))
+    assertEquals("ढाई गोलियाँ", DoseRules.spokenAmount(PillForm.TABLET, 2.5, AppLanguage.HI))
+    assertEquals("डेढ़ गोली", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.HI))
+    assertEquals("आधी गोली", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.HI))
+    assertEquals("साढ़े नौ गोलियाँ", DoseRules.spokenAmount(PillForm.TABLET, 9.5, AppLanguage.HI))
+  }
+
+  @Test fun spokenAmount_syrupAndWhole() {
+    assertEquals("7.5 millilitres", DoseRules.spokenAmount(PillForm.SYRUP, 7.5, AppLanguage.EN))
+    assertEquals("5 मिलीलीटर", DoseRules.spokenAmount(PillForm.SYRUP, 5.0, AppLanguage.HI))
+    assertEquals("10 മില്ലിലിറ്റർ", DoseRules.spokenAmount(PillForm.SYRUP, 10.0, AppLanguage.ML))
+    assertEquals("2 capsules", DoseRules.spokenAmount(PillForm.CAPSULE, 2.0, AppLanguage.EN))
+    assertEquals("2 tablets", DoseRules.spokenAmount(PillForm.TABLET, 2.0, AppLanguage.EN))
+    assertEquals("2 തുള്ളി", DoseRules.spokenAmount(PillForm.DROPS, 2.0, AppLanguage.ML))
+  }
+
   // Courses
 
   @Test fun lastDay_fiveDays_isFifthDay() {

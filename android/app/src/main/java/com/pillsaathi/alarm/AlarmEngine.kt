@@ -284,7 +284,11 @@ class AlarmEngine private constructor(context: Context) {
       val date = dateOf(alarm.nextTriggerAt ?: System.currentTimeMillis())
       val lang = language()
       DoseRules.pillsDue(store.locked { store.loadPills() }, alarm.hour, alarm.minute, date).map {
-        RingPill(it.name, DoseRules.amountText(it.form, it.amount, lang))
+        RingPill(
+          it.name,
+          DoseRules.amountText(it.form, it.amount, lang),
+          DoseRules.spokenAmount(it.form, it.amount, lang),
+        )
       }
     } catch (e: Exception) {
       Log.e(LOG_TAG, "Could not read the pills of ${alarm.id}; ringing with its name", e)
@@ -308,6 +312,25 @@ class AlarmEngine private constructor(context: Context) {
    */
   fun language(): AppLanguage =
     LanguageRules.effective(store.peekSettings().language, Locale.getDefault().language, availableLanguages())
+
+  /**
+   * What a ring with [pills] says ([SpeechText.parts]): the title in the app's language, then each
+   * pill as on the ringing screen. Null when read aloud is off, or if anything fails: a ring never
+   * waits on, or fails for, its speech. Lock-free, like [language].
+   */
+  fun ringSpeech(pills: List<RingPill>): List<SpeechPart>? =
+    try {
+      if (!store.peekSettings().readAloud) {
+        null
+      } else {
+        val lang = language()
+        val title = context.localized(lang).getString(R.string.ringing_title)
+        SpeechText.parts(title, lang, pills.map { SpokenPill(it.name, it.spokenAmount) })
+      }
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not build the ring's speech; ringing without it", e)
+      null
+    }
 
   fun soundFileFor(alarm: Alarm): File? {
     val sound = soundOf(alarm) ?: return null
