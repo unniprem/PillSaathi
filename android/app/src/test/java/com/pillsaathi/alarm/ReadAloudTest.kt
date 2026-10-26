@@ -44,6 +44,25 @@ class ReadAloudTest {
     assertEquals(last + 60_000, ReadAloudRules.nextCheckAt(last + 1, START, last, msToPlayEnd = 100_000))
   }
 
+  // A looping player's position stalls at the loop point and then jumps, so a check meant for a
+  // play end can land just outside the slack on either side of it (seen on the emulator).
+  @Test fun atPlayEnd_nearEndOrStart() {
+    assertTrue(ReadAloudRules.atPlayEnd(position = 1_850, duration = 2_100, lastPosition = null))
+    assertTrue(ReadAloudRules.atPlayEnd(position = 200, duration = 2_100, lastPosition = null))
+    assertEquals(false, ReadAloudRules.atPlayEnd(position = 1_000, duration = 2_100, lastPosition = null))
+    assertEquals(false, ReadAloudRules.atPlayEnd(position = 100, duration = 0, lastPosition = null))
+  }
+
+  @Test fun atPlayEnd_justWrappedSinceLastLook() {
+    // Last look 307 ms before the end; this one just after the loop restarted.
+    assertTrue(ReadAloudRules.atPlayEnd(position = 320, duration = 2_100, lastPosition = 1_793))
+    assertTrue(ReadAloudRules.atPlayEnd(position = 600, duration = 2_100, lastPosition = 1_793))
+    // Well into the next play: not a break any more, even though it wrapped.
+    assertEquals(false, ReadAloudRules.atPlayEnd(position = 900, duration = 2_100, lastPosition = 1_793))
+    // Moving forward mid-play is not a wrap.
+    assertEquals(false, ReadAloudRules.atPlayEnd(position = 700, duration = 2_100, lastPosition = 400))
+  }
+
   // The controller
 
   @Test fun start_doesNotSpeakAtRingStart() {

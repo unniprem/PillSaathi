@@ -20,6 +20,8 @@ class AlarmPlayer(context: Context) : RingSound {
   private val context = context.applicationContext
   private var player: MediaPlayer? = null
   private var sources: List<Source> = emptyList()
+  /** Where the sound was at the last [atPlayEnd], to see a loop restart between looks. */
+  private var lastPosition: Long? = null
 
   /** Keeps the phone awake while speech has the sound paused: a paused player lets it sleep. */
   private val pausedLock: PowerManager.WakeLock? =
@@ -52,6 +54,7 @@ class AlarmPlayer(context: Context) : RingSound {
     player?.release()
     player = null
     sources = emptyList()
+    lastPosition = null
     releasePausedLock()
   }
 
@@ -65,12 +68,11 @@ class AlarmPlayer(context: Context) : RingSound {
   override fun atPlayEnd(): Boolean =
     try {
       val mp = player
-      val duration = mp?.duration ?: 0
-      if (mp == null || duration <= 0) {
+      if (mp == null) {
         false
       } else {
-        val position = mp.currentPosition
-        position <= ReadAloudRules.PLAY_END_SLACK_MS || duration - position <= ReadAloudRules.PLAY_END_SLACK_MS
+        val position = mp.currentPosition.toLong()
+        ReadAloudRules.atPlayEnd(position, mp.duration.toLong(), lastPosition).also { lastPosition = position }
       }
     } catch (e: Exception) {
       false
@@ -89,6 +91,7 @@ class AlarmPlayer(context: Context) : RingSound {
 
   /** Plays again from [fromStart] or where it paused; if that fails, starts the sounds over. */
   override fun resume(fromStart: Boolean) {
+    lastPosition = null
     try {
       val mp = player
       if (mp == null) {
