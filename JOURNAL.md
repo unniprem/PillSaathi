@@ -4,6 +4,36 @@ Session log, newest first.
 
 ---
 
+## 2026-10-26 19:17 IST — Session: Next stages brainstorm, Easy for Amma and History designs
+
+### Summary
+
+The build from PR #5 went out for a few days of testing, and the user asked what comes next. Brainstorming with browser mockups laid out four possible stages for elders and their relatives: family can see doses, set up from afar, Easy for Amma, and History over time. The user chose stages 3 and 4 now, in that order, with caregiver features left until the app goes online. A son or daughter sets up the pills on the elder's phone, and the elder answers the rings. Two designs were written, each checked by a fresh builder-review subagent, and accepted as starting points to revise after the testing feedback. No app code changed.
+
+### Changes Made
+
+| Commit    | Type | Description                                                                |
+| --------- | ---- | -------------------------------------------------------------------------- |
+| `0a78ae5` | docs | Design for Easy for Amma: pill photos, language, read aloud, bigger text   |
+| `8e8e001` | docs | Design for History, shared reports and refill counts                       |
+| `1579e7f` | docs | Mark both designs as accepted starting points                              |
+
+### Key Decisions
+
+- **Offline stages first**: stages 3 and 4 work on the elder's phone alone. Stages 1 and 2 need internet, sign-in and a server for the first time, so they wait.
+- **Easy for Amma before History**: an elder meets it on the first ring, and it changes the ringing screen, the riskiest part, so it should be built and tested early. History only pays off after weeks of records.
+- **Speech waits for a break in the sound**: the first speech comes when a play of the sound ends, or after 15 s for a long sound. A relative's short recorded message is never cut off.
+- **English-letter pill names use the English voice**: a Malayalam or Hindi voice may read "Telma 40" badly, so speech is built in parts with a language each.
+- **Unchecked languages stay hidden**: the branch can merge and APKs can be shared without an elder seeing draft translations. Who checks Malayalam and Hindi is still open.
+- **Reconcile records every missed dose in a gap**: today it records only each card's first missed time, so History would overstate adherence after the phone was off for days.
+
+### Issues Encountered
+
+- The builder checks found two real gaps: the read-aloud timing contradicted itself for long sounds, and "no record" days would have blamed the phone between courses. Both were fixed in the designs.
+- The Redmi's wireless debugging connection went offline (`adb devices` shows it offline), which ended a log recording left running from the earlier session.
+
+---
+
 ## 2026-10-26 16:00 IST — Session: First real phone, smaller APK, pill page top bar
 
 ### Summary
