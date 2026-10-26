@@ -1,57 +1,55 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AlarmListScreen from '../screens/AlarmListScreen';
-import AlarmEditScreen from '../screens/AlarmEditScreen';
+import TodayScreen from '../screens/TodayScreen';
+import PillEditScreen from '../screens/PillEditScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
 import RecordScreen from '../screens/RecordScreen';
 import SetupScreen from '../screens/SetupScreen';
 
 export type RootStackParamList = {
-  AlarmList: undefined;
-  // pickedSoundId: undefined = no pick yet; null = "Default alarm tone" picked
-  AlarmEdit: { alarmId?: string; pickedSoundId?: string | null };
-  SoundPicker: { selectedSoundId: string | null };
-  Record: undefined;
+  Today: undefined;
+  PillEdit: { pillId?: string };
+  // The sound chosen here is set on card alarmId.
+  SoundPicker: { alarmId: string; selectedSoundId: string | null };
+  Record: { alarmId: string };
   Setup: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator({
-  initialRouteName = 'AlarmList',
+  initialRouteName = 'Today',
   initialParams,
 }: {
   initialRouteName?: keyof RootStackParamList;
   initialParams?: object;
 }) {
+  // Only the first screen takes params from outside (tests open any screen first).
+  const paramsFor = (name: keyof RootStackParamList) =>
+    name === initialRouteName ? (initialParams as never) : undefined;
   return (
     <Stack.Navigator initialRouteName={initialRouteName}>
       <Stack.Screen
-        name="AlarmList"
-        component={AlarmListScreen}
-        options={{ title: 'Alarms' }}
+        name="Today"
+        component={TodayScreen}
+        options={{ title: 'Today' }}
       />
       <Stack.Screen
-        name="AlarmEdit"
-        component={AlarmEditScreen}
-        initialParams={
-          initialRouteName === 'AlarmEdit' ? initialParams : undefined
-        }
+        name="PillEdit"
+        component={PillEditScreen}
+        initialParams={paramsFor('PillEdit')}
       />
       <Stack.Screen
         name="SoundPicker"
         component={SoundPickerScreen}
         options={{ title: 'Sound' }}
-        initialParams={
-          initialRouteName === 'SoundPicker'
-            ? (initialParams as RootStackParamList['SoundPicker'])
-            : undefined
-        }
+        initialParams={paramsFor('SoundPicker')}
       />
       <Stack.Screen
         name="Record"
         component={RecordScreen}
         options={{ title: 'Record' }}
+        initialParams={paramsFor('Record')}
       />
       <Stack.Screen
         name="Setup"

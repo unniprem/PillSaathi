@@ -21,14 +21,16 @@ import {
   stopPreview,
 } from '../native/sounds';
 import type { Sound } from '../native/sounds';
+import { setCardSound } from '../native/alarms';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SoundPicker'>;
 
 export default function SoundPickerScreen({ navigation, route }: Props) {
+  const { alarmId } = route.params;
   const [selectedId, setSelectedId] = useState<string | null>(
-    route.params?.selectedSoundId ?? null,
+    route.params.selectedSoundId ?? null,
   );
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -69,12 +71,21 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
     return () => sub.remove();
   }, []);
 
-  const pick = (id: string | null) =>
-    navigation.navigate(
-      'AlarmEdit',
-      { pickedSoundId: id },
-      { merge: true, pop: true },
-    );
+  /** Sets the sound on the card this picker was opened for, then returns to Today. */
+  const pick = async (id: string | null) => {
+    try {
+      await setCardSound(alarmId, id);
+    } catch (e) {
+      console.warn('Could not change the sound', e);
+      if (mounted.current) {
+        Alert.alert('Could not change the sound', 'Please try again.');
+      }
+      return;
+    }
+    if (mounted.current) {
+      navigation.popTo('Today');
+    }
+  };
 
   const togglePreview = (id: string) => {
     if (playingId === id) {
@@ -100,7 +111,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
     try {
       const sound = await importSound();
       if (sound && mounted.current) {
-        pick(sound.id);
+        await pick(sound.id);
       }
     } catch (e) {
       const code = (e as { code?: string })?.code;
@@ -162,7 +173,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
       <View style={styles.buttons}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('Record')}
+          onPress={() => navigation.navigate('Record', { alarmId })}
           style={styles.bigButton}
         >
           <Text style={styles.bigButtonText}>● Record</Text>

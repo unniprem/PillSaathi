@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatDuration } from '../lib/time';
+import { setCardSound } from '../native/alarms';
 import {
   discardRecording,
   onPreviewEnded,
@@ -33,7 +34,8 @@ type Phase = 'idle' | 'recording' | 'recorded';
 const BAR_COUNT = 24;
 const MAX_BAR_HEIGHT = 60;
 
-export default function RecordScreen({ navigation }: Props) {
+export default function RecordScreen({ navigation, route }: Props) {
+  const { alarmId } = route.params;
   const [phase, setPhaseState] = useState<Phase>('idle');
   const [elapsedMs, setElapsedMs] = useState(0);
   const [levels, setLevels] = useState<number[]>([]);
@@ -239,12 +241,23 @@ export default function RecordScreen({ navigation }: Props) {
     try {
       const sound = await saveRecording(name.trim() || 'My recording');
       saved.current = true;
+      try {
+        await setCardSound(alarmId, sound.id);
+      } catch (e) {
+        // The recording is kept and listed in the picker; only the card's sound didn't change.
+        console.warn('Could not set the recording on the card', e);
+        if (mounted.current) {
+          Alert.alert('Could not change the sound', 'Please try again.');
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.replace('Today');
+          }
+        }
+        return;
+      }
       if (mounted.current) {
-        navigation.navigate(
-          'AlarmEdit',
-          { pickedSoundId: sound.id },
-          { merge: true, pop: true },
-        );
+        navigation.popTo('Today');
       }
     } catch (e) {
       console.warn('Could not save the recording', e);

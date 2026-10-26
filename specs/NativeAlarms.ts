@@ -1,26 +1,50 @@
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
 
-export type NativeAlarm = {
+export type DoseTime = { hour: number; minute: number };
+
+export type NativePill = {
   id: string;
-  hour: number;
-  minute: number;
-  days: number[]; // ISO: 1 = Mon … 7 = Sun; empty = one-time
   name: string;
-  soundId: string | null;
-  enabled: boolean;
-  nextTriggerAt: number | null;
-  snoozeUntil: number | null;
+  form: string; // tablet | capsule | syrup | drops
+  amount: number;
+  times: DoseTime[]; // sorted
+  startDate: string; // YYYY-MM-DD
+  days: number | null; // null = no end
 };
 
-export type AlarmInput = {
-  id: string | null; // null = new alarm
+export type PillInput = {
+  id: string | null; // null = new pill
+  name: string;
+  form: string;
+  amount: number;
+  times: DoseTime[];
+  startsTomorrow: boolean; // new pills only; an edit keeps its start date
+  days: number | null;
+};
+
+export type NativeTodayPill = {
+  pillId: string;
+  name: string;
+  form: string;
+  amount: number;
+  startDate: string | null; // null when the pill was deleted since
+  days: number | null;
+  exists: boolean;
+  fromTomorrow: boolean; // added to the card after today's dose was recorded
+};
+
+export type NativeTodayCard = {
+  alarmId: string | null; // null when the card is gone but today has a record
   hour: number;
   minute: number;
-  days: number[];
-  name: string;
   soundId: string | null;
+  status: string; // taken | skipped | missed | ringing | snoozed | upcoming | later | done
+  statusAt: number | null;
+  pills: NativeTodayPill[];
 };
+
+export type NativeToday = { date: string; cards: NativeTodayCard[] };
 
 export type Health = {
   notificationsEnabled: boolean;
@@ -37,10 +61,12 @@ export type MissedAlarm = { id: string; name: string; dueAt: number };
 export type PickedTime = { hour: number; minute: number };
 
 export interface Spec extends TurboModule {
-  listAlarms(): Promise<NativeAlarm[]>; // sorted by hour, minute
-  saveAlarm(input: AlarmInput): Promise<NativeAlarm>; // INVALID_ALARM on bad input
-  setAlarmEnabled(id: string, enabled: boolean): Promise<NativeAlarm>;
-  deleteAlarm(id: string): Promise<void>;
+  listPills(): Promise<NativePill[]>; // in the order they were added
+  savePill(input: PillInput): Promise<NativePill>; // INVALID_PILL, NOT_FOUND
+  deletePill(id: string): Promise<void>;
+  getToday(): Promise<NativeToday>;
+  setCardSound(alarmId: string, soundId: string | null): Promise<void>; // NOT_FOUND
+  markDoseTaken(date: string, hour: number, minute: number): Promise<void>; // NOT_FOUND
   reconcileOnAppOpen(): Promise<MissedAlarm[]>;
   getHealth(): Promise<Health>;
   openSetting(target: string): Promise<boolean>; // true = specific page, false = App info fallback

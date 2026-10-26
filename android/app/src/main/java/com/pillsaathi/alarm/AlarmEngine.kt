@@ -117,64 +117,6 @@ class AlarmEngine private constructor(context: Context) {
     Today(dateOf(now), cards)
   }
 
-  fun save(
-    id: String?,
-    hour: Int,
-    minute: Int,
-    days: Set<Int>,
-    name: String,
-    soundId: String?,
-  ): Alarm = store.locked {
-    val now = System.currentTimeMillis()
-    val alarms = store.loadAlarms()
-    val existing = id?.let { wanted -> alarms.firstOrNull { it.id == wanted } }
-    val cleanName = name.trim().ifEmpty { DEFAULT_NAME }
-    val base =
-      existing?.copy(hour = hour, minute = minute, days = days, name = cleanName, soundId = soundId)
-        ?: Alarm(
-          id = UUID.randomUUID().toString(),
-          hour = hour,
-          minute = minute,
-          days = days,
-          name = cleanName,
-          soundId = soundId,
-          enabled = true,
-          nextTriggerAt = null,
-          snoozeUntil = null,
-          lastFiredAt = null,
-          createdAt = now,
-        )
-    val armed = AlarmRules.armed(base, now, zone())
-    store.saveAlarms(if (existing == null) alarms + armed else alarms.replace(armed))
-    scheduler.sync(armed)
-    armed
-  }
-
-  fun setEnabled(id: String, enabled: Boolean): Alarm {
-    val updated = store.locked {
-      val alarms = store.loadAlarms()
-      val alarm = alarms.firstOrNull { it.id == id } ?: throw NoSuchElementException("No alarm $id")
-      val next =
-        if (enabled) AlarmRules.armed(alarm, System.currentTimeMillis(), zone())
-        else AlarmRules.disarmed(alarm)
-      store.saveAlarms(alarms.replace(next))
-      scheduler.sync(next)
-      if (!enabled) scheduler.cancelRecovery(id)
-      next
-    }
-    if (!enabled) RingingService.stopIfRinging(context, id)
-    return updated
-  }
-
-  fun delete(id: String) {
-    store.locked {
-      store.saveAlarms(store.loadAlarms().filterNot { it.id == id })
-      scheduler.cancel(id)
-      scheduler.cancelRecovery(id)
-    }
-    RingingService.stopIfRinging(context, id)
-  }
-
   /**
    * Repairs the schedule ([AlarmRules.reconcile]), reschedules every card, records each missed dose
    * and runs housekeeping. Alarms that the `:ringing` process is ringing or has queued, as its fresh

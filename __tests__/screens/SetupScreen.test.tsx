@@ -38,7 +38,9 @@ beforeEach(() => {
     seen: true,
     doneSteps: [],
   });
-  jest.mocked(alarms.listAlarms).mockResolvedValue([]);
+  jest
+    .mocked(alarms.getToday)
+    .mockResolvedValue({ date: '2026-10-26', cards: [] });
   jest.mocked(alarms.reconcileOnAppOpen).mockResolvedValue([]);
   jest.mocked(alarms.is24HourFormat).mockReturnValue(false);
   jest.mocked(sounds.listSounds).mockResolvedValue([]);

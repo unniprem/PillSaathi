@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
   AppState,
@@ -11,9 +17,11 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import AlarmRow from '../components/AlarmRow';
+import DoseCard from '../components/DoseCard';
 import HealthBanner from '../components/HealthBanner';
+import { formatDay } from '../lib/course';
 import { healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
 import { formatTime } from '../lib/time';
@@ -21,29 +29,30 @@ import { currentManufacturer } from '../setup/oemSteps';
 import {
   getHealth,
   getSetupState,
+  getToday,
   is24HourFormat,
-  listAlarms,
+  markDoseTaken,
   openSetting,
   reconcileOnAppOpen,
-  setAlarmEnabled,
 } from '../native/alarms';
-import type { Alarm, MissedAlarm } from '../native/alarms';
+import type { MissedAlarm, Today, TodayCard } from '../native/alarms';
 import { listSounds } from '../native/sounds';
 import type { Sound } from '../native/sounds';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { colors } from '../theme';
+import { colors, spacing } from '../theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Today'>;
 
+/** One line per missed dose: "8:00 AM: Azithromycin 500, Telma 40". */
 function alertMissed(missed: MissedAlarm[], onFix: () => void) {
   const is24h = is24HourFormat();
   const lines = missed.map(m => {
     const due = new Date(m.dueAt);
-    return `${m.name} (${formatTime(due.getHours(), due.getMinutes(), is24h)})`;
+    return `${formatTime(due.getHours(), due.getMinutes(), is24h)}: ${m.name}`;
   });
   Alert.alert(
-    'Alarm missed',
-    `PillSaathi was stopped by your phone and missed ${lines.join('\n')}.`,
+    'Missed medicines',
+    `PillSaathi was stopped by your phone and missed:\n${lines.join('\n')}`,
     [
       { text: 'Later', style: 'cancel' },
       { text: 'Fix this', onPress: onFix },
@@ -51,9 +60,10 @@ function alertMissed(missed: MissedAlarm[], onFix: () => void) {
   );
 }
 
-export default function AlarmListScreen({ navigation }: Props) {
+export default function TodayScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [alarms, setAlarms] = useState<Alarm[]>([]);
+  const [today, setToday] = useState<Today | null>(null);
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -76,7 +86,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           console.warn('Could not reconcile alarms', e);
         }
       }
-      // A health or setup failure must never hide the alarms, and shows no
+      // A health or setup failure must never hide the doses, and shows no
       // banner rather than a wrong one.
       Promise.all([getHealth(), getSetupState()])
         .then(([health, setup]) => {
@@ -90,8 +100,8 @@ export default function AlarmListScreen({ navigation }: Props) {
             setIssues([]);
           }
         });
-      const [alarmsResult, soundsResult] = await Promise.allSettled([
-        listAlarms(),
+      const [todayResult, soundsResult] = await Promise.allSettled([
+        getToday(),
         listSounds(),
       ]);
       if (!mounted.current || request !== latest.current) {
@@ -102,12 +112,12 @@ export default function AlarmListScreen({ navigation }: Props) {
       } else {
         console.warn('Could not load sounds', soundsResult.reason);
       }
-      if (alarmsResult.status === 'fulfilled') {
-        setAlarms(alarmsResult.value);
+      if (todayResult.status === 'fulfilled') {
+        setToday(todayResult.value);
         setLoadFailed(false);
         setLoaded(true);
       } else {
-        console.warn('Could not load alarms', alarmsResult.reason);
+        console.warn("Could not load today's doses", todayResult.reason);
         setLoadFailed(true);
       }
     },
@@ -128,7 +138,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         {
           title: 'Allow notifications',
           message:
-            'PillSaathi needs notifications to show your alarms when they ring.',
+            'PillSaathi needs notifications to show your medicines when they ring.',
           buttonPositive: 'OK',
         },
       ).catch(e => console.warn('Notification permission request failed', e));
@@ -150,19 +160,37 @@ export default function AlarmListScreen({ navigation }: Props) {
     }, [refresh]),
   );
 
-  const toggle = async (alarm: Alarm, enabled: boolean) => {
-    try {
-      const updated = await setAlarmEnabled(alarm.id, enabled);
-      if (mounted.current) {
-        setAlarms(list => list.map(a => (a.id === updated.id ? updated : a)));
-      }
-    } catch (e) {
-      console.warn('Could not change the alarm', e);
-      if (mounted.current) {
-        Alert.alert('Could not change the alarm', 'Please try again.');
-      }
-      refresh(false);
+  const date = today?.date;
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: date ? `Today · ${formatDay(date)}` : 'Today',
+    });
+  }, [navigation, date]);
+
+  // Only a missed or skipped dose: someone took it but didn't tap Taken.
+  const confirmTaken = (card: TodayCard) => {
+    if (!date) {
+      return;
     }
+    const time = formatTime(card.hour, card.minute, is24HourFormat());
+    const names = card.pills.map(p => p.name).join(', ');
+    Alert.alert('Mark as taken?', `${time} · ${names}`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Mark as taken',
+        onPress: async () => {
+          try {
+            await markDoseTaken(date, card.hour, card.minute);
+          } catch (e) {
+            console.warn('Could not mark the dose taken', e);
+            if (mounted.current) {
+              Alert.alert('Could not mark it taken', 'Please try again.');
+            }
+          }
+          refresh(false);
+        },
+      },
+    ]);
   };
 
   const runAction = (issue: Issue) => {
@@ -183,36 +211,45 @@ export default function AlarmListScreen({ navigation }: Props) {
     <View style={styles.container}>
       <HealthBanner issues={issues} onAction={runAction} />
       <FlatList
-        data={alarms}
-        keyExtractor={a => a.id}
+        data={today?.cards ?? []}
+        keyExtractor={c => `${c.hour}:${c.minute}`}
+        contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <AlarmRow
-            alarm={item}
-            soundName={soundName(item.soundId)}
+          <DoseCard
+            card={item}
+            date={today!.date}
             is24h={is24h}
-            onPress={() =>
-              navigation.navigate('AlarmEdit', { alarmId: item.id })
+            soundName={soundName(item.soundId)}
+            onOpenPill={pillId => navigation.navigate('PillEdit', { pillId })}
+            onOpenSound={() =>
+              item.alarmId &&
+              navigation.navigate('SoundPicker', {
+                alarmId: item.alarmId,
+                selectedSoundId: item.soundId,
+              })
             }
-            onToggle={enabled => toggle(item, enabled)}
+            onMarkTaken={() => confirmTaken(item)}
           />
         )}
         ListEmptyComponent={
           loadFailed ? (
             <Text style={styles.empty}>
-              Couldn't load your alarms. Reopen the app to try again.
+              Couldn't load your pills. Reopen the app to try again.
             </Text>
           ) : loaded ? (
-            <Text style={styles.empty}>No alarms yet. Tap + to add one.</Text>
+            <Text style={styles.empty}>
+              No pills yet. Tap + Add pill to add one.
+            </Text>
           ) : undefined
         }
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Add alarm"
-        onPress={() => navigation.navigate('AlarmEdit', {})}
-        style={styles.fab}
+        onPress={() => navigation.navigate('PillEdit', {})}
+        // Clear of the gesture bar: the app draws edge to edge.
+        style={[styles.add, { marginBottom: spacing.md + insets.bottom }]}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Text style={styles.addText}>+ Add pill</Text>
       </Pressable>
     </View>
   );
@@ -226,17 +263,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.textMuted,
   },
-  fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  list: { paddingBottom: spacing.md },
+  add: {
+    margin: spacing.md,
+    padding: spacing.md,
+    borderRadius: 8,
     backgroundColor: colors.primary,
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
   },
-  fabText: { color: colors.onPrimary, fontSize: 32, lineHeight: 36 },
+  addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
 });
