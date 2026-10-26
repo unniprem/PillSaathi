@@ -1,6 +1,7 @@
 package com.pillsaathi.alarm
 
 import android.app.Activity
+import android.graphics.Paint
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -22,7 +23,7 @@ class RingingActivity : Activity() {
   private val enableButtons = Runnable { setButtonsEnabled(true) }
   private lateinit var buttons: List<View>
 
-  /** The ring on screen; Stop and Snooze are sent for it, never for one that replaced it. */
+  /** The ring on screen; Taken, Skip and Snooze are sent for it, never for one that replaced it. */
   private var rendered: RingingState.Ring? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,14 +46,19 @@ class RingingActivity : Activity() {
       ) {}
     }
     setContentView(R.layout.activity_ringing)
+    val taken = findViewById<TextView>(R.id.ringing_taken)
     val snooze = findViewById<TextView>(R.id.ringing_snooze)
-    val stop = findViewById<TextView>(R.id.ringing_stop)
-    buttons = listOf(snooze, stop)
+    val skip = findViewById<TextView>(R.id.ringing_skip)
+    skip.paintFlags = skip.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+    buttons = listOf(taken, snooze, skip)
+    taken.setOnClickListener {
+      rendered?.let { RingingService.taken(applicationContext, it.alarmId) }
+    }
     snooze.setOnClickListener {
       rendered?.let { RingingService.snooze(applicationContext, it.alarmId) }
     }
-    stop.setOnClickListener {
-      rendered?.let { RingingService.stop(applicationContext, it.alarmId) }
+    skip.setOnClickListener {
+      rendered?.let { RingingService.skip(applicationContext, it.alarmId) }
     }
   }
 
@@ -99,7 +105,7 @@ class RingingActivity : Activity() {
     if (ring != rendered && RingCommands.inGuard(ring, SystemClock.elapsedRealtime())) {
       // This ring has just replaced the one on screen: a second tap meant for that one must not
       // end it unseen.
-      Log.i(LOG_TAG, "Stop and Snooze paused ${RingCommands.GUARD_MS} ms: new ring ${ring.alarmId}")
+      Log.i(LOG_TAG, "Ring buttons paused ${RingCommands.GUARD_MS} ms: new ring ${ring.alarmId}")
       setButtonsEnabled(false)
       handler.removeCallbacks(enableButtons)
       handler.postDelayed(enableButtons, RingCommands.GUARD_MS)

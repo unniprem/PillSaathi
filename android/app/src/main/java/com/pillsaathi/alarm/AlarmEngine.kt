@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.pillsaathi.R
 import java.io.File
+import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
@@ -12,12 +14,17 @@ internal const val LOG_TAG = "PillSaathiAlarm"
 enum class ReconcileTrigger { BOOT, CLOCK_CHANGED, APP_OPEN, PERMISSION_CHANGED, RECOVERY }
 
 /**
- * The one entry point for changing alarms. Receivers, the ringing service and the React Native
- * modules all go through it, so every change is persisted and rescheduled under the store lock.
+ * The one entry point for changing pills, time cards (alarms) and dose records. Receivers, the
+ * ringing service and the React Native modules all go through it, so every change is persisted and
+ * rescheduled under the store lock.
+ *
+ * Pills drive the cards: after every pill change, reconcile and ring end, housekeeping
+ * ([DoseRules.planCards]) makes one card per time the pills need and removes the rest.
  *
  * Two kinds of caller, two rules for a failed write ([StorageException]):
- * - A user's change ([save], [setEnabled], [delete], [clearSound]) is written first and scheduled
- *   only after, and a failed write is thrown, so the app never reports a change it didn't keep.
+ * - A user's change ([savePill], [deletePill], [setCardSound], [markTaken], [clearSound]) is
+ *   written first and scheduled only after, and a failed write is thrown, so the app never reports
+ *   a change it didn't keep.
  * - The ringing path ([onFired], [onQueuedRingStarted], [onRingEnded], [onSnoozed], [reconcile])
  *   logs a failed write and schedules and rings anyway. Ringing comes first; the next reconcile
  *   repairs the lost bookkeeping.
@@ -28,6 +35,87 @@ class AlarmEngine private constructor(context: Context) {
   private val scheduler = AlarmScheduler(this.context)
 
   fun alarms(): List<Alarm> = store.locked { store.loadAlarms() }
+
+  fun pills(): List<Pill> = store.locked { store.loadPills() }
+
+  /**
+   * Adds a pill ([PillDraft.id] null) or edits one, then runs housekeeping. A new pill starts today,
+   * or tomorrow when asked; an edit keeps its start date. Throws [NoSuchElementException] for an
+   * unknown id and [StorageException] when either write fails.
+   */
+  fun savePill(draft: PillDraft): Pill {
+    val (pill, removed) = store.locked {
+      val now = System.currentTimeMillis()
+      val pills = store.loadPills()
+      val existing = draft.id?.let { id ->
+        pills.firstOrNull { it.id == id } ?: throw NoSuchElementException("No pill $id")
+      }
+      val pill =
+        existing?.copy(
+          name = draft.name,
+          form = draft.form,
+          amount = draft.amount,
+          times = draft.times,
+          days = draft.days,
+        )
+          ?: Pill(
+            id = UUID.randomUUID().toString(),
+            name = draft.name,
+            form = draft.form,
+            amount = draft.amount,
+            times = draft.times,
+            startDate = dateOf(now).plusDays(if (draft.startsTomorrow) 1L else 0L),
+            days = draft.days,
+            createdAt = now,
+          )
+      store.savePills(if (existing == null) pills + pill else pills.map { if (it.id == pill.id) pill else it })
+      pill to syncCards(now)
+    }
+    stopRings(removed)
+    return pill
+  }
+
+  /** Deletes pill [id], then runs housekeeping: a card left with no pills goes, ring and all. */
+  fun deletePill(id: String) {
+    val removed = store.locked {
+      store.savePills(store.loadPills().filterNot { it.id == id })
+      syncCards(System.currentTimeMillis())
+    }
+    stopRings(removed)
+  }
+
+  /** Sets card [alarmId]'s sound; null is the default alarm tone. */
+  fun setCardSound(alarmId: String, soundId: String?) {
+    store.locked {
+      val alarms = store.loadAlarms()
+      val card = alarms.firstOrNull { it.id == alarmId } ?: throw NoSuchElementException("No card $alarmId")
+      store.saveAlarms(alarms.replace(card.copy(soundId = soundId)))
+    }
+  }
+
+  /** Marks the recorded dose at [date] [hour]:[minute] taken now. */
+  fun markTaken(date: LocalDate, hour: Int, minute: Int) {
+    store.locked {
+      val updated =
+        DoseRules.markedTaken(store.loadDoses(), date, hour, minute, System.currentTimeMillis())
+          ?: throw NoSuchElementException("No dose on $date at $hour:$minute")
+      store.saveDoses(updated)
+    }
+  }
+
+  /** The Today screen: today's cards with their pills and statuses. */
+  fun today(): Today = store.locked {
+    val now = System.currentTimeMillis()
+    val cards = DoseRules.todayCards(
+      store.loadAlarms(),
+      store.loadPills(),
+      store.loadDoses(),
+      AlarmRules.ownedIds(ringingMarker(), now),
+      now,
+      zone(),
+    )
+    Today(dateOf(now), cards)
+  }
 
   fun save(
     id: String?,
@@ -88,12 +176,14 @@ class AlarmEngine private constructor(context: Context) {
   }
 
   /**
-   * Repairs the schedule ([AlarmRules.reconcile]) and reschedules every alarm. Alarms that the
-   * `:ringing` process is ringing or has queued, as its fresh marker says, are left alone: their
-   * time has passed, but they are not missed.
+   * Repairs the schedule ([AlarmRules.reconcile]), reschedules every card, records each missed dose
+   * and runs housekeeping. Alarms that the `:ringing` process is ringing or has queued, as its fresh
+   * marker says, are left alone: their time has passed, but they are not missed. A missed card with
+   * no pill due at that occurrence is dropped: nothing was missed. The rest are named after the
+   * pills they covered.
    */
   fun reconcile(trigger: ReconcileTrigger): List<MissedAlarm> {
-    val missed = store.locked {
+    val (missed, removed) = store.locked {
       val now = System.currentTimeMillis()
       val owned = AlarmRules.ownedIds(ringingMarker(), now)
       val result = AlarmRules.reconcile(store.loadAlarms(), now, zone(), owned)
@@ -103,8 +193,27 @@ class AlarmEngine private constructor(context: Context) {
       )
       bestEffort("the reconciled alarms") { store.saveAlarms(result.alarms) }
       result.alarms.forEach { scheduler.sync(it) }
-      result.missed
+      val records = mutableListOf<DoseRecord>()
+      val missedDoses = mutableListOf<MissedAlarm>()
+      bestEffort("the missed doses") {
+        val pills = store.loadPills()
+        result.missed.forEach { m ->
+          val alarm = result.alarms.first { it.id == m.id }
+          val record = DoseRules.doseRecord(alarm, pills, m.dueAt, DoseOutcome.MISSED, now, zone())
+          if (record == null) {
+            Log.i(LOG_TAG, "Missed ${m.id}: nothing was due, not recorded")
+          } else {
+            records.add(record)
+            missedDoses.add(m.copy(name = namesOf(record)))
+          }
+        }
+        if (records.isNotEmpty()) {
+          store.saveDoses(records.fold(store.loadDoses()) { acc, r -> DoseRules.withRecord(acc, r, dateOf(now)) })
+        }
+      }
+      missedDoses to housekeeping(now)
     }
+    stopRings(removed)
     if (trigger != ReconcileTrigger.APP_OPEN) missed.forEach { Notifications.postMissed(context, it) }
     return missed
   }
@@ -134,9 +243,20 @@ class AlarmEngine private constructor(context: Context) {
           val ended = AlarmRules.ringEnded(alarm, now, zone())
           bestEffort("the missed fire of $id") { store.saveAlarms(alarms.replace(ended)) }
           scheduler.sync(ended)
-          null to AlarmRules.dueAt(alarm)?.let { MissedAlarm(alarm.id, alarm.name, it) }
+          val occurrence = alarm.nextTriggerAt ?: AlarmRules.dueAt(alarm)
+          val record = occurrence?.let { recordDose(alarm, it, DoseOutcome.MISSED, now) }
+          housekeeping(now)
+          null to record?.let { MissedAlarm(alarm.id, namesOf(it), occurrence) }
         }
         FireDecision.RING -> {
+          if (nothingDue(alarm, now)) {
+            Log.i(LOG_TAG, "Fire $id: nothing due")
+            val ended = AlarmRules.ringEnded(alarm, now, zone())
+            bestEffort("the empty fire of $id") { store.saveAlarms(alarms.replace(ended)) }
+            scheduler.sync(ended)
+            housekeeping(now)
+            return@locked null to null
+          }
           val fired = AlarmRules.fired(alarm, now)
           bestEffort("the fire of $id") { store.saveAlarms(alarms.replace(fired)) }
           scheduler.scheduleRecovery(fired.id, AlarmRules.recoveryAt(now))
@@ -165,24 +285,36 @@ class AlarmEngine private constructor(context: Context) {
   }
 
   /**
-   * Records how [id]'s ring ended. An auto-silenced ring nobody answered is reported as missed
-   * whenever the alarm still exists, even if a reconcile has since switched it off or moved it on;
-   * [dueAt] is when it was due, as its fire saw it. The alarm itself moves on only if it is still
-   * on: one switched off or deleted while ringing has already been cancelled.
+   * Records how [id]'s ring ended as a dose with [outcome], then runs housekeeping. The dose is the
+   * card's occurrence, the time it was first due even if snoozed since, and lists the pills due
+   * then; [dueAt] is when it was due as its fire saw it, used when the card no longer says. A missed
+   * dose (auto-silenced, or a ring that ended abnormally) is also posted as a notification. The card
+   * itself moves on only if it is still on: one switched off or deleted while ringing has already
+   * been cancelled.
    */
-  fun onRingEnded(id: String, autoSilenced: Boolean, dueAt: Long? = null) {
-    val missed = store.locked {
+  fun onRingEnded(id: String, outcome: DoseOutcome, dueAt: Long? = null) {
+    val (missed, removed) = store.locked {
       scheduler.cancelRecovery(id)
       val alarms = store.loadAlarms()
-      val alarm = alarms.firstOrNull { it.id == id } ?: return@locked null
-      val due = dueAt ?: AlarmRules.dueAt(alarm) ?: alarm.lastFiredAt
+      val alarm = alarms.firstOrNull { it.id == id } ?: return@locked null to emptyList()
+      val now = System.currentTimeMillis()
+      val occurrence = alarm.nextTriggerAt ?: dueAt ?: alarm.snoozeUntil ?: alarm.lastFiredAt
+      val record = occurrence?.let { recordDose(alarm, it, outcome, now) }
       if (alarm.enabled) {
-        val ended = AlarmRules.ringEnded(alarm, System.currentTimeMillis(), zone())
+        val ended = AlarmRules.ringEnded(alarm, now, zone())
         bestEffort("the end of $id's ring") { store.saveAlarms(alarms.replace(ended)) }
         scheduler.sync(ended)
       }
-      if (autoSilenced && due != null) MissedAlarm(alarm.id, alarm.name, due) else null
+      val missed =
+        if (outcome == DoseOutcome.MISSED && record != null) {
+          MissedAlarm(alarm.id, namesOf(record), occurrence)
+        } else {
+          null
+        }
+      // This ring is over, so its card no longer counts as busy.
+      missed to housekeeping(now, endedId = id)
     }
+    stopRings(removed)
     missed?.let { Notifications.postMissed(context, it) }
   }
 
@@ -214,6 +346,66 @@ class AlarmEngine private constructor(context: Context) {
     }
   }
 
+  /**
+   * Housekeeping under the store lock: plans the cards ([DoseRules.planCards]) with the fresh
+   * marker's rings counted as busy, saves and schedules them, and cancels the removed ones. Returns
+   * the removed ids, whose rings are stopped after the lock ([stopRings]). Throws on a failed write:
+   * the ringing path calls [housekeeping] instead.
+   */
+  private fun syncCards(now: Long, endedId: String? = null): List<String> {
+    val busy = AlarmRules.ownedIds(ringingMarker(), now) - setOfNotNull(endedId)
+    val plan = DoseRules.planCards(store.loadAlarms(), store.loadPills(), busy, now, zone()) {
+      UUID.randomUUID().toString()
+    }
+    store.saveAlarms(plan.cards)
+    plan.cards.forEach { scheduler.sync(it) }
+    plan.removedIds.forEach {
+      scheduler.cancel(it)
+      scheduler.cancelRecovery(it)
+    }
+    if (plan.removedIds.isNotEmpty()) Log.i(LOG_TAG, "Housekeeping removed ${plan.removedIds}")
+    return plan.removedIds
+  }
+
+  /** [syncCards] on the ringing path: a failure is logged and nothing is removed. */
+  private fun housekeeping(now: Long, endedId: String? = null): List<String> {
+    var removed = emptyList<String>()
+    bestEffort("housekeeping") { removed = syncCards(now, endedId) }
+    return removed
+  }
+
+  private fun stopRings(removedIds: List<String>) =
+    removedIds.forEach { RingingService.stopIfRinging(context, it) }
+
+  /**
+   * Whether no pill is due on [alarm]'s occurrence: the date it was first due, so a dose snoozed
+   * past midnight still rings. If the pills can't be read, it rings anyway.
+   */
+  private fun nothingDue(alarm: Alarm, now: Long): Boolean {
+    val pills =
+      try {
+        store.loadPills()
+      } catch (e: Exception) {
+        Log.e(LOG_TAG, "Could not read the pills; ringing ${alarm.id} anyway", e)
+        return false
+      }
+    val date = dateOf(alarm.nextTriggerAt ?: now)
+    return DoseRules.pillsDue(pills, alarm.hour, alarm.minute, date).isEmpty()
+  }
+
+  /** Records [alarm]'s dose at [occurrenceAt] on the ringing path; null when nothing was due. */
+  private fun recordDose(alarm: Alarm, occurrenceAt: Long, outcome: DoseOutcome, now: Long): DoseRecord? {
+    var record: DoseRecord? = null
+    bestEffort("the $outcome dose of ${alarm.id}") {
+      record = DoseRules.doseRecord(alarm, store.loadPills(), occurrenceAt, outcome, now, zone())
+      record?.let { r -> store.saveDoses(DoseRules.withRecord(store.loadDoses(), r, dateOf(now))) }
+    }
+    if (record == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
+    return record
+  }
+
+  private fun namesOf(record: DoseRecord): String = record.pills.joinToString(", ") { it.name }
+
   private fun soundOf(alarm: Alarm): Sound? {
     val soundId = alarm.soundId ?: return null
     return store.locked { store.loadSounds() }.firstOrNull { it.id == soundId }
@@ -238,6 +430,8 @@ class AlarmEngine private constructor(context: Context) {
   }
 
   private fun zone(): ZoneId = ZoneId.systemDefault()
+
+  private fun dateOf(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(zone()).toLocalDate()
 
   private fun List<Alarm>.replace(alarm: Alarm): List<Alarm> =
     map { if (it.id == alarm.id) alarm else it }

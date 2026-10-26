@@ -49,20 +49,21 @@ object Notifications {
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .addAction(
         0,
-        context.getString(R.string.action_snooze),
-        serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
+        context.getString(R.string.action_taken),
+        serviceIntent(context, RingingService.ACTION_TAKEN, ring.alarmId),
       )
       .addAction(
         0,
-        context.getString(R.string.action_stop),
-        serviceIntent(context, RingingService.ACTION_STOP, ring.alarmId),
+        context.getString(R.string.action_snooze),
+        serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
       )
       .build()
   }
 
+  /** "Missed: 8:00 AM, Azithromycin 500, Telma 40": [MissedAlarm.name] holds the pill names. */
   fun postMissed(context: Context, missed: MissedAlarm) {
     val text =
-      context.getString(R.string.missed_alarm, missed.name, formatTime(context, missed.dueAt))
+      context.getString(R.string.missed_alarm, formatTime(context, missed.dueAt), missed.name)
     val open =
       PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
     val notification =
@@ -85,7 +86,7 @@ object Notifications {
   private fun formatTime(context: Context, millis: Long): String =
     DateFormat.getTimeFormat(context).format(Date(millis))
 
-  /** Stop or Snooze for [alarmId]'s ring only; each alarm's action is its own PendingIntent. */
+  /** Taken or Snooze for [alarmId]'s ring only; each alarm's action is its own PendingIntent. */
   private fun serviceIntent(context: Context, action: String, alarmId: String): PendingIntent =
     PendingIntent.getService(
       context,

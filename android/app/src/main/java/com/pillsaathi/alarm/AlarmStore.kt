@@ -9,7 +9,7 @@ import java.io.IOException
 class StorageException(message: String, cause: Throwable?) : IOException(message, cause)
 
 /**
- * Alarm, sound and setup data, kept in device-protected storage so alarms can ring before the
+ * Alarm, pill, dose, sound and setup data, kept in device-protected storage so alarms can ring before the
  * first unlock after a reboot. Shared by the main and `:ringing` processes: each value is a JSON
  * file under `store/`, read fresh from disk every time, so one process always sees the other's
  * writes.
@@ -32,6 +32,14 @@ class AlarmStore(context: Context) {
   fun loadAlarms(): List<Alarm> = load(ALARMS, emptyList(), AlarmJson::alarmsFromJson)
 
   fun saveAlarms(alarms: List<Alarm>) = save(ALARMS, AlarmJson.alarmsToJson(alarms))
+
+  fun loadPills(): List<Pill> = load(PILLS, emptyList(), PillJson::pillsFromJson)
+
+  fun savePills(pills: List<Pill>) = save(PILLS, PillJson.pillsToJson(pills))
+
+  fun loadDoses(): List<DoseRecord> = load(DOSES, emptyList(), PillJson::dosesFromJson)
+
+  fun saveDoses(doses: List<DoseRecord>) = save(DOSES, PillJson.dosesToJson(doses))
 
   fun loadSounds(): List<Sound> = load(SOUNDS, emptyList(), AlarmJson::soundsFromJson)
 
@@ -75,6 +83,8 @@ class AlarmStore(context: Context) {
   private companion object {
     const val STORE_DIR = "store"
     const val ALARMS = "alarms.json"
+    const val PILLS = "pills.json"
+    const val DOSES = "doses.json"
     const val SOUNDS = "sounds.json"
     const val SETUP = "setup.json"
     const val RINGING = "ringing.json"

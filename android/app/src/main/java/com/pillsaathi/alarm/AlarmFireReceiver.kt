@@ -39,7 +39,7 @@ class AlarmFireReceiver : BroadcastReceiver() {
       RingWakeLock.release("could not start the ringing service")
       Log.e(LOG_TAG, "Could not start ringing ${alarm.id}; recording it as missed", e)
       try {
-        AlarmEngine.get(context).onRingEnded(alarm.id, autoSilenced = true, dueAt = dueAt)
+        AlarmEngine.get(context).onRingEnded(alarm.id, DoseOutcome.MISSED, dueAt)
       } catch (e2: Exception) {
         Log.e(LOG_TAG, "Could not record ${alarm.id} as missed", e2)
       }

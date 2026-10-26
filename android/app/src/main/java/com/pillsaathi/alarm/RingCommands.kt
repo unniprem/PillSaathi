@@ -1,7 +1,7 @@
 package com.pillsaathi.alarm
 
 /**
- * Decides whether a Stop or Snooze reaches the ring that is current. Pure, so it can be unit
+ * Decides whether a Taken, Skip or Snooze reaches the ring that is current. Pure, so it can be unit
  * tested.
  *
  * A command names the alarm whose ring it was meant for. When that ring ends, a queued alarm
@@ -9,7 +9,7 @@ package com.pillsaathi.alarm
  * notification action, would otherwise end that next alarm unseen.
  */
 object RingCommands {
-  /** How long a ring that has just replaced another ignores Stop and Snooze. */
+  /** How long a ring that has just replaced another ignores Taken, Skip and Snooze. */
   const val GUARD_MS = 1_500L
 
   enum class Verdict {
