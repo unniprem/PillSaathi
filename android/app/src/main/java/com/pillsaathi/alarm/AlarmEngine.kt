@@ -1,12 +1,14 @@
 package com.pillsaathi.alarm
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.util.Log
 import com.pillsaathi.R
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Locale
 import java.util.UUID
 
 internal const val LOG_TAG = "PillSaathiAlarm"
@@ -287,6 +289,24 @@ class AlarmEngine private constructor(context: Context) {
       Log.e(LOG_TAG, "Could not read the pills of ${alarm.id}; ringing with its name", e)
       emptyList()
     }
+
+  fun settings(): AppSettings = store.locked { store.loadSettings() }
+
+  /** Changes the settings: a user's change, so a failed write throws [StorageException]. */
+  fun updateSettings(change: (AppSettings) -> AppSettings) {
+    store.locked { store.saveSettings(change(store.loadSettings())) }
+  }
+
+  /** The languages to offer: all of them in a debug build, only checked ones in a release. */
+  fun availableLanguages(): List<AppLanguage> =
+    LanguageRules.available(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)
+
+  /**
+   * The language the app speaks now ([LanguageRules.effective]). Read without the store lock and
+   * never throws, so the ringing path can call it before anything else.
+   */
+  fun language(): AppLanguage =
+    LanguageRules.effective(store.peekSettings().language, Locale.getDefault().language, availableLanguages())
 
   fun soundFileFor(alarm: Alarm): File? {
     val sound = soundOf(alarm) ?: return null

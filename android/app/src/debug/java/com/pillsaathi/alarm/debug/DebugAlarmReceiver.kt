@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import com.pillsaathi.alarm.Alarm
 import com.pillsaathi.alarm.AlarmEngine
+import com.pillsaathi.alarm.AppLanguage
 import com.pillsaathi.alarm.DebugHooks
 import com.pillsaathi.alarm.DoseTime
 import com.pillsaathi.alarm.LOG_TAG
@@ -88,6 +89,22 @@ class DebugAlarmReceiver : BroadcastReceiver() {
       // Simulates the system destroying RingingService mid-ring.
       "com.pillsaathi.DEBUG_STOP_SERVICE" ->
         context.stopService(Intent(context, RingingService::class.java))
+      // lang en|ml|hi stores that language, lang phone follows the phone; read_aloud true|false.
+      "com.pillsaathi.DEBUG_SETTINGS" -> {
+        val lang = intent.getStringExtra("lang")
+        if (lang != null && lang != "phone" && AppLanguage.fromCode(lang) == null) {
+          Log.w(LOG_TAG, "Unknown lang $lang; settings unchanged")
+          return
+        }
+        engine.updateSettings { s ->
+          s.copy(
+            language = if (lang == null) s.language else AppLanguage.fromCode(lang),
+            readAloud =
+              if (intent.hasExtra("read_aloud")) intent.getBooleanExtra("read_aloud", true) else s.readAloud,
+          )
+        }
+        Log.i(LOG_TAG, "Settings ${engine.settings()}, speaking ${engine.language()}")
+      }
       "com.pillsaathi.DEBUG_AUTO_SILENCE_MS" -> {
         DebugHooks.autoSilenceMsOverride = intent.getLongExtra("ms", -1L).takeIf { it > 0 }
         Log.i(LOG_TAG, "autoSilenceMsOverride=${DebugHooks.autoSilenceMsOverride}")

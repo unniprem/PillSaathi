@@ -48,6 +48,22 @@ class FileStoreTest {
   }
 
   @Test(timeout = 10_000)
+  fun peek_whileAnotherThreadHoldsTheLock_readsWithoutWaiting() {
+    store.write("settings.json", "{\"language\":\"ml\"}")
+    val holding = java.util.concurrent.CountDownLatch(1)
+    val release = java.util.concurrent.CountDownLatch(1)
+    val holder = Thread { store.locked { holding.countDown(); release.await() } }.apply { start() }
+    try {
+      holding.await()
+      assertEquals("{\"language\":\"ml\"}", store.peek("settings.json"))
+      assertNull(store.peek("missing.json"))
+    } finally {
+      release.countDown()
+      holder.join()
+    }
+  }
+
+  @Test(timeout = 10_000)
   fun nestedLocked_doesNotDeadlockOrThrow() {
     // A second FileStore over the same dir shares the lock, like two AlarmStores in one process.
     store.locked { FileStore(dir).locked { store.locked { store.write("n.json", "1") } } }

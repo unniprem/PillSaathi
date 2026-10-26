@@ -72,6 +72,21 @@ class AlarmJsonTest {
     assertEquals(m, AlarmJson.ringingMarkerFromJson(AlarmJson.ringingMarkerToJson(m)))
   }
 
+  @Test fun settings_roundTrip() {
+    val s = AppSettings(AppLanguage.HI, readAloud = false)
+    assertEquals(s, AlarmJson.settingsFromJson(AlarmJson.settingsToJson(s)))
+    val phone = AppSettings(null, readAloud = true)
+    assertEquals(phone, AlarmJson.settingsFromJson(AlarmJson.settingsToJson(phone)))
+  }
+
+  @Test fun settings_missing_defaults() {
+    assertEquals(AppSettings(null, true), AlarmJson.settingsFromJson(null))
+    assertEquals(AppSettings(null, true), AlarmJson.settingsFromJson("{}"))
+  }
+
+  @Test fun settings_unknownLanguage_followsPhone() =
+    assertEquals(AppSettings(null, true), AlarmJson.settingsFromJson("{\"language\":\"ta\"}"))
+
   @Test fun ringingMarker_writtenBeforeQueues_readsWithEmptyQueue() =
     assertEquals(
       RingingMarker("a1", 5L, emptyList()),
