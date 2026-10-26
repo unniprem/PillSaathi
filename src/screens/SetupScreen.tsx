@@ -10,6 +10,7 @@ import {
 } from '../native/alarms';
 import type { Health, SetupState } from '../native/alarms';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useI18n } from '../i18n';
 import { currentManufacturer, stepsFor } from '../setup/oemSteps';
 import { colors, spacing } from '../theme';
 
@@ -19,7 +20,8 @@ export default function SetupScreen({ navigation }: Props) {
   const [health, setHealth] = useState<Health | null>(null);
   const [setup, setSetup] = useState<SetupState | null>(null);
   const mounted = useRef(true);
-  const steps = stepsFor(currentManufacturer());
+  const { t } = useI18n();
+  const steps = stepsFor(currentManufacturer(), t);
 
   useEffect(() => {
     mounted.current = true;
@@ -66,10 +68,7 @@ export default function SetupScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.intro}>
-          Some phones stop apps in the background. Do these steps once so your
-          alarms always ring.
-        </Text>
+        <Text style={styles.intro}>{t.setup.intro}</Text>
         {steps.map(step => (
           <View key={step.key} style={styles.card}>
             <Text style={styles.title}>{step.title}</Text>
@@ -81,12 +80,14 @@ export default function SetupScreen({ navigation }: Props) {
                   onPress={() => open(step.setting!)}
                   style={styles.button}
                 >
-                  <Text style={styles.buttonText}>Open settings</Text>
+                  <Text style={styles.buttonText}>
+                    {t.common.openSettings}
+                  </Text>
                 </Pressable>
               ) : null}
               {step.autoDone ? (
                 health?.ignoringBatteryOptimizations ? (
-                  <Text style={styles.auto}>✓ Allowed</Text>
+                  <Text style={styles.auto}>{t.setup.allowed}</Text>
                 ) : null
               ) : (
                 <Pressable
@@ -100,7 +101,7 @@ export default function SetupScreen({ navigation }: Props) {
                       isDone(step.key) && styles.buttonTextOn,
                     ]}
                   >
-                    {isDone(step.key) ? 'Done ✓' : 'Done'}
+                    {isDone(step.key) ? t.setup.doneTick : t.setup.done}
                   </Text>
                 </Pressable>
               )}
@@ -113,7 +114,7 @@ export default function SetupScreen({ navigation }: Props) {
         onPress={() => navigation.goBack()}
         style={styles.finish}
       >
-        <Text style={styles.finishText}>Finish</Text>
+        <Text style={styles.finishText}>{t.setup.finish}</Text>
       </Pressable>
     </View>
   );

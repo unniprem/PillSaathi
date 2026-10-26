@@ -86,6 +86,7 @@ export const hi: Strings = {
     editTitle: 'दवा बदलें',
     name: 'नाम',
     namePlaceholder: 'दवा का नाम',
+    loadFailed: 'यह दवा लोड नहीं हो सकी।',
     photo: 'फ़ोटो',
     takePhoto: 'फ़ोटो लें',
     chooseGallery: 'गैलरी से चुनें',

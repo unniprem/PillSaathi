@@ -2,8 +2,9 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert, Linking, PermissionsAndroid } from 'react-native';
 import * as alarms from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
+import { hi } from '../../src/i18n/hi';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
-import { renderApp } from '../helpers/renderApp';
+import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
@@ -51,6 +52,27 @@ test('the idle screen shows 0:00 and the limit hint', async () => {
   await renderApp('Record', { alarmId: 'c8' });
   expect(await screen.findByText('0:00')).toBeTruthy();
   expect(screen.getByText('Up to 2:00')).toBeTruthy();
+});
+
+test('shows the Record screen in Hindi', async () => {
+  jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
+  await renderApp('Record', { alarmId: 'c8' });
+  expect(await screen.findByText(hi.record.upTo)).toBeTruthy();
+  expect(headerTitles()).toEqual([hi.record.title]);
+  await fireEvent.press(screen.getByLabelText(hi.record.start));
+  expect(PermissionsAndroid.request).toHaveBeenCalledWith(
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    {
+      title: hi.record.allowMic,
+      message: hi.record.micMessage,
+      buttonPositive: hi.common.ok,
+    },
+  );
+  expect(await screen.findByText(hi.record.tapToStop)).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText(hi.record.stop));
+  expect(await screen.findByText(hi.record.use)).toBeTruthy();
+  expect(screen.getByText(hi.record.listen)).toBeTruthy();
+  expect(screen.getByDisplayValue(hi.record.defaultName)).toBeTruthy();
 });
 
 test('record then stop shows Listen, Redo and the name field', async () => {

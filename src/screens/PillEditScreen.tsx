@@ -97,6 +97,9 @@ function Chip({
 export default function PillEditScreen({ navigation, route }: Props) {
   const pillId = route.params?.pillId;
   const { t } = useI18n();
+  // For the load, which must not run again (and undo edits) when the language changes.
+  const words = useRef(t);
+  words.current = t;
   const [name, setName] = useState('');
   const [form, setForm] = useState<PillForm>('tablet');
   const [amount, setAmount] = useState(AMOUNT_RULES.tablet.initial);
@@ -183,7 +186,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
       .catch(e => {
         console.warn('Could not load the pill', e);
         if (mounted.current) {
-          Alert.alert("Couldn't load this pill.");
+          Alert.alert(words.current.pill.loadFailed);
           leave();
         }
       });

@@ -84,6 +84,7 @@ export const en = {
     editTitle: 'Edit pill',
     name: 'Name',
     namePlaceholder: 'Medicine name',
+    loadFailed: "Couldn't load this pill.",
     photo: 'Photo',
     takePhoto: 'Take a photo',
     chooseGallery: 'Choose from gallery',

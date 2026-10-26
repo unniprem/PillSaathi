@@ -2,8 +2,9 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as alarms from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
+import { ml } from '../../src/i18n/ml';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
-import { renderApp } from '../helpers/renderApp';
+import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
@@ -50,6 +51,21 @@ test('lists Default alarm tone first, then saved sounds with type and length', a
     .getAllByTestId('sound-name')
     .map(n => n.props.children as string);
   expect(names).toEqual(['Default alarm tone', 'My voice', 'Birdsong']);
+});
+
+test('shows the Sound screen in Malayalam', async () => {
+  jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
+  await renderApp('SoundPicker', { alarmId: 'c8', selectedSoundId: null });
+  expect(await screen.findByText(ml.sound.yourSounds)).toBeTruthy();
+  expect(screen.getByText(ml.sound.record)).toBeTruthy();
+  expect(screen.getByText(ml.sound.import)).toBeTruthy();
+  expect(screen.getByText(`${ml.sound.recorded} · 0:12`)).toBeTruthy();
+  expect(screen.getByLabelText(ml.sound.play('My voice'))).toBeTruthy();
+  const names = screen
+    .getAllByTestId('sound-name')
+    .map(n => n.props.children as string);
+  expect(names[0]).toBe(ml.common.defaultTone);
+  expect(headerTitles()).toEqual([ml.sound.title]);
 });
 
 test('picking a sound sets it on the card and returns to Today', async () => {

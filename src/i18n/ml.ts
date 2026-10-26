@@ -87,6 +87,7 @@ export const ml: Strings = {
     editTitle: 'മരുന്ന് മാറ്റുക',
     name: 'പേര്',
     namePlaceholder: 'മരുന്നിന്റെ പേര്',
+    loadFailed: 'ഈ മരുന്ന് ലോഡ് ചെയ്യാനായില്ല.',
     photo: 'ഫോട്ടോ',
     takePhoto: 'ഫോട്ടോ എടുക്കുക',
     chooseGallery: 'ഗാലറിയിൽ നിന്ന് തിരഞ്ഞെടുക്കുക',

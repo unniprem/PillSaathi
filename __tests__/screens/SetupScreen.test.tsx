@@ -2,7 +2,8 @@ import { Platform } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
-import { renderApp } from '../helpers/renderApp';
+import { ml } from '../../src/i18n/ml';
+import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
@@ -46,6 +47,23 @@ beforeEach(() => {
   jest.mocked(sounds.listSounds).mockResolvedValue([]);
   jest.mocked(alarms.openSetting).mockResolvedValue(true);
   jest.mocked(alarms.setSetupStepDone).mockResolvedValue(undefined);
+  jest.mocked(alarms.currentLanguage).mockReturnValue('en');
+});
+
+test('shows the Xiaomi steps in Malayalam', async () => {
+  jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
+  await renderSetup();
+  expect(
+    await screen.findByText(ml.setup.steps.xiaomiAutostart.title),
+  ).toBeTruthy();
+  expect(screen.getByText(ml.setup.steps.xiaomiBattery.body)).toBeTruthy();
+  expect(screen.getByText(ml.setup.steps.lockRecents.title)).toBeTruthy();
+  expect(screen.getByText(ml.setup.steps.battery.title)).toBeTruthy();
+  expect(screen.getByText(ml.setup.intro)).toBeTruthy();
+  expect(screen.getAllByText(ml.common.openSettings)).toHaveLength(3);
+  expect(screen.getAllByText(ml.setup.done)).toHaveLength(3);
+  expect(screen.getByText(ml.setup.finish)).toBeTruthy();
+  expect(headerTitles()).toEqual([ml.setup.title]);
 });
 
 test('shows the intro and the Xiaomi steps in order', async () => {

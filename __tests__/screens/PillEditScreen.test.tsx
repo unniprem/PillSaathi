@@ -339,6 +339,14 @@ test('shows the pill page in Malayalam', async () => {
   expect(screen.getByText(ml.forms.capsule)).toBeTruthy();
 });
 
+test('a pill that cannot be loaded says so in the app language', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
+  jest.mocked(alarms.listPills).mockRejectedValue(new Error('disk'));
+  await renderApp('PillEdit', { pillId: 'p1' });
+  await waitFor(() => expect(alert).toHaveBeenCalledWith(ml.pill.loadFailed));
+});
+
 test('a pill that no longer exists leaves the page', async () => {
   jest.mocked(alarms.listPills).mockResolvedValue([]);
   await renderApp('PillEdit', { pillId: 'p1' });
