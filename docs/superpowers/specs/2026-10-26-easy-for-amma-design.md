@@ -2,7 +2,7 @@
 
 Date: 2026-10-26
 Branch: `feature/easy-for-amma` (from `main` after PR #5)
-Status: draft, awaiting approval
+Status: accepted as a starting point (2026-10-26); to be revised after the current build's testing
 
 ## Intent
 
@@ -146,7 +146,8 @@ for the screens of this stage and the next).
   in the app, separately from the phone's language.
 - Numbers stay as Western digits (1, ½, 2.5), as on medicine strips.
 - I'll draft the translations. Someone who reads each language checks them,
-  starting with the amount texts and the ringing screen.
+  starting with the amount texts and the ringing screen. Who checks
+  Malayalam and Hindi is still open (the user will decide later).
 - **A language that hasn't been checked stays hidden.** It isn't in the
   Language list, and a phone set to it gets English. So the branch can
   merge with a draft translation, and an APK can be shared, without an

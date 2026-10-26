@@ -2,7 +2,7 @@
 
 Date: 2026-10-26
 Branch: its own feature branch, after `feature/easy-for-amma` is merged
-Status: draft, awaiting approval
+Status: accepted as a starting point (2026-10-26); to be revised after the current build's testing
 
 ## Intent
 
