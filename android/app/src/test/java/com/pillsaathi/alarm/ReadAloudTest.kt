@@ -63,6 +63,14 @@ class ReadAloudTest {
     assertEquals(false, ReadAloudRules.atPlayEnd(position = 700, duration = 2_100, lastPosition = 400))
   }
 
+  // A ring's first look has no last position, and the controller only ever looks at play ends,
+  // so a 10 s recording's first look just past its wrap must count too (or speech is forced at 15 s,
+  // mid-recording).
+  @Test fun atPlayEnd_firstLookJustAfterWrap() {
+    assertTrue(ReadAloudRules.atPlayEnd(position = 450, duration = 10_000, lastPosition = null))
+    assertEquals(false, ReadAloudRules.atPlayEnd(position = 700, duration = 10_000, lastPosition = null))
+  }
+
   // The controller
 
   @Test fun start_doesNotSpeakAtRingStart() {

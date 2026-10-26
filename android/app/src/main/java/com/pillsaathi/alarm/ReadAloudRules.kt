@@ -34,11 +34,13 @@ object ReadAloudRules {
    * [PLAY_END_SLACK_MS] of a play's end or start, or back near the start ([WRAP_SLACK_MS]) having
    * wrapped since the last look at [lastPosition]. A looping player's reported position stalls at
    * the loop point and then jumps, so a look meant for the end can land just past either side.
+   * With no last look (a ring's first, or the first after speech), a position that near the start
+   * is a wrap too: [ReadAloud] only looks at play ends, never at the start of a play.
    */
   fun atPlayEnd(position: Long, duration: Long, lastPosition: Long?): Boolean {
     if (duration <= 0) return false
     if (position <= PLAY_END_SLACK_MS || duration - position <= PLAY_END_SLACK_MS) return true
-    return lastPosition != null && position < lastPosition && position <= WRAP_SLACK_MS
+    return (lastPosition == null || position < lastPosition) && position <= WRAP_SLACK_MS
   }
 
   fun decide(now: Long, ringStart: Long, lastSpeechEnd: Long?, atPlayEnd: Boolean): Step =
