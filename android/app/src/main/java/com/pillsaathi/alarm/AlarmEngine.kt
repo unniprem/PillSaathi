@@ -329,6 +329,22 @@ class AlarmEngine private constructor(context: Context) {
     }
   }
 
+  /**
+   * The pills due on [alarm]'s ring, with their amounts: those due on its occurrence's date, so a
+   * dose snoozed past midnight still lists its pills. Empty if the pills can't be read; the ring
+   * then shows the card's name.
+   */
+  fun ringPills(alarm: Alarm): List<RingPill> =
+    try {
+      val date = dateOf(alarm.nextTriggerAt ?: System.currentTimeMillis())
+      DoseRules.pillsDue(store.locked { store.loadPills() }, alarm.hour, alarm.minute, date).map {
+        RingPill(it.name, DoseRules.amountText(it.form, it.amount))
+      }
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not read the pills of ${alarm.id}; ringing with its name", e)
+      emptyList()
+    }
+
   fun soundFileFor(alarm: Alarm): File? {
     val sound = soundOf(alarm) ?: return null
     return File(store.soundsDir, sound.fileName)

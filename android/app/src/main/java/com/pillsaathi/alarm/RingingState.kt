@@ -3,12 +3,16 @@ package com.pillsaathi.alarm
 import android.util.Log
 import java.util.concurrent.CopyOnWriteArrayList
 
+/** A pill on a ring, with its amount as text ("½ tablet", "5 ml"). */
+data class RingPill(val name: String, val amount: String)
+
 /** What is ringing right now, in this process. Only [RingingService] changes it, on the main thread. */
 object RingingState {
   /**
    * One ring. [startedAt] is wall-clock time, for display; [startedElapsed] is
    * `SystemClock.elapsedRealtime()` once it sounded, for [RingCommands]' input guard.
    * [followsAnother] is true for a ring that came from the queue the moment another ended.
+   * [pills] are the pills due on this ring; [name] is shown instead when there are none.
    */
   data class Ring(
     val alarmId: String,
@@ -17,6 +21,7 @@ object RingingState {
     val startedAt: Long,
     val startedElapsed: Long = 0L,
     val followsAnother: Boolean = false,
+    val pills: List<RingPill> = emptyList(),
   )
 
   @Volatile

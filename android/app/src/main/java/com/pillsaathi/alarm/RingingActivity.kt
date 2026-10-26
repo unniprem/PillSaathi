@@ -9,10 +9,14 @@ import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.util.Log
+import android.graphics.Color
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.window.OnBackInvokedDispatcher
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.window.OnBackInvokedDispatcher
 import com.pillsaathi.R
 import java.util.Date
 
@@ -113,10 +117,42 @@ class RingingActivity : Activity() {
     rendered = ring
     findViewById<TextView>(R.id.ringing_time).text =
       DateFormat.getTimeFormat(this).format(Date(ring.startedAt))
-    findViewById<TextView>(R.id.ringing_name).text = ring.name
+    renderPills(ring)
     findViewById<TextView>(R.id.ringing_sound).text =
       getString(R.string.ringing_sound, ring.soundName)
   }
+
+  /** One row per due pill, its name and amount; the card's name alone if there are none. */
+  private fun renderPills(ring: RingingState.Ring) {
+    val list = findViewById<LinearLayout>(R.id.ringing_pills)
+    list.removeAllViews()
+    val rows = ring.pills.ifEmpty { listOf(RingPill(ring.name, "")) }
+    rows.forEach { pill ->
+      val row = LinearLayout(this)
+      row.orientation = LinearLayout.HORIZONTAL
+      row.gravity = Gravity.CENTER_VERTICAL
+      val pad = dp(8)
+      row.setPadding(0, pad, 0, pad)
+      val name = text(pill.name, 24f, Color.WHITE)
+      row.addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+      if (pill.amount.isNotEmpty()) {
+        val amount = text(pill.amount, 22f, MUTED)
+        amount.setPadding(dp(16), 0, 0, 0)
+        row.addView(amount)
+      }
+      list.addView(row)
+    }
+  }
+
+  private fun text(value: String, sp: Float, color: Int) =
+    TextView(this).apply {
+      text = value
+      setTextColor(color)
+      setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
+    }
+
+  private fun dp(value: Int): Int =
+    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), resources.displayMetrics).toInt()
 
   private fun setButtonsEnabled(enabled: Boolean) {
     buttons.forEach {
@@ -127,5 +163,6 @@ class RingingActivity : Activity() {
 
   private companion object {
     const val DISABLED_ALPHA = 0.5f
+    val MUTED = Color.parseColor("#B0B0B8")
   }
 }

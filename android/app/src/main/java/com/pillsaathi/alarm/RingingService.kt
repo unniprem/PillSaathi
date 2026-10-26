@@ -275,32 +275,34 @@ class RingingService : Service() {
               saveMarker(marker)
             }
           }
-        alarm?.let { Triple(it, engine.soundNameFor(it), engine.soundFileFor(it)) }
+        alarm?.let { FoundRing(it, engine.soundNameFor(it), engine.soundFileFor(it), engine.ringPills(it)) }
       }
     if (found == null) {
       Log.i(LOG_TAG, "Not ringing $alarmId: it is gone or off")
       owed.remove(alarmId)
       return false
     }
-    val (alarm, soundName, soundFile) = found
-    startRing(alarm, soundName, soundFile, startedAt, fromQueue)
+    startRing(found, startedAt, fromQueue)
     return true
   }
 
-  private fun startRing(
-    alarm: Alarm,
-    soundName: String,
-    sound: File?,
-    startedAt: Long,
-    followsAnother: Boolean,
-  ) {
+  /** What a ring needs from the store, read under one lock. */
+  private class FoundRing(
+    val alarm: Alarm,
+    val soundName: String,
+    val sound: File?,
+    val pills: List<RingPill>,
+  )
+
+  private fun startRing(found: FoundRing, startedAt: Long, followsAnother: Boolean) {
+    val alarm = found.alarm
     ringing = true
     // Arm auto-silence before anything that touches audio, so a ring can never run forever.
     handler.removeCallbacks(autoSilence)
     handler.postDelayed(autoSilence, DebugHooks.autoSilenceMsOverride ?: AlarmRules.AUTO_SILENCE_MS)
     try {
       vibrator.start()
-      player.start(sound)
+      player.start(found.sound)
     } finally {
       // Published once it sounds (all on this thread, so the screen couldn't redraw sooner): the
       // Taken, Skip and Snooze guard of a ring that replaced another counts from here.
@@ -308,10 +310,11 @@ class RingingService : Service() {
         RingingState.Ring(
           alarm.id,
           alarm.name,
-          soundName,
+          found.soundName,
           startedAt,
           SystemClock.elapsedRealtime(),
           followsAnother,
+          found.pills,
         )
       RingingState.update(ring)
       goForeground(ring)

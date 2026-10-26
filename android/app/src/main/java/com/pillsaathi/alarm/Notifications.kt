@@ -35,12 +35,17 @@ object Notifications {
     NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed))
   }
 
+  /** The ongoing ring: its pills by name, and expanded, one "name · amount" line per pill. */
   fun ringing(context: Context, ring: RingingState.Ring): Notification {
     val screen = ringingScreenIntent(context)
+    val names = if (ring.pills.isEmpty()) ring.name else ring.pills.joinToString(", ") { it.name }
+    val lines =
+      if (ring.pills.isEmpty()) ring.name else ring.pills.joinToString("\n") { "${it.name} · ${it.amount}" }
     return NotificationCompat.Builder(context, CHANNEL_RINGING)
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
       .setContentTitle(formatTime(context, ring.startedAt))
-      .setContentText(ring.name)
+      .setContentText(names)
+      .setStyle(NotificationCompat.BigTextStyle().bigText(lines))
       .setCategory(NotificationCompat.CATEGORY_ALARM)
       .setPriority(NotificationCompat.PRIORITY_MAX)
       .setOngoing(true)
