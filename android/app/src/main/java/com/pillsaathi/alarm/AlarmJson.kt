@@ -1,5 +1,6 @@
 package com.pillsaathi.alarm
 
+import java.time.LocalDate
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -19,7 +20,9 @@ object AlarmJson {
           .put("nextTriggerAt", a.nextTriggerAt ?: JSONObject.NULL)
           .put("snoozeUntil", a.snoozeUntil ?: JSONObject.NULL)
           .put("lastFiredAt", a.lastFiredAt ?: JSONObject.NULL)
-          .put("createdAt", a.createdAt),
+          .put("createdAt", a.createdAt)
+          .put("activeFrom", a.activeFrom?.toString() ?: JSONObject.NULL)
+          .put("activeUntil", a.activeUntil?.toString() ?: JSONObject.NULL),
       )
     }
     return arr.toString()
@@ -43,6 +46,8 @@ object AlarmJson {
         snoozeUntil = longOrNull(o, "snoozeUntil"),
         lastFiredAt = longOrNull(o, "lastFiredAt"),
         createdAt = o.getLong("createdAt"),
+        activeFrom = dateOrNull(o, "activeFrom"),
+        activeUntil = dateOrNull(o, "activeUntil"),
       )
     }
   }
@@ -116,4 +121,8 @@ object AlarmJson {
 
   private fun longOrNull(o: JSONObject, key: String): Long? =
     if (o.isNull(key)) null else o.getLong(key)
+
+  /** An ISO date, or null when the key is null or missing (data written before date windows). */
+  internal fun dateOrNull(o: JSONObject, key: String): LocalDate? =
+    if (o.isNull(key)) null else LocalDate.parse(o.getString(key))
 }
