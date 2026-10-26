@@ -1,5 +1,11 @@
 package com.pillsaathi.alarm
 
+import java.time.LocalDate
+
+/**
+ * An alarm the engine schedules. For pills it is a time card: one per hour and minute, every day,
+ * ringing only on dates from [activeFrom] through [activeUntil] (either end open when null).
+ */
 data class Alarm(
   val id: String,
   val hour: Int,
@@ -12,6 +18,8 @@ data class Alarm(
   val snoozeUntil: Long?,
   val lastFiredAt: Long?,
   val createdAt: Long,
+  val activeFrom: LocalDate? = null,
+  val activeUntil: LocalDate? = null,
 )
 
 enum class SoundKind(val json: String) {

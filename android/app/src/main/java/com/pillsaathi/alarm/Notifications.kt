@@ -35,12 +35,17 @@ object Notifications {
     NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed))
   }
 
+  /** The ongoing ring: its pills by name, and expanded, one "name · amount" line per pill. */
   fun ringing(context: Context, ring: RingingState.Ring): Notification {
     val screen = ringingScreenIntent(context)
+    val names = if (ring.pills.isEmpty()) ring.name else ring.pills.joinToString(", ") { it.name }
+    val lines =
+      if (ring.pills.isEmpty()) ring.name else ring.pills.joinToString("\n") { "${it.name} · ${it.amount}" }
     return NotificationCompat.Builder(context, CHANNEL_RINGING)
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
       .setContentTitle(formatTime(context, ring.startedAt))
-      .setContentText(ring.name)
+      .setContentText(names)
+      .setStyle(NotificationCompat.BigTextStyle().bigText(lines))
       .setCategory(NotificationCompat.CATEGORY_ALARM)
       .setPriority(NotificationCompat.PRIORITY_MAX)
       .setOngoing(true)
@@ -49,20 +54,21 @@ object Notifications {
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .addAction(
         0,
-        context.getString(R.string.action_snooze),
-        serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
+        context.getString(R.string.action_taken),
+        serviceIntent(context, RingingService.ACTION_TAKEN, ring.alarmId),
       )
       .addAction(
         0,
-        context.getString(R.string.action_stop),
-        serviceIntent(context, RingingService.ACTION_STOP, ring.alarmId),
+        context.getString(R.string.action_snooze),
+        serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
       )
       .build()
   }
 
+  /** "Missed: 8:00 AM, Azithromycin 500, Telma 40": [MissedAlarm.name] holds the pill names. */
   fun postMissed(context: Context, missed: MissedAlarm) {
     val text =
-      context.getString(R.string.missed_alarm, missed.name, formatTime(context, missed.dueAt))
+      context.getString(R.string.missed_alarm, formatTime(context, missed.dueAt), missed.name)
     val open =
       PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
     val notification =
@@ -85,7 +91,7 @@ object Notifications {
   private fun formatTime(context: Context, millis: Long): String =
     DateFormat.getTimeFormat(context).format(Date(millis))
 
-  /** Stop or Snooze for [alarmId]'s ring only; each alarm's action is its own PendingIntent. */
+  /** Taken or Snooze for [alarmId]'s ring only; each alarm's action is its own PendingIntent. */
   private fun serviceIntent(context: Context, action: String, alarmId: String): PendingIntent =
     PendingIntent.getService(
       context,

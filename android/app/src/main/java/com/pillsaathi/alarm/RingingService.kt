@@ -30,7 +30,8 @@ class RingingService : Service() {
 
   companion object {
     const val ACTION_RING = "com.pillsaathi.RING"
-    const val ACTION_STOP = "com.pillsaathi.STOP"
+    const val ACTION_TAKEN = "com.pillsaathi.TAKEN"
+    const val ACTION_SKIP = "com.pillsaathi.SKIP"
     const val ACTION_SNOOZE = "com.pillsaathi.SNOOZE"
     const val EXTRA_ALARM_ID = "alarmId"
     private const val EXTRA_DUE_AT = "dueAt"
@@ -44,24 +45,34 @@ class RingingService : Service() {
     }
 
     /**
-     * Stops [alarmId]'s ring; ignored once another ring has taken its place. With no id it stops
-     * whatever rings (debug). Call only from the `:ringing` process (ringing screen, debug).
+     * Ends [alarmId]'s ring and records its dose taken; ignored once another ring has taken its
+     * place. With no id it acts on whatever rings (debug). Call only from the `:ringing` process
+     * (ringing screen, debug).
      */
-    fun stop(context: Context, alarmId: String? = null) =
-      command(context, commandIntent(context, ACTION_STOP, alarmId))
+    fun taken(context: Context, alarmId: String? = null) =
+      command(context, commandIntent(context, ACTION_TAKEN, alarmId))
 
-    /** Snoozes [alarmId]'s ring, like [stop]. Call only from the `:ringing` process. */
+    /** Ends [alarmId]'s ring and records its dose skipped, like [taken]. */
+    fun skip(context: Context, alarmId: String? = null) =
+      command(context, commandIntent(context, ACTION_SKIP, alarmId))
+
+    /** Snoozes [alarmId]'s ring, like [taken]. Call only from the `:ringing` process. */
     fun snooze(context: Context, alarmId: String? = null) =
       command(context, commandIntent(context, ACTION_SNOOZE, alarmId))
 
     /**
-     * A Stop or Snooze meant for [alarmId]'s ring. Its data gives each alarm's notification action
-     * its own PendingIntent, so one alarm's action never carries another's id.
+     * A Taken, Skip or Snooze meant for [alarmId]'s ring. Its data gives each alarm's notification
+     * action its own PendingIntent, so one alarm's action never carries another's id.
      */
     fun commandIntent(context: Context, action: String, alarmId: String?): Intent {
       val intent = intent(context, action)
       if (alarmId != null) {
-        val verb = if (action == ACTION_SNOOZE) "snooze" else "stop"
+        val verb =
+          when (action) {
+            ACTION_TAKEN -> "taken"
+            ACTION_SKIP -> "skip"
+            else -> "snooze"
+          }
         intent
           .setData(Uri.parse("pillsaathi://ring/${Uri.encode(alarmId)}/$verb"))
           .putExtra(EXTRA_ALARM_ID, alarmId)
@@ -104,13 +115,13 @@ class RingingService : Service() {
 
   /**
    * Alarms this service has taken on (ringing or queued) whose ring hasn't been recorded as ended,
-   * each with the time it was due. If the service fails or is destroyed with any left, they are
-   * recorded as missed, so the next occurrence is still scheduled.
+   * each with the time it was due. If the service fails or is destroyed with any left, their doses
+   * are recorded as missed, so the next occurrence is still scheduled.
    */
   private val owed = LinkedHashMap<String, Long?>()
   private val autoSilence = Runnable {
     guarded("auto-silence", null) {
-      endCurrent { id, dueAt -> engine.onRingEnded(id, autoSilenced = true, dueAt = dueAt) }
+      endCurrent { id, dueAt -> engine.onRingEnded(id, DoseOutcome.MISSED, dueAt) }
     }
   }
   private lateinit var engine: AlarmEngine
@@ -135,8 +146,10 @@ class RingingService : Service() {
     guarded(action, alarmId) {
       when (action) {
         ACTION_RING -> onRing(alarmId, intent?.dueAt())
-        ACTION_STOP ->
-          onCommand(action, alarmId) { id, _ -> engine.onRingEnded(id, autoSilenced = false) }
+        ACTION_TAKEN ->
+          onCommand(action, alarmId) { id, dueAt -> engine.onRingEnded(id, DoseOutcome.TAKEN, dueAt) }
+        ACTION_SKIP ->
+          onCommand(action, alarmId) { id, dueAt -> engine.onRingEnded(id, DoseOutcome.SKIPPED, dueAt) }
         ACTION_SNOOZE -> onCommand(action, alarmId) { id, _ -> engine.onSnoozed(id) }
         ACTION_DISMISS -> onDismiss(alarmId)
         else -> if (!ringing) finish()
@@ -179,7 +192,7 @@ class RingingService : Service() {
     finish()
   }
 
-  /** Stop or Snooze: ends the current ring only if the command is meant for it ([RingCommands]). */
+  /** Taken, Skip or Snooze: ends the current ring only if meant for it ([RingCommands]). */
   private fun onCommand(action: String, alarmId: String?, record: (String, Long?) -> Unit) {
     val current = RingingState.current
     when (val verdict = RingCommands.judge(alarmId, current, SystemClock.elapsedRealtime())) {
@@ -262,43 +275,46 @@ class RingingService : Service() {
               saveMarker(marker)
             }
           }
-        alarm?.let { Triple(it, engine.soundNameFor(it), engine.soundFileFor(it)) }
+        alarm?.let { FoundRing(it, engine.soundNameFor(it), engine.soundFileFor(it), engine.ringPills(it)) }
       }
     if (found == null) {
       Log.i(LOG_TAG, "Not ringing $alarmId: it is gone or off")
       owed.remove(alarmId)
       return false
     }
-    val (alarm, soundName, soundFile) = found
-    startRing(alarm, soundName, soundFile, startedAt, fromQueue)
+    startRing(found, startedAt, fromQueue)
     return true
   }
 
-  private fun startRing(
-    alarm: Alarm,
-    soundName: String,
-    sound: File?,
-    startedAt: Long,
-    followsAnother: Boolean,
-  ) {
+  /** What a ring needs from the store, read under one lock. */
+  private class FoundRing(
+    val alarm: Alarm,
+    val soundName: String,
+    val sound: File?,
+    val pills: List<RingPill>,
+  )
+
+  private fun startRing(found: FoundRing, startedAt: Long, followsAnother: Boolean) {
+    val alarm = found.alarm
     ringing = true
     // Arm auto-silence before anything that touches audio, so a ring can never run forever.
     handler.removeCallbacks(autoSilence)
     handler.postDelayed(autoSilence, DebugHooks.autoSilenceMsOverride ?: AlarmRules.AUTO_SILENCE_MS)
     try {
       vibrator.start()
-      player.start(sound)
+      player.start(found.sound)
     } finally {
       // Published once it sounds (all on this thread, so the screen couldn't redraw sooner): the
-      // Stop and Snooze guard of a ring that replaced another counts from here.
+      // Taken, Skip and Snooze guard of a ring that replaced another counts from here.
       val ring =
         RingingState.Ring(
           alarm.id,
           alarm.name,
-          soundName,
+          found.soundName,
           startedAt,
           SystemClock.elapsedRealtime(),
           followsAnother,
+          found.pills,
         )
       RingingState.update(ring)
       goForeground(ring)
@@ -326,14 +342,14 @@ class RingingService : Service() {
     stopSelfResult(lastStartId)
   }
 
-  /** Records every ring still owed as missed (auto-silenced), which also schedules what's next. */
+  /** Records every ring still owed as a missed dose, which also schedules what's next. */
   private fun abandonOwed() {
     val rings = owed.toList()
     owed.clear()
     rings.forEach { (id, dueAt) ->
       Log.w(LOG_TAG, "Ring of $id ended abnormally; recording it as missed")
       try {
-        engine.onRingEnded(id, autoSilenced = true, dueAt = dueAt)
+        engine.onRingEnded(id, DoseOutcome.MISSED, dueAt)
       } catch (e: Exception) {
         Log.e(LOG_TAG, "Could not record $id as missed", e)
       }

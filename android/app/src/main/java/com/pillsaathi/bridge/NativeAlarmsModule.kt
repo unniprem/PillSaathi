@@ -12,17 +12,22 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableMap
-import com.pillsaathi.alarm.Alarm
 import com.pillsaathi.alarm.AlarmEngine
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.MissedAlarm
+import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.ReconcileTrigger
 import com.pillsaathi.alarm.SetupState
 import com.pillsaathi.alarm.StorageException
+import com.pillsaathi.alarm.TodayCard
+import com.pillsaathi.alarm.TodayPill
 import com.pillsaathi.specs.NativeAlarmsSpec
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 /**
- * Alarms, health checks, settings links, first-run setup and the time picker for JS.
+ * Pills, today's doses, card sounds, health checks, settings links, first-run setup and the time
+ * picker for JS.
  *
  * The engine and store are used fresh on every call, never cached, because the `:ringing` process
  * changes the same data. They can wait on the store lock, so they only ever run on one background
@@ -39,38 +44,58 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
 
   override fun getName() = NAME
 
-  override fun listAlarms(promise: Promise) =
+  override fun listPills(promise: Promise) =
     onWorker(promise) {
       Arguments.createArray().apply {
-        engine.alarms().sortedWith(compareBy({ it.hour }, { it.minute })).forEach {
-          pushMap(alarmToJs(it))
-        }
+        engine.pills().sortedBy { it.createdAt }.forEach { pushMap(pillToJs(it)) }
       }
     }
 
-  override fun saveAlarm(input: ReadableMap, promise: Promise) =
+  override fun savePill(input: ReadableMap, promise: Promise) =
     onWorker(promise) {
-      // Read as plain values so a wrong type is INVALID_ALARM, not a cast error.
-      val raw = input.toHashMap()
-      val valid = AlarmInputValidator.validate(raw["hour"], raw["minute"], raw["days"])
-      val id = raw["id"] as? String
-      val name = raw["name"] as? String
-      val soundId = raw["soundId"] as? String
-      alarmToJs(engine.save(id, valid.hour, valid.minute, valid.days, name.orEmpty(), soundId))
+      // Read as plain values so a wrong type is INVALID_PILL, not a cast error.
+      val draft = PillInputValidator.validate(input.toHashMap())
+      try {
+        pillToJs(engine.savePill(draft))
+      } catch (e: NoSuchElementException) {
+        throw AlarmException(NOT_FOUND, "No pill ${draft.id}")
+      }
     }
 
-  override fun setAlarmEnabled(id: String, enabled: Boolean, promise: Promise) =
+  override fun deletePill(id: String, promise: Promise) =
+    onWorker(promise) {
+      engine.deletePill(id)
+      null
+    }
+
+  override fun getToday(promise: Promise) =
+    onWorker(promise) {
+      val today = engine.today()
+      Arguments.createMap().apply {
+        putString("date", today.date.toString())
+        putArray("cards", Arguments.createArray().apply { today.cards.forEach { pushMap(cardToJs(it)) } })
+      }
+    }
+
+  override fun setCardSound(alarmId: String, soundId: String?, promise: Promise) =
     onWorker(promise) {
       try {
-        alarmToJs(engine.setEnabled(id, enabled))
+        engine.setCardSound(alarmId, soundId)
       } catch (e: NoSuchElementException) {
-        throw AlarmException(NOT_FOUND, "No alarm $id")
+        throw AlarmException(NOT_FOUND, "No card $alarmId")
       }
+      null
     }
 
-  override fun deleteAlarm(id: String, promise: Promise) =
+  override fun markDoseTaken(date: String, hour: Double, minute: Double, promise: Promise) =
     onWorker(promise) {
-      engine.delete(id)
+      try {
+        engine.markTaken(LocalDate.parse(date), hour.toInt(), minute.toInt())
+      } catch (e: DateTimeParseException) {
+        throw AlarmException(NOT_FOUND, "No dose on $date")
+      } catch (e: NoSuchElementException) {
+        throw AlarmException(NOT_FOUND, "No dose on $date at ${hour.toInt()}:${minute.toInt()}")
+      }
       null
     }
 
@@ -217,20 +242,50 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     if (!posted) promise.reject(IllegalStateException("The alarm module has shut down"))
   }
 
-  private fun alarmToJs(alarm: Alarm): WritableMap =
+  private fun pillToJs(pill: Pill): WritableMap =
     Arguments.createMap().apply {
-      putString("id", alarm.id)
-      putInt("hour", alarm.hour)
-      putInt("minute", alarm.minute)
+      putString("id", pill.id)
+      putString("name", pill.name)
+      putString("form", pill.form.json)
+      putDouble("amount", pill.amount)
       putArray(
-        "days",
-        Arguments.createArray().apply { alarm.days.sorted().forEach { pushInt(it) } },
+        "times",
+        Arguments.createArray().apply {
+          pill.times.forEach {
+            pushMap(
+              Arguments.createMap().apply {
+                putInt("hour", it.hour)
+                putInt("minute", it.minute)
+              },
+            )
+          }
+        },
       )
-      putString("name", alarm.name)
-      putString("soundId", alarm.soundId)
-      putBoolean("enabled", alarm.enabled)
-      alarm.nextTriggerAt?.let { putDouble("nextTriggerAt", it.toDouble()) } ?: putNull("nextTriggerAt")
-      alarm.snoozeUntil?.let { putDouble("snoozeUntil", it.toDouble()) } ?: putNull("snoozeUntil")
+      putString("startDate", pill.startDate.toString())
+      pill.days?.let { putInt("days", it) } ?: putNull("days")
+    }
+
+  private fun cardToJs(card: TodayCard): WritableMap =
+    Arguments.createMap().apply {
+      putString("alarmId", card.alarmId)
+      putInt("hour", card.hour)
+      putInt("minute", card.minute)
+      putString("soundId", card.soundId)
+      putString("status", card.status.json)
+      card.statusAt?.let { putDouble("statusAt", it.toDouble()) } ?: putNull("statusAt")
+      putArray("pills", Arguments.createArray().apply { card.pills.forEach { pushMap(todayPillToJs(it)) } })
+    }
+
+  private fun todayPillToJs(pill: TodayPill): WritableMap =
+    Arguments.createMap().apply {
+      putString("pillId", pill.pillId)
+      putString("name", pill.name)
+      putString("form", pill.form.json)
+      putDouble("amount", pill.amount)
+      putString("startDate", pill.startDate?.toString())
+      pill.days?.let { putInt("days", it) } ?: putNull("days")
+      putBoolean("exists", pill.exists)
+      putBoolean("fromTomorrow", pill.fromTomorrow)
     }
 
   private fun missedToJs(missed: MissedAlarm): WritableMap =

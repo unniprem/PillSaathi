@@ -7,6 +7,7 @@ export const colors = {
   onPrimary: '#FFFFFF',
   border: '#D1D5DB',
   danger: '#DC2626',
+  success: '#2E7D32',
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24 };

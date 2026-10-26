@@ -4,6 +4,43 @@ Session log, newest first.
 
 ---
 
+## 2026-10-26 08:50 IST — Session: Pills, merged dose alarms and dose records
+
+### Summary
+
+The user asked to execute the latest plan (`docs/superpowers/plans/2026-10-26-pills-and-doses.md`), make sure everything works, fix any issues found, and open a PR. The plan ran inline, task by task, with TDD and a ledger, and ended with one fresh whole-branch review. PillSaathi now manages pills instead of plain alarms. A pill has a name, a type (tablet, capsule, syrup or drops), an amount, 1–6 times and a course length (5/7/10/20 days, any other number, or no end). Every distinct time becomes a _time card_: the engine's existing alarm, repeating daily and ringing only inside its pills' date window. Pills due at the same minute ring once, and the native ringing screen lists each pill and amount. Taken, Skip and Missed are recorded natively with a snapshot of the pills. A Today screen replaces the alarm list, and a pill page replaces the alarm editor. Sound and Record now set a card's sound. Every emulator case passed, including the real UI end to end. The final review found one Important bug, and I promoted one Minor finding to Important. Both were fixed with tests.
+
+### Changes Made
+
+| Commit    | Type | Description                                                                  |
+| --------- | ---- | ---------------------------------------------------------------------------- |
+| `5361f82` | docs | Design for pills, merged dose alarms and taken records                       |
+| `571bf1c` | docs | Implementation plan for pills and doses                                      |
+| `d8aca06` | feat | Date windows on alarms so time cards ring only during their pills' courses   |
+| `3fe5b08` | feat | Pure pill, time card and dose record rules (`DoseRules`, `PillJson`)         |
+| `33f9ff9` | feat | Engine runs pills as merged time cards with Taken, Skip and missed records   |
+| `c9fbe05` | feat | Ringing screen and notification list each due pill and its amount            |
+| `cf67775` | feat | Amount and course display helpers (TypeScript)                               |
+| `3c11243` | feat | Today screen and pill page on a new pill API, replacing plain alarms         |
+| `ab62a8b` | docs | README and device matrix for pills                                           |
+| `b4e3988` | fix  | Never record a dose against a card that moved on; never re-ring a taken dose |
+
+### Key Decisions
+
+- **A time card is the existing `Alarm` plus a date window**: the reviewed scheduling, queue, recovery, reconcile and missed rules keep working per card unchanged. Pills sit on top and housekeeping (`planCards`) keeps the cards in step after every pill change, reconcile and ring end, so courses end without a daily job.
+- **Doses are dated by their occurrence, not the ring's end**: a last-day dose snoozed past midnight still re-rings, lists its pill, and is recorded under the day it was due.
+- **Plain alarms are removed on upgrade (spec over plan)**: `MY_PACKAGE_REPLACED` reconciles before any pill can exist, so the plan's "old alarm becomes the card and keeps its sound" can't happen. The spec says plain alarms are removed and sounds kept, and that is what ships and was tested.
+- **A dose already taken never rings again**: after a clock set back or a westward time-zone change the same time comes round. Ringing it would ask for a second dose, so a fire over a TAKEN record ends quietly.
+- **An early delivery counts as the dose's fire**: a fire inside the 1-minute early tolerance no longer looks "missed" when the card is re-synced mid-ring. Before the fix, that could move the card to tomorrow and record Taken for the wrong day.
+
+### Issues Encountered
+
+- The emulator is a Play Store image without root, so `adb root` + `date` can't move the clock. `adb shell cmd alarm set-time <ms>` does it, and is now in the README.
+- `adb shell am broadcast … --es name "Telma 40"` splits at the space on the device shell. Names need quoting for both shells.
+- The local `main` ref is stale (the pre-fresh-start app). The upgrade test used `origin/main` (41a50a3).
+- The final review (0 Critical, 1 Important, 7 Minor) found the early-fire mis-dating bug. Five Minor findings are deferred and listed in the PR: a sub-second midnight race on a last-day card, corrupt `pills.json` clearing every card, a queued card showing "Ringing now", unchanged cards being re-synced, and removed-id handling in `onFired`.
+- Pending on a real device: the Xiaomi and other OEM cases from the earlier matrix still apply to cards.
+
 ## 2026-10-25 13:16 IST — Session: Fresh start + Android custom-sound alarm
 
 ### Summary

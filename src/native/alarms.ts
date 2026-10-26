@@ -1,22 +1,39 @@
 import NativeAlarms from '../../specs/NativeAlarms';
 import type {
-  AlarmInput,
+  DoseTime,
   Health,
   MissedAlarm,
-  NativeAlarm,
+  NativePill,
+  NativeTodayCard,
+  NativeTodayPill,
   PickedTime,
+  PillInput as NativePillInput,
   SetupState,
   Spec,
 } from '../../specs/NativeAlarms';
+import type { PillForm } from '../lib/amount';
 
-export type {
-  AlarmInput,
-  Health,
-  MissedAlarm,
-  NativeAlarm as Alarm,
-  PickedTime,
-  SetupState,
+export type { DoseTime, Health, MissedAlarm, PickedTime, PillForm, SetupState };
+
+/** A dose's state on the Today screen. */
+export type DoseStatus =
+  | 'taken'
+  | 'skipped'
+  | 'missed'
+  | 'ringing'
+  | 'snoozed'
+  | 'upcoming'
+  | 'later'
+  | 'done';
+
+export type Pill = Omit<NativePill, 'form'> & { form: PillForm };
+export type PillInput = Omit<NativePillInput, 'form'> & { form: PillForm };
+export type TodayPill = Omit<NativeTodayPill, 'form'> & { form: PillForm };
+export type TodayCard = Omit<NativeTodayCard, 'status' | 'pills'> & {
+  status: DoseStatus;
+  pills: TodayPill[];
 };
+export type Today = { date: string; cards: TodayCard[] };
 
 export type SettingTarget =
   | 'notifications'
@@ -32,7 +49,7 @@ export type SettingTarget =
 
 /** The codes the native module rejects its promises with. */
 export const AlarmErrors = {
-  InvalidAlarm: 'INVALID_ALARM',
+  InvalidPill: 'INVALID_PILL',
   NoActivity: 'NO_ACTIVITY',
   NotFound: 'NOT_FOUND',
   /** The app's storage couldn't be read or written, often because the phone is full. */
@@ -46,28 +63,46 @@ function native(): Spec {
   return NativeAlarms;
 }
 
-/** All alarms, sorted by hour then minute. */
-export async function listAlarms(): Promise<NativeAlarm[]> {
-  return native().listAlarms();
+/** All pills, in the order they were added. */
+export async function listPills(): Promise<Pill[]> {
+  return (await native().listPills()) as Pill[];
 }
 
-/** Creates (`id: null`) or updates an alarm; rejects `INVALID_ALARM` on out-of-range input. */
-export async function saveAlarm(input: AlarmInput): Promise<NativeAlarm> {
-  return native().saveAlarm(input);
+/**
+ * Adds (`id: null`) or edits a pill, then the native side rebuilds the time cards. Rejects
+ * `INVALID_PILL` on out-of-range input and `NOT_FOUND` for an unknown id.
+ */
+export async function savePill(input: PillInput): Promise<Pill> {
+  return (await native().savePill(input)) as Pill;
 }
 
-export async function setAlarmEnabled(
-  id: string,
-  enabled: boolean,
-): Promise<NativeAlarm> {
-  return native().setAlarmEnabled(id, enabled);
+export async function deletePill(id: string): Promise<void> {
+  return native().deletePill(id);
 }
 
-export async function deleteAlarm(id: string): Promise<void> {
-  return native().deleteAlarm(id);
+/** Today's time cards with their pills and statuses. */
+export async function getToday(): Promise<Today> {
+  return (await native().getToday()) as Today;
 }
 
-/** Re-checks the schedule; gives alarms that were missed while the app was closed. */
+/** Sets a card's sound; null is the default alarm tone. Rejects `NOT_FOUND`. */
+export async function setCardSound(
+  alarmId: string,
+  soundId: string | null,
+): Promise<void> {
+  return native().setCardSound(alarmId, soundId);
+}
+
+/** Marks a missed or skipped dose taken now. Rejects `NOT_FOUND`. */
+export async function markDoseTaken(
+  date: string,
+  hour: number,
+  minute: number,
+): Promise<void> {
+  return native().markDoseTaken(date, hour, minute);
+}
+
+/** Re-checks the schedule; gives doses that were missed while the app was closed, named after their pills. */
 export async function reconcileOnAppOpen(): Promise<MissedAlarm[]> {
   return native().reconcileOnAppOpen();
 }

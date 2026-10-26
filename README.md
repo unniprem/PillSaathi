@@ -1,6 +1,8 @@
 # PillSaathi
 
-PillSaathi is an Android alarm app (React Native 0.88) for medicine reminders. Each alarm can play a sound you recorded or imported, and it is built to ring as reliably as the phone's built-in Clock app: with the screen locked, in silent or Do Not Disturb mode, after the app is swiped away, and after a reboot.
+PillSaathi is an Android medicine reminder (React Native 0.88). You add each pill once: its name, its type (tablet, capsule, syrup or drops), how much to take, the times of day, and for how many days (5, 7, 10, 20, any other number, or no end). Pills due at the same minute ring as **one** alarm that lists every pill and its amount. On the ringing screen you tap **Taken**, **Snooze 10 min** or **Skip this time**, and the app records the dose as taken, skipped or missed. The home screen, **Today**, shows one card per time with its pills, its sound and today's status.
+
+Each time can play a sound you recorded or imported, and it rings as reliably as the phone's built-in Clock app: with the screen locked, in silent or Do Not Disturb mode, after the app is swiped away, and after a reboot.
 
 Android only for now. The JS bundle still builds for iOS, but the alarm features throw `PillSaathi alarms are Android-only for now`.
 
@@ -8,10 +10,12 @@ Android only for now. The JS bundle still builds for iOS, but the alarm features
 
 - The alarm engine is native Kotlin in `android/app/src/main/java/com/pillsaathi/alarm/`. Alarms are scheduled with `AlarmManager.setAlarmClock()`.
 - Everything that rings (`AlarmFireReceiver`, `SystemEventReceiver`, `RingingService`, `RingingActivity`) runs in a separate `:ringing` process, so a React Native or JS crash in the main process can't silence an alarm.
-- Alarms, sounds and setup state live in a multi-process-safe file store in device-protected storage, so alarms ring before the first unlock after a reboot.
-- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the five screens in `src/screens/`.
+- Each distinct pill time is a **time card**: one engine alarm that repeats every day and rings only between the earliest start and the latest last day of its pills. Housekeeping (`DoseRules.planCards`) keeps the cards in step with the pills after every pill change, reconcile and ring end, so courses end on their own. At fire time the engine checks again and doesn't ring a card with nothing due.
+- Every dose is recorded natively on the ringing path (`doses.json`, kept 365 days) with a snapshot of its pills, so later edits don't rewrite history. The pure rules (due pills, cards, records, Today statuses, amount text) live in `DoseRules.kt` with JVM tests.
+- Pills, cards, records, sounds and setup state live in a multi-process-safe file store in device-protected storage, so alarms ring before the first unlock after a reboot.
+- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the five screens in `src/screens/`: Today, the pill page, Sound, Record and Setup.
 
-The full design is in [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md).
+The designs are in [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
 
 ## Run it
 
@@ -36,7 +40,7 @@ Setup gotchas:
 ```sh
 npm test                                          # Jest: screens and lib
 npx tsc --noEmit && npm run lint                  # types and lint
-cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm rules, ring commands, JSON, file store
+cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm and dose rules, pill input, ring commands, JSON, file store
 ```
 
 ## Debug broadcasts (debug builds only)
@@ -47,22 +51,46 @@ cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm rules, ring
 adb shell am broadcast -a <ACTION> -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver [extras]
 ```
 
-| Action                                 | Extras                                                                                                                                                                              | Effect                                                                                |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `com.pillsaathi.DEBUG_ADD_ALARM`       | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug`), optional `--es days "1,2"` (ISO 1 = Mon to 7 = Sun; omit for a one-time alarm), optional `--es sound_id ID` | Saves an alarm that fires N minutes from now                                          |
-| `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                | Logs every alarm with its next trigger, snooze and last-fired times                   |
-| `com.pillsaathi.DEBUG_STOP`            | optional `--es alarm_id ID`                                                                                                                                                         | Stops whatever rings now; with an id, only that alarm's ring, as the Stop button does |
-| `com.pillsaathi.DEBUG_SNOOZE`          | optional `--es alarm_id ID`                                                                                                                                                         | Snoozes whatever rings now; with an id, only that alarm's ring                        |
-| `com.pillsaathi.DEBUG_AUTO_SILENCE_MS` | `--el ms N`                                                                                                                                                                         | Overrides the 10-minute auto-silence for testing; `0` resets it                       |
-| `com.pillsaathi.DEBUG_STOP_SERVICE`    | none                                                                                                                                                                                | Destroys `RingingService` mid-ring, simulating a system kill                          |
+| Action                                 | Extras                                                                                                                                                                                                                                   | Effect                                                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `com.pillsaathi.DEBUG_ADD_PILL`        | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug pill`), `--es form tablet\|capsule\|syrup\|drops` (default `tablet`), `--ef amount A` (default: the form's), `--ei days N` (0 = no end), `--ez start_tomorrow true` | Saves a pill whose one time is N minutes from now; pills at the same minute share one card                |
+| `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                                                                     | Logs every card with its next trigger, snooze and last-fired times, every pill, and `today()`'s cards     |
+| `com.pillsaathi.DEBUG_TAKEN`           | optional `--es alarm_id ID`                                                                                                                                                                                                              | Ends whatever rings now and records it taken; with an id, only that card's ring, as the Taken button does |
+| `com.pillsaathi.DEBUG_SKIP`            | optional `--es alarm_id ID`                                                                                                                                                                                                              | Ends the ring and records it skipped, like Skip this time                                                 |
+| `com.pillsaathi.DEBUG_SNOOZE`          | optional `--es alarm_id ID`                                                                                                                                                                                                              | Snoozes whatever rings now; with an id, only that card's ring                                             |
+| `com.pillsaathi.DEBUG_AUTO_SILENCE_MS` | `--el ms N`                                                                                                                                                                                                                              | Overrides the 10-minute auto-silence for testing; `0` resets it                                           |
+| `com.pillsaathi.DEBUG_STOP_SERVICE`    | none                                                                                                                                                                                                                                     | Destroys `RingingService` mid-ring, simulating a system kill                                              |
 
-Example: `adb shell am broadcast -a com.pillsaathi.DEBUG_ADD_ALARM -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver --ei minutes_from_now 2 --es name Test`
+Example: `adb shell am broadcast -a com.pillsaathi.DEBUG_ADD_PILL -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver --ei minutes_from_now 2 --es name Telma --ef amount 0.5`
+
+A name with spaces has to survive two shells: quote it for the device shell too, e.g. `adb shell "am broadcast ... --es name 'Telma 40'"`.
+
+To move the emulator's clock without root (Play Store images): `adb shell cmd alarm set-time <epoch-ms>`, then `adb shell settings put global auto_time 1` to go back.
 
 Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb shell dumpsys activity services com.pillsaathi`, `adb shell dumpsys audio` (look for the `USAGE_ALARM` player), `adb shell am force-stop com.pillsaathi` (simulates an OEM kill).
 
 ## Device test matrix
 
-Last run: 2026-10-25, emulator API 34 (`Medium_Phone_API_34`, arm64, Google). Everything marked pass was done with the real app on the emulator. Scheduling a fixed time through the debug receiver was used where the UI would only have added typing; the first alarm (locked case) was created through the UI.
+### Pills and doses
+
+Last run: 2026-10-26, emulator API 34 (`Medium_Phone_API_34`, arm64, Google Play image). The pill page, Today, Sound and Record cases used the real UI; ring timing used the debug receiver to add pills a minute or two out.
+
+- [x] Two pills at the same minute (added through the pill page) show as one card on Today and ring once, listing both with their amounts ("1 tablet", "½ tablet", "5 ml"). The expanded notification shows one "name · amount" line per pill, with Taken and Snooze.
+- [x] Taken records the dose, and Today shows "✓ Taken 7:54 AM".
+- [x] Skip this time records SKIPPED.
+- [x] Letting the ring auto-silence (20 s override) records MISSED and posts "Missed: 7:06 AM, E".
+- [x] Snooze, the re-ring 10 minutes later, then Taken: exactly one record, TAKEN, under the original time.
+- [x] A 1-day course: rang and was taken today; with the clock moved to tomorrow 10:00, the card and its system alarm were gone. Moving the clock back recorded nothing and alerted nothing.
+- [x] Ten pills in one minute: the list scrolls, and Taken, Snooze and Skip stay on screen.
+- [x] A recording set on one card through its sound row: that card's next ring played the recording; the other card kept the default tone.
+- [x] Deleting the only pill on a card removed the card and its system alarm; today's record of it stays on Today, not openable.
+- [x] Setup opened after the first pill was saved.
+- [x] Rings with both app processes killed (`am kill`), and after `adb reboot` with a card 5 minutes out.
+- [x] Upgrade from `main`'s plain-alarm build with two plain alarms, one using a recording: at the first reconcile after the install (`MY_PACKAGE_REPLACED`) both alarms and their system alarms were removed, and the recording stayed in the library. This is the spec's rule ("old plain alarms are removed on upgrade… sounds are kept"); an old alarm's sound is not carried over to a later pill at that time.
+
+### Alarm engine
+
+Last run: 2026-10-25, before pills (the buttons were Stop and Snooze then; Stop is now Taken or Skip), emulator API 34 (`Medium_Phone_API_34`, arm64, Google). Everything marked pass was done with the real app on the emulator. Scheduling a fixed time through the debug receiver was used where the UI would only have added typing; the first alarm (locked case) was created through the UI.
 
 Legend: `[x]` passed, `[ ]` pending (could not be run here).
 

@@ -1,5 +1,6 @@
 package com.pillsaathi.alarm
 
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -12,6 +13,30 @@ class AlarmJsonTest {
       Alarm("a2", 0, 5, emptySet(), "", null, false, null, null, null, 200L),
     )
     assertEquals(alarms, AlarmJson.alarmsFromJson(AlarmJson.alarmsToJson(alarms)))
+  }
+
+  @Test fun alarms_roundTrip_withWindow() {
+    val alarms = listOf(
+      Alarm(
+        "c1", 8, 0, (1..7).toSet(), "A, B", null, true, 1000L, null, null, 100L,
+        LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 5),
+      ),
+      Alarm("c2", 21, 0, (1..7).toSet(), "C", "s1", true, 2000L, null, null, 200L, LocalDate.of(2026, 10, 27), null),
+    )
+    val json = AlarmJson.alarmsToJson(alarms)
+    assertTrue(json.contains("\"2026-10-26\"") && json.contains("\"2026-11-05\""))
+    assertEquals(alarms, AlarmJson.alarmsFromJson(json))
+  }
+
+  @Test fun alarms_jsonWithoutWindowKeys_readsNullWindow() {
+    val old =
+      "[{\"id\":\"a1\",\"hour\":7,\"minute\":30,\"days\":[1,3,5],\"name\":\"Pills\"," +
+        "\"soundId\":\"s1\",\"enabled\":true,\"nextTriggerAt\":1000,\"snoozeUntil\":null," +
+        "\"lastFiredAt\":null,\"createdAt\":100}]"
+    assertEquals(
+      listOf(Alarm("a1", 7, 30, setOf(1, 3, 5), "Pills", "s1", true, 1000L, null, null, 100L, null, null)),
+      AlarmJson.alarmsFromJson(old),
+    )
   }
 
   @Test fun sounds_roundTrip() {

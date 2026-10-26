@@ -27,37 +27,61 @@ object AlarmRules {
     throw IllegalStateException("No trigger found within 8 days")
   }
 
+  /**
+   * [alarm]'s first time strictly after [afterMillis] that falls in its date window, or null when
+   * that would be after [Alarm.activeUntil]: the alarm has no future.
+   */
+  fun nextTriggerFor(alarm: Alarm, afterMillis: Long, zone: ZoneId): Long? {
+    val windowStart = alarm.activeFrom?.atStartOfDay(zone)?.toInstant()?.toEpochMilli()?.minus(1)
+    val after = maxOf(afterMillis, windowStart ?: afterMillis)
+    val next = nextTrigger(alarm.hour, alarm.minute, alarm.days, after, zone)
+    val until = alarm.activeUntil ?: return next
+    return if (Instant.ofEpochMilli(next).atZone(zone).toLocalDate().isAfter(until)) null else next
+  }
+
   fun dueAt(alarm: Alarm): Long? =
     if (!alarm.enabled) null else alarm.snoozeUntil ?: alarm.nextTriggerAt
 
-  fun armed(alarm: Alarm, now: Long, zone: ZoneId): Alarm = alarm.copy(
-    enabled = true,
-    nextTriggerAt = nextTrigger(alarm.hour, alarm.minute, alarm.days, now, zone),
-    snoozeUntil = null,
-  )
+  fun armed(alarm: Alarm, now: Long, zone: ZoneId): Alarm {
+    val next = nextTriggerFor(alarm, now, zone) ?: return disarmed(alarm)
+    return alarm.copy(enabled = true, nextTriggerAt = next, snoozeUntil = null)
+  }
 
   fun disarmed(alarm: Alarm): Alarm =
     alarm.copy(enabled = false, nextTriggerAt = null, snoozeUntil = null)
 
   fun fired(alarm: Alarm, now: Long): Alarm = alarm.copy(lastFiredAt = now)
 
-  fun ringEnded(alarm: Alarm, now: Long, zone: ZoneId): Alarm =
-    if (alarm.days.isEmpty()) {
-      disarmed(alarm)
-    } else {
-      alarm.copy(
-        nextTriggerAt = nextTrigger(alarm.hour, alarm.minute, alarm.days, now, zone),
-        snoozeUntil = null,
-      )
-    }
+  fun ringEnded(alarm: Alarm, now: Long, zone: ZoneId): Alarm {
+    if (alarm.days.isEmpty()) return disarmed(alarm)
+    val next = nextTriggerFor(alarm, now, zone) ?: return disarmed(alarm)
+    return alarm.copy(nextTriggerAt = next, snoozeUntil = null)
+  }
 
   fun snoozed(alarm: Alarm, now: Long): Alarm = alarm.copy(snoozeUntil = now + SNOOZE_MS)
 
+  /**
+   * The occurrence a ring of [alarm] ending at [now] belongs to: the time it was first due, even if
+   * snoozed since. That is its next trigger while the ring lasts; if the alarm has already moved on
+   * to a later one (a fire handled it as missed mid-ring), the ring's own [dueAt] instead.
+   */
+  fun occurrence(alarm: Alarm, dueAt: Long?, now: Long): Long? =
+    alarm.nextTriggerAt?.takeIf { it <= now + EARLY_FIRE_TOLERANCE_MS }
+      ?: dueAt
+      ?: alarm.snoozeUntil
+      ?: alarm.lastFiredAt
+
   fun isMissed(alarm: Alarm, now: Long): Boolean {
     val due = dueAt(alarm) ?: return false
-    val last = alarm.lastFiredAt
-    return due < now - MISSED_GRACE_MS && (last == null || last < due)
+    return due < now - MISSED_GRACE_MS && !firedFor(alarm.lastFiredAt, due)
   }
+
+  /**
+   * Whether a fire at [lastFiredAt] was the one for [due]. A delivery may come up to
+   * [EARLY_FIRE_TOLERANCE_MS] early and still ring, so that early fire counts too.
+   */
+  private fun firedFor(lastFiredAt: Long?, due: Long): Boolean =
+    lastFiredAt != null && lastFiredAt >= due - EARLY_FIRE_TOLERANCE_MS
 
   /**
    * Decides whether a delivery for [alarm] at [now] should ring. A delivery for an alarm that is
@@ -92,8 +116,9 @@ object AlarmRules {
   /**
    * Repairs the schedule: arms enabled alarms with no due time, reports and moves on alarms whose
    * time passed unrung, ends rings whose end was never recorded (their process died; reported as
-   * missed, since nobody may have answered), and recomputes future times for the current zone.
-   * Alarms in [ownedIds] are ringing or queued right now, so they are left exactly as they are.
+   * missed, since nobody may have answered), and recomputes future times for the current zone,
+   * switching off an alarm whose date window has no future left. A missed alarm is reported at its
+   * occurrence, the time it was first due, even when it was snoozed since. Alarms in [ownedIds] are ringing or queued right now, so they are left exactly as they are.
    */
   fun reconcile(
     alarms: List<Alarm>,
@@ -109,15 +134,15 @@ object AlarmRules {
       when {
         due == null -> armed(a, now, zone)
         isMissed(a, now) -> {
-          missed.add(MissedAlarm(a.id, a.name, due))
+          missed.add(MissedAlarm(a.id, a.name, a.nextTriggerAt ?: due))
           ringEnded(a, now, zone)
         }
-        last != null && last >= due && now - last > AUTO_SILENCE_MS + MISSED_GRACE_MS -> {
-          missed.add(MissedAlarm(a.id, a.name, due))
+        last != null && firedFor(last, due) && now - last > AUTO_SILENCE_MS + MISSED_GRACE_MS -> {
+          missed.add(MissedAlarm(a.id, a.name, a.nextTriggerAt ?: due))
           ringEnded(a, now, zone)
         }
         due > now && a.snoozeUntil == null ->
-          a.copy(nextTriggerAt = nextTrigger(a.hour, a.minute, a.days, now, zone))
+          nextTriggerFor(a, now, zone)?.let { a.copy(nextTriggerAt = it) } ?: disarmed(a)
         else -> a
       }
     }

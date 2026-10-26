@@ -1,6 +1,7 @@
 package com.pillsaathi.alarm
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -13,6 +14,7 @@ import org.junit.Test
 class AlarmRulesTest {
   private val IST = ZoneId.of("Asia/Kolkata")
   private val WEEKDAYS = setOf(1, 2, 3, 4, 5)
+  private val EVERY_DAY = (1..7).toSet()
 
   private fun at(y: Int, mo: Int, d: Int, h: Int, mi: Int, s: Int = 0, zone: ZoneId = IST): Long =
     LocalDateTime.of(y, mo, d, h, mi, s).atZone(zone).toInstant().toEpochMilli()
@@ -23,7 +25,16 @@ class AlarmRulesTest {
     next: Long? = null,
     snooze: Long? = null,
     lastFired: Long? = null,
-  ) = Alarm("a1", 7, 0, days, "Pills", null, enabled, next, snooze, lastFired, 0L)
+    from: LocalDate? = null,
+    until: LocalDate? = null,
+  ) = Alarm("a1", 7, 0, days, "Pills", null, enabled, next, snooze, lastFired, 0L, from, until)
+
+  /** The 8:00 every-day card the date-window tests use. */
+  private fun card8(
+    next: Long? = null,
+    from: LocalDate? = null,
+    until: LocalDate? = null,
+  ) = alarm(EVERY_DAY, next = next, from = from, until = until).copy(hour = 8)
 
   @Test fun nextTrigger_oneTime_laterToday() =
     assertEquals(at(2026, 10, 25, 7, 0), AlarmRules.nextTrigger(7, 0, emptySet(), at(2026, 10, 25, 6, 0), IST))
@@ -271,4 +282,103 @@ class AlarmRulesTest {
     assertEquals(at(2026, 10, 27, 7, 0), r.alarms[0].nextTriggerAt)
     assertEquals(listOf(MissedAlarm("a1", "Pills", at(2026, 10, 26, 7, 0))), r.missed)
   }
+
+  @Test fun nextTriggerFor_activeFromTomorrow_skipsToday() =
+    assertEquals(
+      at(2026, 10, 27, 8, 0),
+      AlarmRules.nextTriggerFor(card8(from = LocalDate.of(2026, 10, 27)), at(2026, 10, 26, 7, 0), IST),
+    )
+
+  @Test fun nextTriggerFor_lastDayBeforeTime_today() =
+    assertEquals(
+      at(2026, 10, 26, 8, 0),
+      AlarmRules.nextTriggerFor(card8(until = LocalDate.of(2026, 10, 26)), at(2026, 10, 26, 7, 0), IST),
+    )
+
+  @Test fun nextTriggerFor_lastDayAfterTime_null() =
+    assertNull(
+      AlarmRules.nextTriggerFor(card8(until = LocalDate.of(2026, 10, 26)), at(2026, 10, 26, 9, 0), IST),
+    )
+
+  @Test fun nextTriggerFor_noWindow_sameAsNextTrigger() =
+    assertEquals(
+      at(2026, 10, 27, 8, 0),
+      AlarmRules.nextTriggerFor(card8(), at(2026, 10, 26, 9, 0), IST),
+    )
+
+  @Test fun armed_noFutureInWindow_disarmed() {
+    val a = AlarmRules.armed(card8(until = LocalDate.of(2026, 10, 25)), at(2026, 10, 26, 7, 0), IST)
+    assertFalse(a.enabled)
+    assertNull(a.nextTriggerAt)
+  }
+
+  @Test fun ringEnded_lastDoseOfWindow_disarmed() {
+    val a = card8(next = at(2026, 10, 26, 8, 0), until = LocalDate.of(2026, 10, 26))
+    val ended = AlarmRules.ringEnded(a, at(2026, 10, 26, 8, 5), IST)
+    assertFalse(ended.enabled)
+    assertNull(ended.nextTriggerAt)
+    assertNull(ended.snoozeUntil)
+  }
+
+  @Test fun reconcile_futureBeyondShortenedWindow_disarmed() {
+    val a = card8(next = at(2026, 10, 27, 8, 0), until = LocalDate.of(2026, 10, 26))
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 10, 0), IST)
+    assertFalse(r.alarms[0].enabled)
+    assertNull(r.alarms[0].nextTriggerAt)
+    assertTrue(r.missed.isEmpty())
+  }
+
+  @Test fun reconcile_missedWhileSnoozed_reportsOccurrence() {
+    val a = alarm(
+      next = at(2026, 10, 26, 7, 0),
+      snooze = at(2026, 10, 26, 7, 10),
+      lastFired = at(2026, 10, 26, 7, 0),
+    )
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 20), IST)
+    assertEquals(listOf(MissedAlarm("a1", "Pills", at(2026, 10, 26, 7, 0))), r.missed)
+  }
+
+  // An early delivery (within EARLY_FIRE_TOLERANCE_MS) is the dose's fire, not a fire before it.
+
+  @Test fun fireDecision_refireAfterEarlyFire_rings() =
+    assertEquals(
+      FireDecision.RING,
+      AlarmRules.fireDecision(
+        alarm(next = at(2026, 10, 26, 7, 0), lastFired = at(2026, 10, 26, 6, 59, 30)),
+        at(2026, 10, 26, 7, 5),
+      ),
+    )
+
+  @Test fun reconcile_earlyFiredRingNotStuckYet_unchanged() {
+    val a = alarm(next = at(2026, 10, 26, 7, 0), lastFired = at(2026, 10, 26, 6, 59, 30))
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 5), IST)
+    assertEquals(listOf(a), r.alarms)
+    assertTrue(r.missed.isEmpty())
+  }
+
+  @Test fun reconcile_earlyFiredStuckRing_endedAndReportedMissed() {
+    val due = at(2026, 10, 26, 7, 0)
+    val a = alarm(EVERY_DAY, next = due, lastFired = at(2026, 10, 26, 6, 59, 30))
+    val r = AlarmRules.reconcile(listOf(a), at(2026, 10, 26, 7, 13), IST)
+    assertEquals(listOf(MissedAlarm("a1", "Pills", due)), r.missed)
+    assertEquals(at(2026, 10, 27, 7, 0), r.alarms[0].nextTriggerAt)
+  }
+
+  @Test fun occurrence_ringingCard_isItsNextTrigger() {
+    val a = card8(next = at(2026, 10, 30, 23, 55), until = LocalDate.of(2026, 10, 30))
+      .copy(snoozeUntil = at(2026, 10, 31, 0, 5))
+    assertEquals(at(2026, 10, 30, 23, 55), AlarmRules.occurrence(a, at(2026, 10, 31, 0, 5), at(2026, 10, 31, 0, 7)))
+  }
+
+  @Test fun occurrence_cardMovedOnDuringRing_usesTheFiresDueAt() {
+    val a = card8(next = at(2026, 10, 27, 8, 0))
+    assertEquals(at(2026, 10, 26, 8, 0), AlarmRules.occurrence(a, at(2026, 10, 26, 8, 0), at(2026, 10, 26, 8, 6)))
+  }
+
+  @Test fun occurrence_disarmedCard_fallsBackToDueAtThenLastFired() {
+    val a = card8().copy(enabled = false, lastFiredAt = at(2026, 10, 26, 8, 0))
+    assertEquals(at(2026, 10, 26, 8, 0), AlarmRules.occurrence(a, null, at(2026, 10, 26, 8, 6)))
+    assertEquals(at(2026, 10, 26, 7, 59), AlarmRules.occurrence(a, at(2026, 10, 26, 7, 59), at(2026, 10, 26, 8, 6)))
+  }
 }
+

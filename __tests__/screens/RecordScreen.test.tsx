@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert, Linking, PermissionsAndroid } from 'react-native';
 import * as alarms from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
+import { mockAlarmsDefaults } from '../helpers/nativeMocks';
 import { renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
@@ -16,9 +17,7 @@ afterEach(() => {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(PermissionsAndroid, 'request').mockResolvedValue('granted');
-  jest.mocked(alarms.listAlarms).mockResolvedValue([]);
-  jest.mocked(alarms.reconcileOnAppOpen).mockResolvedValue([]);
-  jest.mocked(alarms.is24HourFormat).mockReturnValue(false);
+  mockAlarmsDefaults();
   jest.mocked(sounds.listSounds).mockResolvedValue([]);
   jest.mocked(sounds.startRecording).mockResolvedValue();
   jest.mocked(sounds.stopRecording).mockResolvedValue(5000);
@@ -43,13 +42,13 @@ beforeEach(() => {
 });
 
 async function startRecording() {
-  await renderApp('Record');
+  await renderApp('Record', { alarmId: 'c8' });
   await fireEvent.press(await screen.findByLabelText('Start recording'));
   await screen.findByText('Tap to stop');
 }
 
 test('the idle screen shows 0:00 and the limit hint', async () => {
-  await renderApp('Record');
+  await renderApp('Record', { alarmId: 'c8' });
   expect(await screen.findByText('0:00')).toBeTruthy();
   expect(screen.getByText('Up to 2:00')).toBeTruthy();
 });
@@ -76,7 +75,7 @@ test('a denied microphone offers the settings page', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
   jest.mocked(PermissionsAndroid.request).mockResolvedValue('denied');
-  await renderApp('Record');
+  await renderApp('Record', { alarmId: 'c8' });
   await fireEvent.press(await screen.findByLabelText('Start recording'));
   expect(alert).toHaveBeenCalledWith(
     'Microphone access is off',
@@ -163,6 +162,25 @@ test('Use this sound saves with the typed name', async () => {
   );
   await fireEvent.press(screen.getByText('Use this sound'));
   expect(sounds.saveRecording).toHaveBeenCalledWith('Amma voice');
+  await waitFor(() =>
+    expect(alarms.setCardSound).toHaveBeenCalledWith('c8', 's9'),
+  );
+  expect(await screen.findByText('+ Add pill')).toBeTruthy();
+});
+
+test('a saved recording that cannot be set on the card says so', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.mocked(alarms.setCardSound).mockRejectedValueOnce(new Error('gone'));
+  await recordedScreen();
+  await fireEvent.press(screen.getByText('Use this sound'));
+  await waitFor(() =>
+    expect(alert).toHaveBeenCalledWith(
+      'Could not change the sound',
+      'Please try again.',
+    ),
+  );
+  expect(sounds.discardRecording).not.toHaveBeenCalled();
 });
 
 function deferred<T>() {
@@ -193,7 +211,7 @@ async function recordedScreen() {
 test('leaving while start is pending discards once start resolves', async () => {
   const start = deferred<void>();
   jest.mocked(sounds.startRecording).mockReturnValue(start.promise);
-  await renderApp('Record');
+  await renderApp('Record', { alarmId: 'c8' });
   await fireEvent.press(await screen.findByLabelText('Start recording'));
   await waitFor(() => expect(sounds.startRecording).toHaveBeenCalled());
   await screen.unmount();
