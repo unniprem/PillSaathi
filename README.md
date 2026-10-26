@@ -106,11 +106,14 @@ Last run: 2026-10-26, emulator API 34 (`Medium_Phone_API_34`, arm64, Google Play
 - [x] Malayalam (chosen in Settings): Settings, Today, the pill page and Try it changed at once; the next ring's screen, notification actions and speech were Malayalam (the English name "Telma 40" in the English voice); an auto-silenced ring posted "നഷ്ടമായി: 9:10 PM, Iron".
 - [x] A release build installed over a stored Malayalam choice lists English only in Settings, and the app, the ringing screen, its notification and its speech were all English.
 
+**Observed:** on this emulator (no audio output), the player's reported position is sometimes stale for a second or more (the same value at two looks 0.9–1.4 s apart). Then the looks aimed at play ends miss them, and speech comes at the forced time instead (15 s into the ring, or 60 s after the last speech). The sound keeps playing throughout. A real phone may report the position smoothly; the 10-second recording case below decides it. If a phone shows the same, the fix is to loop the sound in the app (restart on the player's completion event) so each play end is an exact event.
+
 **Pending, needs a real phone (Redmi Note 10 was not connected):**
 
 - [ ] No voice for the app's language: speech in English (covered by a JVM test; the emulator has a Malayalam voice).
 - [ ] How Malayalam sounds with "Telma 40": the Malayalam words and the English name each natural, with no long gap at the switch.
-- [ ] A relative's 10-second recording: speech always after the recording ends, never in the middle.
+- [ ] A relative's 10-second recording: speech always after the recording ends, never in the middle. Watch `adb logcat -s PillSaathiAlarm` for "Read aloud … SPEAK_FROM_START" near 10 s (good) or "SPEAK_AND_RESUME" at 15 s (a missed play end).
+- [ ] The delay from speech starting to the sound pausing (the start of the next play is heard until then; 0.15–1 s on the emulator).
 - [ ] The camera photo of a real pill strip, taken in portrait, upright everywhere.
 
 ### Pills and doses
