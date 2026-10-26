@@ -213,7 +213,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
   const courseStart = startDate ?? (startsTomorrow ? addDays(today, 1) : today);
 
   // Runs after a successful save; it never throws, so the user always leaves.
-  const finish = async () => {
+  const finish = useCallback(async () => {
     try {
       if (!(await getSetupState()).seen) {
         await markSetupSeen();
@@ -224,9 +224,9 @@ export default function PillEditScreen({ navigation, route }: Props) {
       console.warn('Could not check the setup state', e);
     }
     leave();
-  };
+  }, [navigation, leave]);
 
-  const save = async () => {
+  const save = useCallback(async () => {
     if (saving || !ready || days === undefined) {
       return;
     }
@@ -280,9 +280,20 @@ export default function PillEditScreen({ navigation, route }: Props) {
     if (mounted.current) {
       setSaving(false);
     }
-  };
+  }, [
+    saving,
+    ready,
+    days,
+    pillId,
+    name,
+    form,
+    amount,
+    times,
+    startsTomorrow,
+    finish,
+  ]);
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     if (!pillId) {
       return;
     }
@@ -304,7 +315,39 @@ export default function PillEditScreen({ navigation, route }: Props) {
         },
       },
     ]);
-  };
+  }, [pillId, leave]);
+
+  const renderActions = useCallback(
+    () => (
+      <View style={styles.headerActions}>
+        {pillId ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={confirmDelete}
+            hitSlop={spacing.sm}
+          >
+            <Text style={styles.headerDelete}>Delete</Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !ready || saving }}
+          onPress={save}
+          disabled={!ready || saving}
+          hitSlop={spacing.sm}
+        >
+          <Text style={[styles.headerSave, !ready && styles.disabled]}>
+            Save
+          </Text>
+        </Pressable>
+      </View>
+    ),
+    [pillId, confirmDelete, ready, saving, save],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight: renderActions });
+  }, [navigation, renderActions]);
 
   return (
     <ScrollView
@@ -428,26 +471,6 @@ export default function PillEditScreen({ navigation, route }: Props) {
           {courseSummary({ startDate: courseStart, days, times, today, is24h })}
         </Text>
       ) : null}
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !ready || saving }}
-        onPress={save}
-        disabled={!ready || saving}
-        style={[styles.save, !ready && styles.saveDisabled]}
-      >
-        <Text style={styles.saveText}>Save</Text>
-      </Pressable>
-
-      {pillId ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={confirmDelete}
-          style={styles.delete}
-        >
-          <Text style={styles.deleteText}>Delete</Text>
-        </Pressable>
-      ) : null}
     </ScrollView>
   );
 }
@@ -500,15 +523,12 @@ const styles = StyleSheet.create({
   remove: { fontSize: 18, color: colors.textMuted },
   addTime: { paddingVertical: spacing.sm },
   summary: { marginTop: spacing.md, fontSize: 15, color: colors.text },
-  save: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: spacing.md,
+  headerActions: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.lg,
   },
-  saveDisabled: { opacity: 0.5 },
-  saveText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
-  delete: { marginTop: spacing.md, padding: spacing.md, alignItems: 'center' },
-  deleteText: { color: colors.danger, fontSize: 18 },
+  headerDelete: { fontSize: 16, color: colors.danger },
+  headerSave: { fontSize: 17, fontWeight: '600', color: colors.primary },
+  disabled: { opacity: 0.4 },
 });
