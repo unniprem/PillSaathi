@@ -96,6 +96,13 @@ Last run: 2026-10-26, emulator API 34 (`Medium_Phone_API_34`, arm64, Google Play
 - [x] Rings with both app processes killed (`am kill`), and after `adb reboot` with a card 5 minutes out.
 - [x] Upgrade from `main`'s plain-alarm build with two plain alarms, one using a recording: at the first reconcile after the install (`MY_PACKAGE_REPLACED`) both alarms and their system alarms were removed, and the recording stayed in the library. This is the spec's rule ("old plain alarms are removed on upgrade… sounds are kept"); an old alarm's sound is not carried over to a later pill at that time.
 
+**Real phone:** Redmi Note 10 (`M2101K7AI`), Android 12 (API 31), MIUI 14.0.5, 2026-10-26. The rings below ran on the debug build, with pills added through the real UI.
+
+- [x] A pill rang at its minute with the default alarm tone (MIUI's `miui_week_ringtone.ogg`), and Taken recorded "✓ Taken 11:22 AM". Fire to sound: 0.3 s.
+- [x] A recording made on the phone and set on a card played at that card's ring (0.2 s from the fire), and Taken was recorded.
+- [x] Pills, records and the recording survived installing over the app: debug, then release, then a release with one APK per CPU type.
+- Observed: MIUI's "clear all" in Recents kills the app's main process (`Killing … OneKeyClean` in the log). Whether a pill still rings after that is the pending Xiaomi case below.
+
 ### Alarm engine
 
 Last run: 2026-10-25, before pills (the buttons were Stop and Snooze then; Stop is now Taken or Skip), emulator API 34 (`Medium_Phone_API_34`, arm64, Google). Everything marked pass was done with the real app on the emulator. Scheduling a fixed time through the debug receiver was used where the UI would only have added typing; the first alarm (locked case) was created through the UI.
