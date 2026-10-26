@@ -21,8 +21,11 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableMap
 import com.pillsaathi.alarm.AlarmEngine
+import com.pillsaathi.alarm.AppLanguage
 import com.pillsaathi.alarm.LOG_TAG
+import com.pillsaathi.alarm.LanguageRules
 import com.pillsaathi.alarm.MissedAlarm
+import com.pillsaathi.alarm.Notifications
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.ReconcileTrigger
 import com.pillsaathi.alarm.SetupState
@@ -33,10 +36,11 @@ import com.pillsaathi.photo.PillPhotos
 import com.pillsaathi.specs.NativeAlarmsSpec
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
+import java.util.Locale
 
 /**
- * Pills and their photos, today's doses, card sounds, health checks, settings links, first-run
- * setup and the time picker for JS.
+ * Pills and their photos, today's doses, card sounds, the app's language and read-aloud settings,
+ * health checks, settings links, first-run setup and the time picker for JS.
  *
  * The engine and store are used fresh on every call, never cached, because the `:ringing` process
  * changes the same data. They can wait on the store lock, so they only ever run on one background
@@ -156,6 +160,61 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
         Log.w(LOG_TAG, "Could not clean up unused photos", e)
       }
       Arguments.createArray().apply { missed.forEach { pushMap(missedToJs(it)) } }
+    }
+
+  override fun getSettings(promise: Promise) =
+    onWorker(promise) {
+      val settings = engine.settings()
+      val offered = engine.availableLanguages()
+      val speaking = LanguageRules.effective(settings.language, Locale.getDefault().language, offered)
+      Arguments.createMap().apply {
+        putString("language", speaking.code)
+        putBoolean("readAloud", settings.readAloud)
+        putArray(
+          "languages",
+          Arguments.createArray().apply {
+            offered.forEach {
+              pushMap(
+                Arguments.createMap().apply {
+                  putString("code", it.code)
+                  putString("label", it.label)
+                  putBoolean("draft", it !in LanguageRules.CHECKED)
+                },
+              )
+            }
+          },
+        )
+      }
+    }
+
+  /** Synchronous, for the first screen's words; the same lock-free read the ringing screen uses. */
+  override fun currentLanguage(): String =
+    try {
+      engine.language().code
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not read the app language", e)
+      AppLanguage.EN.code
+    }
+
+  override fun setLanguage(code: String, promise: Promise) =
+    onWorker(promise) {
+      val lang =
+        AppLanguage.fromCode(code)?.takeIf { it in engine.availableLanguages() }
+          ?: throw AlarmException(INVALID_LANGUAGE, "The app doesn't offer the language $code")
+      engine.updateSettings { it.copy(language = lang) }
+      // Renames the notification channels; best effort, the language is saved.
+      try {
+        Notifications.ensureChannels(reactApplicationContext)
+      } catch (e: Exception) {
+        Log.w(LOG_TAG, "Could not rename the notification channels", e)
+      }
+      null
+    }
+
+  override fun setReadAloud(on: Boolean, promise: Promise) =
+    onWorker(promise) {
+      engine.updateSettings { it.copy(readAloud = on) }
+      null
     }
 
   override fun pickPhoto(source: String, promise: Promise) {
@@ -398,6 +457,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     private const val NOT_FOUND = "NOT_FOUND"
     private const val STORAGE_ERROR = "STORAGE_ERROR"
     private const val PHOTO_ERROR = "PHOTO_ERROR"
+    private const val INVALID_LANGUAGE = "INVALID_LANGUAGE"
     private const val REQUEST_CAMERA = 4_801
     private const val REQUEST_GALLERY = 4_802
   }

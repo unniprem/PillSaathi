@@ -39,6 +39,7 @@ import type { MissedAlarm, Today, TodayCard } from '../native/alarms';
 import { listSounds } from '../native/sounds';
 import type { Sound } from '../native/sounds';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useI18n } from '../i18n';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Today'>;
@@ -62,6 +63,7 @@ function alertMissed(missed: MissedAlarm[], onFix: () => void) {
 
 export default function TodayScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [today, setToday] = useState<Today | null>(null);
   const [sounds, setSounds] = useState<Sound[]>([]);
@@ -163,9 +165,9 @@ export default function TodayScreen({ navigation }: Props) {
   const date = today?.date;
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: date ? `Today · ${formatDay(date)}` : 'Today',
+      title: date ? t.today.titleOn(formatDay(date, t)) : t.today.title,
     });
-  }, [navigation, date]);
+  }, [navigation, date, t]);
 
   // Only a missed or skipped dose: someone took it but didn't tap Taken.
   const confirmTaken = (card: TodayCard) => {
@@ -249,7 +251,7 @@ export default function TodayScreen({ navigation }: Props) {
         // Clear of the gesture bar: the app draws edge to edge.
         style={[styles.add, { marginBottom: spacing.md + insets.bottom }]}
       >
-        <Text style={styles.addText}>+ Add pill</Text>
+        <Text style={styles.addText}>{t.today.addPill}</Text>
       </Pressable>
     </View>
   );

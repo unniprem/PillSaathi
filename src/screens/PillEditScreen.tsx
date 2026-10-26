@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AmountStepper from '../components/AmountStepper';
-import { AMOUNT_RULES, FORMS, FORM_LABELS } from '../lib/amount';
+import { AMOUNT_RULES, FORMS } from '../lib/amount';
 import type { PillForm } from '../lib/amount';
 import { addDays, courseSummary, toISODate } from '../lib/course';
 import { formatTime } from '../lib/time';
@@ -33,6 +33,7 @@ import {
 } from '../native/alarms';
 import type { DoseTime } from '../native/alarms';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useI18n } from '../i18n';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PillEdit'>;
@@ -93,6 +94,7 @@ function Chip({
 
 export default function PillEditScreen({ navigation, route }: Props) {
   const pillId = route.params?.pillId;
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [form, setForm] = useState<PillForm>('tablet');
   const [amount, setAmount] = useState(AMOUNT_RULES.tablet.initial);
@@ -196,14 +198,14 @@ export default function PillEditScreen({ navigation, route }: Props) {
     if (!picked || !mounted.current) {
       return;
     }
-    if (times.some((t, i) => i !== index && sameTime(t, picked))) {
+    if (times.some((time, i) => i !== index && sameTime(time, picked))) {
       Alert.alert('That time is already added.');
       return;
     }
     const next =
       index === undefined
         ? [...times, picked]
-        : times.map((t, i) => (i === index ? picked : t));
+        : times.map((time, i) => (i === index ? picked : time));
     setTimes(next.sort(byTime));
   };
 
@@ -375,7 +377,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         {FORMS.map(f => (
           <Chip
             key={f}
-            label={FORM_LABELS[f]}
+            label={t.forms[f]}
             selected={form === f}
             onPress={() => chooseForm(f)}
           />
@@ -386,10 +388,10 @@ export default function PillEditScreen({ navigation, route }: Props) {
       <AmountStepper form={form} amount={amount} onChange={setAmount} />
 
       <Text style={styles.label}>When to remind</Text>
-      {times.map((t, i) => {
-        const label = formatTime(t.hour, t.minute, is24h);
+      {times.map((time, i) => {
+        const label = formatTime(time.hour, time.minute, is24h);
         return (
-          <View key={`${t.hour}:${t.minute}`} style={styles.timeRow}>
+          <View key={`${time.hour}:${time.minute}`} style={styles.timeRow}>
             <Text style={styles.time}>{label}</Text>
             <Pressable
               accessibilityRole="button"

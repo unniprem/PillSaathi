@@ -1,11 +1,11 @@
 import {
   AMOUNT_RULES,
   FORMS,
-  FORM_LABELS,
   formatAmount,
   stepAmount,
   type PillForm,
 } from '../../src/lib/amount';
+import { en } from '../../src/i18n/en';
 
 test.each([
   ['tablet', 0.5, '½ tablet'],
@@ -24,6 +24,24 @@ test.each([
   expect(formatAmount(form as PillForm, amount as number)).toBe(text),
 );
 
+test('formats Malayalam and Hindi amounts', () => {
+  const rows: [PillForm, number, string, string][] = [
+    ['tablet', 0.5, '½ ഗുളിക', '½ गोली'],
+    ['tablet', 1, '1 ഗുളിക', '1 गोली'],
+    ['tablet', 1.5, '1½ ഗുളിക', '1½ गोली'],
+    ['tablet', 2, '2 ഗുളിക', '2 गोलियाँ'],
+    ['capsule', 1, '1 ക്യാപ്സ്യൂൾ', '1 कैप्सूल'],
+    ['capsule', 2, '2 ക്യാപ്സ്യൂൾ', '2 कैप्सूल'],
+    ['syrup', 7.5, '7.5 ml', '7.5 ml'],
+    ['drops', 1, '1 തുള്ളി', '1 बूंद'],
+    ['drops', 2, '2 തുള്ളി', '2 बूंदें'],
+  ];
+  for (const [form, amount, mlText, hiText] of rows) {
+    expect(formatAmount(form, amount, 'ml')).toBe(mlText);
+    expect(formatAmount(form, amount, 'hi')).toBe(hiText);
+  }
+});
+
 test('stepAmount steps and clamps', () => {
   expect(stepAmount('tablet', 1, 1)).toBe(1.5);
   expect(stepAmount('tablet', 0.5, -1)).toBe(0.5);
@@ -37,7 +55,7 @@ test('stepAmount steps and clamps', () => {
 
 test('lists the forms in table order with their labels and rules', () => {
   expect(FORMS).toEqual(['tablet', 'capsule', 'syrup', 'drops']);
-  expect(FORMS.map(f => FORM_LABELS[f])).toEqual([
+  expect(FORMS.map(f => en.forms[f])).toEqual([
     'Tablet',
     'Capsule',
     'Syrup',

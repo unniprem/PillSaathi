@@ -27,4 +27,12 @@ export function mockAlarmsDefaults() {
   });
   jest.mocked(alarms.setCardSound).mockResolvedValue();
   jest.mocked(alarms.markDoseTaken).mockResolvedValue();
+  jest.mocked(alarms.currentLanguage).mockReturnValue('en');
+  jest.mocked(alarms.getSettings).mockResolvedValue({
+    language: 'en',
+    readAloud: true,
+    languages: [{ code: 'en', label: 'English', draft: false }],
+  });
+  jest.mocked(alarms.setLanguage).mockResolvedValue();
+  jest.mocked(alarms.setReadAloud).mockResolvedValue();
 }

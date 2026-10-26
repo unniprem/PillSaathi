@@ -1,7 +1,9 @@
 import NativeAlarms from '../../specs/NativeAlarms';
 import type {
+  AppSettings,
   DoseTime,
   Health,
+  LanguageOption,
   MissedAlarm,
   NativePill,
   NativeTodayCard,
@@ -15,8 +17,10 @@ import type {
 import type { PillForm } from '../lib/amount';
 
 export type {
+  AppSettings,
   DoseTime,
   Health,
+  LanguageOption,
   MissedAlarm,
   PickedPhoto,
   PickedTime,
@@ -59,6 +63,8 @@ export type SettingTarget =
 /** The codes the native module rejects its promises with. */
 export const AlarmErrors = {
   InvalidPill: 'INVALID_PILL',
+  /** A language the app doesn't offer (a draft one in a release build, say). */
+  InvalidLanguage: 'INVALID_LANGUAGE',
   NoActivity: 'NO_ACTIVITY',
   NotFound: 'NOT_FOUND',
   /** A photo couldn't be taken in, or another pick is still open. */
@@ -163,4 +169,23 @@ export async function pickPhoto(
   source: 'camera' | 'gallery',
 ): Promise<PickedPhoto | null> {
   return native().pickPhoto(source);
+}
+
+/** The language the app speaks, whether it reads pills aloud, and the languages it offers. */
+export async function getSettings(): Promise<AppSettings> {
+  return native().getSettings();
+}
+
+/** The language the app speaks now, read at once; the ringing screen uses the same one. */
+export function currentLanguage(): string {
+  return native().currentLanguage();
+}
+
+/** Saves the app's language. Rejects `INVALID_LANGUAGE` for one it doesn't offer. */
+export async function setLanguage(code: string): Promise<void> {
+  return native().setLanguage(code);
+}
+
+export async function setReadAloud(on: boolean): Promise<void> {
+  return native().setReadAloud(on);
 }
