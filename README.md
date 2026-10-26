@@ -27,6 +27,14 @@ npm start          # Metro, in one terminal
 npm run android    # build and install, in another
 ```
 
+To build an APK to install on a phone without Metro:
+
+```sh
+cd android && ./gradlew assembleRelease
+```
+
+It writes one APK per CPU type to `android/app/build/outputs/apk/release/`. Share `app-arm64-v8a-release.apk` (about 23 MB), which fits almost every phone from the last several years, or `app-armeabi-v7a-release.apk` for an old 32-bit phone. The x86 ones are for emulators. It is signed with the debug key, so it is for testing only.
+
 Setup gotchas:
 
 - A checkout built before the TurboModules were added needs `rm -rf android/app/.cxx` once. Without it the modules aren't linked and JS sees `null`.
