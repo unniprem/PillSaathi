@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  AppState,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -73,6 +74,16 @@ export default function HistoryDayScreen({ route }: Props) {
       load();
     }, [load]),
   );
+
+  // Doses may have rung, or been found missed, while the app was away.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        load();
+      }
+    });
+    return () => sub.remove();
+  }, [load]);
 
   const is24h = is24HourFormat();
 

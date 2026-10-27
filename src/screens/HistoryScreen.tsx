@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import {
   Alert,
+  AppState,
   Pressable,
   ScrollView,
   Share,
@@ -121,16 +122,34 @@ export default function HistoryScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  // So does coming back to the app: doses may have rung, or been found missed, meanwhile.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        load(month.current);
+      }
+    });
+    return () => sub.remove();
+  }, [load]);
+
+  // Reads the month again, so the report never leaves out a dose recorded since it was shown.
   const share = useCallback(async () => {
     if (!shown) {
       return;
     }
+    const request = ++latest.current;
     try {
-      const pills = await listPills();
+      const [history, pills] = await Promise.all([
+        loadMonth(shown.month),
+        listPills(),
+      ]);
+      if (mounted.current && request === latest.current) {
+        setShown({ month: shown.month, history });
+      }
       const message = reportText({
         month: shown.month,
-        today: shown.history.today,
-        doses: shown.history.doses,
+        today: history.today,
+        doses: history.doses,
         pills,
         is24h: is24HourFormat(),
         lang,

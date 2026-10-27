@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Alert, AppState } from 'react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type {
   History,
@@ -153,4 +153,20 @@ it('says when nothing was recorded', async () => {
   expect(
     await screen.findByText('Nothing was recorded on this day.'),
   ).toBeTruthy();
+});
+
+it('reloads the day when the app comes back', async () => {
+  const listeners: ((state: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, cb) => {
+    listeners.push(cb as (state: string) => void);
+    return { remove: jest.fn() } as never;
+  });
+  jest.mocked(alarms.getHistory).mockResolvedValue(history([dose(8, 'taken')]));
+  await renderApp('HistoryDay', { date: '2026-10-06' });
+  await screen.findByText('✓ Taken 8:03 AM');
+  jest
+    .mocked(alarms.getHistory)
+    .mockResolvedValue(history([dose(8, 'taken'), dose(21, 'missed')]));
+  await act(async () => listeners.forEach(l => l('active')));
+  expect(await screen.findByText('Missed')).toBeTruthy();
 });

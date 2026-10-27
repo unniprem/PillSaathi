@@ -1,5 +1,5 @@
-import { Alert, Share } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Alert, AppState, Share } from 'react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type { History, HistoryDose } from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
@@ -140,7 +140,11 @@ it.each([
 );
 
 it('opens a past day and not a future one', async () => {
-  jest.mocked(alarms.getHistory).mockResolvedValue(october);
+  // As native does: only the doses from `from` through `to`.
+  jest.mocked(alarms.getHistory).mockImplementation(async (from, to) => ({
+    ...october,
+    doses: october.doses.filter(d => d.date >= from && d.date <= to),
+  }));
   await renderApp('History');
   await screen.findByText('60% taken');
   await fireEvent.press(screen.getByLabelText('Tue 27 Oct'));
@@ -188,4 +192,41 @@ it('shows History in Malayalam', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
   await renderApp('History');
   await waitFor(() => expect(headerTitles()).toEqual(['ചരിത്രം']));
+});
+
+// Left open on History, the app misses a dose (or reconcile records one) before Share is tapped.
+const withEveningMissed: History = {
+  ...october,
+  doses: [...october.doses, dose('2026-10-26', 21, 'missed')],
+};
+
+it('shares what is recorded now, not what was loaded', async () => {
+  const share = jest
+    .spyOn(Share, 'share')
+    .mockResolvedValue({ action: Share.sharedAction, activityType: undefined });
+  jest.mocked(alarms.getHistory).mockResolvedValue(october);
+  await renderApp('History');
+  await screen.findByText('60% taken');
+  jest.mocked(alarms.getHistory).mockResolvedValue(withEveningMissed);
+  await fireEvent.press(screen.getByText('Share'));
+  await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+  const { message } = share.mock.calls[0][0] as { message: string };
+  expect(message).toContain('Taken 3 of 6 doses (50%)');
+  expect(message).toContain('• Mon 26 Oct, 9:00 PM: missed (Telma 40)');
+  expect(await screen.findByText('50% taken')).toBeTruthy();
+});
+
+it('reloads the month when the app comes back', async () => {
+  const listeners: ((state: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, cb) => {
+    listeners.push(cb as (state: string) => void);
+    return { remove: jest.fn() } as never;
+  });
+  jest.mocked(alarms.getHistory).mockResolvedValue(october);
+  await renderApp('History');
+  await screen.findByText('60% taken');
+  jest.mocked(alarms.getHistory).mockResolvedValue(withEveningMissed);
+  await act(async () => listeners.forEach(l => l('active')));
+  expect(await screen.findByText('50% taken')).toBeTruthy();
+  expect(screen.getByLabelText('Mon 26 Oct: None taken')).toBeTruthy();
 });
