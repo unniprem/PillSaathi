@@ -261,6 +261,9 @@ export const hi: Strings = {
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'रिपोर्ट शेयर नहीं हो सकी',
     loadFailed: 'इतिहास नहीं दिखा सके।',
+    dayEmpty: 'इस दिन कुछ दर्ज नहीं हुआ।',
+    takenMarked: (day: string, time: string) =>
+      `✓ ली गई (बाद में दर्ज: ${day}, ${time})`,
   },
   report: {
     title: (range: string) => `PillSaathi · ${range}`,

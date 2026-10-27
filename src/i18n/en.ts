@@ -255,6 +255,9 @@ export const en = {
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'Could not share the report',
     loadFailed: "Couldn't load the history.",
+    dayEmpty: 'Nothing was recorded on this day.',
+    takenMarked: (day: string, time: string) =>
+      `✓ Taken (marked ${day}, ${time})`,
   },
   report: {
     title: (range: string) => `PillSaathi · ${range}`,
