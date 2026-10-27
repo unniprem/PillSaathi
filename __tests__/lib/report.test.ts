@@ -16,6 +16,7 @@ const telma: Pill = {
   days: null,
   photo: null,
   photoUri: null,
+  remaining: null,
 };
 const vitaminD: Pill = {
   id: 'p2',
@@ -27,6 +28,7 @@ const vitaminD: Pill = {
   days: 10, // last day Fri 30 Oct
   photo: null,
   photoUri: null,
+  remaining: null,
 };
 
 function dose(

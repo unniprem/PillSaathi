@@ -86,6 +86,7 @@ const today: Today = {
       pills: [pill('p2', 'Telma 40', { amount: 0.5, days: null })],
     },
   ],
+  refills: [],
 };
 
 beforeEach(() => {
@@ -237,6 +238,7 @@ test('opens the pill page from a pill row', async () => {
       days: 5,
       photo: null,
       photoUri: null,
+      remaining: null,
     },
   ]);
   await renderApp();
@@ -304,7 +306,7 @@ test('no alert when nothing was missed', async () => {
 test('shows the empty prompt', async () => {
   jest
     .mocked(alarms.getToday)
-    .mockResolvedValue({ date: '2026-10-26', cards: [] });
+    .mockResolvedValue({ date: '2026-10-26', cards: [], refills: [] });
   await renderApp();
   expect(
     await screen.findByText('No pills yet. Tap + Add pill to add one.'),
@@ -377,5 +379,78 @@ describe('when a side call fails', () => {
     await renderApp();
     expect(await screen.findByText('Azithromycin 500')).toBeTruthy();
     expect(screen.getAllByText('♪ Default alarm tone')).toHaveLength(4);
+  });
+});
+
+describe('running low', () => {
+  const lowTelma = {
+    pillId: 'p2',
+    name: 'Telma 40',
+    form: 'tablet' as const,
+    remaining: 9,
+    daysLeft: 4,
+    level: 'low' as const,
+  };
+
+  test('warns when tablets run low and opens the pill at its count', async () => {
+    jest.mocked(alarms.getToday).mockResolvedValue({
+      ...today,
+      refills: [lowTelma],
+    });
+    jest.mocked(alarms.listPills).mockResolvedValue([
+      {
+        id: 'p2',
+        name: 'Telma 40',
+        form: 'tablet',
+        amount: 0.5,
+        times: [{ hour: 21, minute: 0 }],
+        startDate: '2026-10-20',
+        days: null,
+        photo: null,
+        photoUri: null,
+        remaining: 9,
+      },
+    ]);
+    await renderApp();
+    expect(await screen.findByText('Telma 40: 9 tablets left')).toBeTruthy();
+    expect(screen.getByText('About 4 days.')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Add tablets'));
+    expect(await screen.findByDisplayValue('9')).toBeTruthy();
+    expect(screen.getByLabelText('Tablets left').props.autoFocus).toBe(true);
+    expect(headerTitles()).toEqual(['Today · Mon 26 Oct', 'Edit pill']);
+  });
+
+  test('says none left', async () => {
+    jest.mocked(alarms.getToday).mockResolvedValue({
+      ...today,
+      refills: [{ ...lowTelma, remaining: 0, daysLeft: 0, level: 'out' }],
+    });
+    await renderApp();
+    expect(await screen.findByText('Telma 40: none left')).toBeTruthy();
+    expect(screen.queryByText(/^About|^Less than/)).toBeNull();
+    expect(screen.getByText('Add tablets')).toBeTruthy();
+  });
+
+  test('says one day, less than a day, and capsules', async () => {
+    jest.mocked(alarms.getToday).mockResolvedValue({
+      ...today,
+      refills: [
+        { ...lowTelma, remaining: 1.5, daysLeft: 1 },
+        {
+          ...lowTelma,
+          pillId: 'p3',
+          name: 'Vitamin D3',
+          form: 'capsule',
+          remaining: 1,
+          daysLeft: 0,
+        },
+      ],
+    });
+    await renderApp();
+    expect(await screen.findByText('Telma 40: 1½ tablets left')).toBeTruthy();
+    expect(screen.getByText('About 1 day.')).toBeTruthy();
+    expect(screen.getByText('Vitamin D3: 1 capsule left')).toBeTruthy();
+    expect(screen.getByText('Less than a day.')).toBeTruthy();
+    expect(screen.getByText('Add capsules')).toBeTruthy();
   });
 });

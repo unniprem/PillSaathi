@@ -119,6 +119,9 @@ export const ml: Strings = {
       'അനുമതിയില്ലെങ്കിൽ Android കൃത്യസമയത്ത് മരുന്ന് ഓർമ്മിപ്പിച്ചേക്കില്ല.',
     notNow: 'ഇപ്പോൾ വേണ്ട',
     allow: 'അനുവദിക്കുക',
+    tabletsLeft: 'ബാക്കിയുള്ള ഗുളികകൾ',
+    capsulesLeft: 'ബാക്കിയുള്ള ക്യാപ്സ്യൂളുകൾ',
+    countNote: 'നിർബന്ധമില്ല. ഓരോ തവണ കഴിക്കുമ്പോഴും ആ അളവ് കുറയും.',
   },
   health: {
     notifications:
@@ -248,6 +251,15 @@ export const ml: Strings = {
     noSpeech:
       'നിങ്ങളുടെ ഫോണിന് ഉറക്കെ വായിക്കാനാവില്ല. ഫോണിന്റെ ക്രമീകരണങ്ങളിൽ ഒരു text-to-speech ശബ്ദം ചേർക്കുക.',
     openVoiceSettings: 'ശബ്ദ ക്രമീകരണങ്ങൾ തുറക്കുക',
+  },
+  refill: {
+    left: (name: string, amount: string) => `${name}: ${amount} ബാക്കി`,
+    out: (name: string) => `${name}: ഒന്നും ബാക്കിയില്ല`,
+    aboutDays: (days: number) => `ഏകദേശം ${days} ദിവസം.`,
+    aboutOneDay: 'ഏകദേശം 1 ദിവസം.',
+    lessThanDay: 'ഒരു ദിവസത്തിൽ കുറവ്.',
+    addTablets: 'ഗുളികകൾ ചേർക്കുക',
+    addCapsules: 'ക്യാപ്സ്യൂളുകൾ ചേർക്കുക',
   },
   history: {
     title: 'ചരിത്രം',

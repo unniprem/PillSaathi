@@ -117,6 +117,9 @@ export const hi: Strings = {
       'इसके बिना Android आपकी दवाओं का अलार्म समय पर नहीं बजा सकता।',
     notNow: 'अभी नहीं',
     allow: 'अनुमति दें',
+    tabletsLeft: 'बची गोलियाँ',
+    capsulesLeft: 'बचे कैप्सूल',
+    countNote: 'ज़रूरी नहीं। हर बार लेने पर उतनी मात्रा घटती है।',
   },
   health: {
     notifications:
@@ -244,6 +247,15 @@ export const hi: Strings = {
     noSpeech:
       'आपका फ़ोन ज़ोर से नहीं पढ़ सकता। फ़ोन की सेटिंग्स में एक text-to-speech आवाज़ जोड़ें।',
     openVoiceSettings: 'आवाज़ सेटिंग्स खोलें',
+  },
+  refill: {
+    left: (name: string, amount: string) => `${name}: ${amount} बची हैं`,
+    out: (name: string) => `${name}: कुछ नहीं बचा`,
+    aboutDays: (days: number) => `लगभग ${days} दिन।`,
+    aboutOneDay: 'लगभग 1 दिन।',
+    lessThanDay: 'एक दिन से कम।',
+    addTablets: 'गोलियाँ जोड़ें',
+    addCapsules: 'कैप्सूल जोड़ें',
   },
   history: {
     title: 'इतिहास',

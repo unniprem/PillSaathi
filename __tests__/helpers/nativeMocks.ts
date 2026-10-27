@@ -12,7 +12,11 @@ export const healthy: Health = {
   alarmVolumeLow: false,
 };
 
-export const emptyToday: Today = { date: '2026-10-26', cards: [] };
+export const emptyToday: Today = {
+  date: '2026-10-26',
+  cards: [],
+  refills: [],
+};
 
 /** Defaults for a mocked `src/native/alarms`: no pills, nothing missed, healthy. */
 export function mockAlarmsDefaults() {

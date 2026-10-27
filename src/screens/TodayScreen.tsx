@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DoseCard from '../components/DoseCard';
 import HealthBanner from '../components/HealthBanner';
+import RefillBanner from '../components/RefillBanner';
 import { formatDay } from '../lib/course';
 import { healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
@@ -247,6 +248,12 @@ export default function TodayScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <HealthBanner issues={issues} onAction={runAction} />
+      <RefillBanner
+        refills={today?.refills ?? []}
+        onOpen={pillId =>
+          navigation.navigate('PillEdit', { pillId, focusCount: true })
+        }
+      />
       <FlatList
         data={today?.cards ?? []}
         keyExtractor={c => `${c.hour}:${c.minute}`}
@@ -306,5 +313,9 @@ const styles = StyleSheet.create({
   },
   addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
   gear: { fontSize: 26, color: colors.text },
-  headerButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
 });

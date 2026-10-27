@@ -41,7 +41,7 @@ beforeEach(() => {
   });
   jest
     .mocked(alarms.getToday)
-    .mockResolvedValue({ date: '2026-10-26', cards: [] });
+    .mockResolvedValue({ date: '2026-10-26', cards: [], refills: [] });
   jest.mocked(alarms.reconcileOnAppOpen).mockResolvedValue([]);
   jest.mocked(alarms.is24HourFormat).mockReturnValue(false);
   jest.mocked(sounds.listSounds).mockResolvedValue([]);

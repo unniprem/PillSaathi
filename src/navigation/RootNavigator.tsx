@@ -13,7 +13,8 @@ import { formatDay } from '../lib/course';
 
 export type RootStackParamList = {
   Today: undefined;
-  PillEdit: { pillId?: string };
+  // focusCount opens at Tablets left, from the running-low banner.
+  PillEdit: { pillId?: string; focusCount?: boolean };
   // The sound chosen here is set on card alarmId.
   SoundPicker: { alarmId: string; selectedSoundId: string | null };
   Record: { alarmId: string };
