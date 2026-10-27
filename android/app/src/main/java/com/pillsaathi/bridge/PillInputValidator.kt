@@ -4,6 +4,7 @@ import com.pillsaathi.alarm.DoseTime
 import com.pillsaathi.alarm.PhotoRules
 import com.pillsaathi.alarm.PillDraft
 import com.pillsaathi.alarm.PillForm
+import com.pillsaathi.alarm.RefillRules
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
@@ -19,12 +20,15 @@ object PillInputValidator {
   const val MAX_NAME_LENGTH = 60
   const val MAX_TIMES = 6
   const val MAX_DAYS = 365
+  const val MAX_REMAINING = 999.0
 
   /**
    * Throws [AlarmException] with code [INVALID_PILL] on any bad value: a name blank or over
    * [MAX_NAME_LENGTH] after trimming, an unknown form, an amount off its form's steps or range,
    * 1 to [MAX_TIMES] distinct times, days null (no end) or 1 to [MAX_DAYS], and a photo that is
-   * null (or missing) or a photo's file name, never a path. Times come back sorted.
+   * null (or missing) or a photo's file name, never a path. Times come back sorted. The tablets
+   * left are null (or missing: not counted) or 0 to [MAX_REMAINING] in halves, on tablets and
+   * capsules only, and remainingChanged is missing (false) or true or false.
    */
   fun validate(raw: Map<String, Any?>): PillDraft {
     val id = raw["id"]
@@ -41,7 +45,24 @@ object PillInputValidator {
       if (it !is String || !PhotoRules.isPhotoName(it)) throw invalid("photo must be a photo's name or null")
       it
     }
-    return PillDraft(id as String?, name, form, amount(raw["amount"], form), times, startsTomorrow, days, photo)
+    val remaining = raw["remaining"]?.let { remaining(it) }
+    if (remaining != null && !RefillRules.isCountable(form)) throw invalid("only tablets and capsules are counted")
+    val remainingChanged = raw["remainingChanged"]?.let {
+      it as? Boolean ?: throw invalid("remainingChanged must be true or false")
+    } ?: false
+    return PillDraft(
+      id as String?, name, form, amount(raw["amount"], form), times, startsTomorrow, days, photo, remaining,
+      remainingChanged,
+    )
+  }
+
+  /** The tablets left: 0 to [MAX_REMAINING] in steps of a half. */
+  private fun remaining(value: Any): Double {
+    val d = (value as? Number)?.toDouble()
+    if (d == null || !d.isFinite() || d < 0.0 || d > MAX_REMAINING || d * 2 != Math.floor(d * 2)) {
+      throw invalid("remaining must be 0 to $MAX_REMAINING in halves")
+    }
+    return d
   }
 
   /** The amount as a whole number of [form]'s steps, within its range. */

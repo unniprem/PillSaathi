@@ -454,9 +454,19 @@ class DoseRulesTest {
     val missed = record(8, 0, DoseOutcome.MISSED, oct(26, 8, 12), listOf(a))
     val other = record(21, 0, DoseOutcome.SKIPPED, oct(25, 21, 3), listOf(a), date = date(25))
     assertEquals(
-      listOf(other, missed.copy(outcome = DoseOutcome.TAKEN, at = NOW)),
+      listOf(other, missed.copy(outcome = DoseOutcome.TAKEN, at = NOW, marked = true)),
       DoseRules.markedTaken(listOf(other, missed), TODAY, 8, 0, NOW),
     )
+  }
+
+  // History shows a dose marked taken later as marked, never as tapped on time.
+  @Test fun markedTaken_setsMarked() {
+    val a = pill("A", listOf(t(8, 0)))
+    val skipped = record(8, 0, DoseOutcome.SKIPPED, oct(25, 8, 12), listOf(a), date = date(25))
+    val onTime = record(8, 0, DoseOutcome.TAKEN, oct(26, 8, 1), listOf(a))
+    val after = DoseRules.markedTaken(listOf(skipped, onTime), date(25), 8, 0, NOW)!!
+    assertEquals(listOf(true, false), after.map { it.marked })
+    assertEquals(listOf(onTime), DoseRules.markedTaken(listOf(onTime), TODAY, 8, 0, NOW))
   }
 
   @Test fun markedTaken_noRecord_null() {

@@ -486,6 +486,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       pill.days?.let { putInt("days", it) } ?: putNull("days")
       putString("photo", pill.photo)
       putString("photoUri", pill.photo?.let(photos::fileUri))
+      pill.remaining?.let { putDouble("remaining", it) } ?: putNull("remaining")
     }
 
   private fun cardToJs(card: TodayCard): WritableMap =

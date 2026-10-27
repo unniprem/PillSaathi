@@ -254,7 +254,10 @@ object DoseRules {
     return updated.filterNot { it.date.isBefore(oldest) }
   }
 
-  /** [records] with the dose at [date] [hour]:[minute] marked taken [at], or null if none exists. */
+  /**
+   * [records] with the dose at [date] [hour]:[minute] marked taken [at], and [DoseRecord.marked],
+   * or null if none exists.
+   */
   fun markedTaken(
     records: List<DoseRecord>,
     date: LocalDate,
@@ -265,7 +268,7 @@ object DoseRules {
     val match = { r: DoseRecord -> r.date == date && r.hour == hour && r.minute == minute }
     val existing = records.firstOrNull(match) ?: return null
     if (existing.outcome == DoseOutcome.TAKEN) return records
-    return records.map { if (match(it)) it.copy(outcome = DoseOutcome.TAKEN, at = at) else it }
+    return records.map { if (match(it)) it.copy(outcome = DoseOutcome.TAKEN, at = at, marked = true) else it }
   }
 
   /**

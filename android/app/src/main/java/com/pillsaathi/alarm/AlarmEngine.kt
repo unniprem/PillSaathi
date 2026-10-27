@@ -43,7 +43,7 @@ class AlarmEngine private constructor(context: Context) {
   /**
    * Adds a pill ([PillDraft.id] null) or edits one, then runs housekeeping. A new pill starts today,
    * or tomorrow when asked; an edit keeps its start date. The draft's photo is kept only if its file
-   * exists, and a photo it replaces is deleted. Throws [NoSuchElementException] for an unknown id
+   * exists, and a photo it replaces is deleted. The tablets left follow [RefillRules.savedCount]. Throws [NoSuchElementException] for an unknown id
    * and [StorageException] when either write fails.
    */
   fun savePill(draft: PillDraft): Pill {
@@ -58,6 +58,7 @@ class AlarmEngine private constructor(context: Context) {
           if (!it) Log.w(LOG_TAG, "Photo $name is gone; saving the pill without one")
         }
       }
+      val (remaining, refillNotified) = RefillRules.savedCount(existing, draft)
       val pill =
         existing?.copy(
           name = draft.name,
@@ -66,6 +67,8 @@ class AlarmEngine private constructor(context: Context) {
           times = draft.times,
           days = draft.days,
           photo = photo,
+          remaining = remaining,
+          refillNotified = refillNotified,
         )
           ?: Pill(
             id = UUID.randomUUID().toString(),
@@ -77,6 +80,7 @@ class AlarmEngine private constructor(context: Context) {
             days = draft.days,
             createdAt = now,
             photo = photo,
+            remaining = remaining,
           )
       val saved = if (existing == null) pills + pill else pills.map { if (it.id == pill.id) pill else it }
       store.savePills(saved)

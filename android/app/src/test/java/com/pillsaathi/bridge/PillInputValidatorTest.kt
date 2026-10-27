@@ -110,4 +110,31 @@ class PillInputValidatorTest {
     assertRejected("photo" to "a.jpg")
     assertRejected("photo" to 5.0)
   }
+
+  @Test fun remaining_halfStepsInRange() {
+    listOf(0.0, 9.5, 999.0).forEach {
+      val draft = PillInputValidator.validate(input("remaining" to it, "remainingChanged" to true))
+      assertEquals(it, draft.remaining!!, 0.0)
+      assertEquals(true, draft.remainingChanged)
+    }
+    assertEquals(30.0, PillInputValidator.validate(input("form" to "capsule", "remaining" to 30.0)).remaining!!, 0.0)
+    assertRejected("remaining" to -1.0)
+    assertRejected("remaining" to 9.3)
+    assertRejected("remaining" to 999.5)
+    assertRejected("remaining" to "9")
+    assertRejected("remaining" to Double.NaN)
+  }
+
+  @Test fun remaining_onSyrup_rejected() {
+    assertRejected("form" to "syrup", "amount" to 5.0, "remaining" to 10.0)
+    assertRejected("form" to "drops", "amount" to 2.0, "remaining" to 10.0)
+    assertNull(PillInputValidator.validate(input("form" to "syrup", "amount" to 5.0, "remaining" to null)).remaining)
+  }
+
+  @Test fun remaining_missing_notCountedUnchanged() {
+    val draft = PillInputValidator.validate(input()) // No keys: an older app.
+    assertNull(draft.remaining)
+    assertEquals(false, draft.remainingChanged)
+    assertRejected("remainingChanged" to "true")
+  }
 }

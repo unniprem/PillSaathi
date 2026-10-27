@@ -34,7 +34,7 @@ class DebugAlarmReceiver : BroadcastReceiver() {
     val engine = AlarmEngine.get(context)
     when (intent.action) {
       // A pill whose one time is minutes_from_now away; days 0 means no end; photo is the name of a
-      // photo already in the store.
+      // photo already in the store; remaining is the tablets left (not counted when absent).
       "com.pillsaathi.DEBUG_ADD_PILL" -> {
         val minutes = intent.getIntExtra("minutes_from_now", 1)
         val at =
@@ -55,6 +55,9 @@ class DebugAlarmReceiver : BroadcastReceiver() {
               startsTomorrow = intent.getBooleanExtra("start_tomorrow", false),
               days = days,
               photo = intent.getStringExtra("photo"),
+              remaining =
+                if (intent.hasExtra("remaining")) intent.getFloatExtra("remaining", 0f).toDouble() else null,
+              remainingChanged = intent.hasExtra("remaining"),
             ),
           )
         Log.i(LOG_TAG, "Added $pill")

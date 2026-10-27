@@ -32,6 +32,8 @@ data class DoseTime(val hour: Int, val minute: Int) : Comparable<DoseTime> {
 /**
  * A medicine taken every day at [times], from [startDate] for [days] days, or with no end when
  * [days] is null. [photo] is its photo's file name in the store's photos, if it has one.
+ * [remaining] is how many tablets or capsules are left, null when they aren't counted, and
+ * [refillNotified] the last refill warning posted for it ([RefillRules]).
  */
 data class Pill(
   val id: String,
@@ -43,9 +45,14 @@ data class Pill(
   val days: Int?,
   val createdAt: Long,
   val photo: String? = null,
+  val remaining: Double? = null,
+  val refillNotified: RefillLevel? = null,
 )
 
-/** A pill as the app sends it to be saved: [id] is null for a new pill. */
+/**
+ * A pill as the app sends it to be saved: [id] is null for a new pill. [remaining] counts only when
+ * [remainingChanged] (or for a new pill), so a page left open can't put back an older count.
+ */
 data class PillDraft(
   val id: String?,
   val name: String,
@@ -55,6 +62,8 @@ data class PillDraft(
   val startsTomorrow: Boolean,
   val days: Int?,
   val photo: String? = null,
+  val remaining: Double? = null,
+  val remainingChanged: Boolean = false,
 )
 
 enum class DoseOutcome(val json: String) {
@@ -66,7 +75,10 @@ enum class DoseOutcome(val json: String) {
 /** A pill as it was when its dose was recorded, so later edits don't rewrite what happened. */
 data class DosePill(val pillId: String, val name: String, val form: PillForm, val amount: Double)
 
-/** How the dose of one time card on one [date] ended, with the pills it covered. */
+/**
+ * How the dose of one time card on one [date] ended, with the pills it covered. [marked] is true
+ * for a dose marked taken later, so it never looks like it was taken on time.
+ */
 data class DoseRecord(
   val date: LocalDate,
   val hour: Int,
@@ -74,6 +86,7 @@ data class DoseRecord(
   val outcome: DoseOutcome,
   val at: Long,
   val pills: List<DosePill>,
+  val marked: Boolean = false,
 )
 
 enum class DoseStatus(val json: String) {
