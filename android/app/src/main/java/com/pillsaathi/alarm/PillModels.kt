@@ -128,7 +128,8 @@ data class TodayCard(
   val statusAt: Long?,
 )
 
-data class Today(val date: LocalDate, val cards: List<TodayCard>)
+/** The Today screen: its cards, and the counted pills running low or out. */
+data class Today(val date: LocalDate, val cards: List<TodayCard>, val refills: List<RefillWarning>)
 
 /** The time cards the pills need, and the alarms housekeeping removed. */
 data class CardPlan(val cards: List<Alarm>, val removedIds: List<String>)

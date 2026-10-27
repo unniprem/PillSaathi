@@ -31,6 +31,7 @@ import com.pillsaathi.alarm.Notifications
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.PillForm
 import com.pillsaathi.alarm.ReconcileTrigger
+import com.pillsaathi.alarm.RefillWarning
 import com.pillsaathi.alarm.SetupState
 import com.pillsaathi.alarm.SpokenPill
 import com.pillsaathi.alarm.StorageException
@@ -139,6 +140,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       Arguments.createMap().apply {
         putString("date", today.date.toString())
         putArray("cards", Arguments.createArray().apply { today.cards.forEach { pushMap(cardToJs(it)) } })
+        putArray("refills", Arguments.createArray().apply { today.refills.forEach { pushMap(refillToJs(it)) } })
       }
     }
 
@@ -511,6 +513,16 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       putBoolean("exists", pill.exists)
       putBoolean("fromTomorrow", pill.fromTomorrow)
       putString("photoUri", pill.photo?.let(photos::fileUri))
+    }
+
+  private fun refillToJs(w: RefillWarning): WritableMap =
+    Arguments.createMap().apply {
+      putString("pillId", w.pillId)
+      putString("name", w.name)
+      putString("form", w.form.json)
+      putDouble("remaining", w.remaining)
+      putInt("daysLeft", w.daysLeft)
+      putString("level", w.level.json)
     }
 
   private fun missedToJs(missed: MissedAlarm): WritableMap =

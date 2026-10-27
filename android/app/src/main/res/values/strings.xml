@@ -9,4 +9,12 @@
     <string name="ringing_title">Time for your medicines</string>
     <string name="missed_alarm">Missed: %1$s, %2$s</string>
     <string name="ringing_sound">🔊 %1$s</string>
+    <string name="channel_refill">Refill reminders</string>
+    <string name="refill_low">%1$s: %2$s left · %3$s</string>
+    <string name="refill_out">%1$s: none left</string>
+    <plurals name="refill_days">
+        <item quantity="one">about %d day</item>
+        <item quantity="other">about %d days</item>
+    </plurals>
+    <string name="refill_less_than_day">less than a day</string>
 </resources>

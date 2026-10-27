@@ -13,6 +13,9 @@ import java.util.UUID
 
 internal const val LOG_TAG = "PillSaathiAlarm"
 
+/** A dose as the ringing path left it, and whether that write made it taken (for the counts). */
+private data class Recorded(val record: DoseRecord, val takenNow: Boolean)
+
 enum class ReconcileTrigger { BOOT, CLOCK_CHANGED, APP_OPEN, PERMISSION_CHANGED, RECOVERY }
 
 /**
@@ -131,28 +134,39 @@ class AlarmEngine private constructor(context: Context) {
     }
   }
 
-  /** Marks the recorded dose at [date] [hour]:[minute] taken now. */
+  /**
+   * Marks the recorded dose at [date] [hour]:[minute] taken now; a failed write throws. Then lowers
+   * the counts of its pills, best effort, so a failed count never fails Mark as taken, and posts
+   * any refill notice after the lock.
+   */
   fun markTaken(date: LocalDate, hour: Int, minute: Int) {
-    store.locked {
+    val notices = store.locked {
+      val now = System.currentTimeMillis()
+      val doses = store.loadDoses()
       val updated =
-        DoseRules.markedTaken(store.loadDoses(), date, hour, minute, System.currentTimeMillis())
+        DoseRules.markedTaken(doses, date, hour, minute, now)
           ?: throw NoSuchElementException("No dose on $date at $hour:$minute")
       store.saveDoses(updated)
+      val before = DoseRules.recordOf(doses, date, hour, minute)
+      val after = DoseRules.recordOf(updated, date, hour, minute)
+      if (after != null && RefillRules.takenNow(before, after)) lowerCounts(after, now) else emptyList()
     }
+    notices.forEach { Notifications.postRefill(context, it) }
   }
 
-  /** The Today screen: today's cards with their pills and statuses. */
+  /** The Today screen: today's cards with their pills and statuses, and the refill warnings. */
   fun today(): Today = store.locked {
     val now = System.currentTimeMillis()
+    val pills = store.loadPills()
     val cards = DoseRules.todayCards(
       store.loadAlarms(),
-      store.loadPills(),
+      pills,
       store.loadDoses(),
       AlarmRules.ownedIds(ringingMarker(), now),
       now,
       zone(),
     )
-    Today(dateOf(now), cards)
+    Today(dateOf(now), cards, RefillRules.warnings(pills, now, zone()))
   }
 
   /**
@@ -272,21 +286,25 @@ class AlarmEngine private constructor(context: Context) {
    * then; [dueAt] is when it was due as its fire saw it, used when the card no longer says. A missed
    * dose (auto-silenced, or a ring that ended abnormally) is also posted as a notification. The card
    * itself moves on only if it is still on: one switched off or deleted while ringing has already
-   * been cancelled.
+   * been cancelled. A dose this ring made taken then lowers its pills' counts, best effort, and any
+   * refill notice is posted after the lock, once the ring's end is recorded.
    */
   fun onRingEnded(id: String, outcome: DoseOutcome, dueAt: Long? = null) {
-    val (missed, removed) = store.locked {
+    val (missed, notices, removed) = store.locked<Triple<MissedAlarm?, List<RefillWarning>, List<String>>> {
       scheduler.cancelRecovery(id)
       val alarms = store.loadAlarms()
-      val alarm = alarms.firstOrNull { it.id == id } ?: return@locked null to emptyList()
+      val alarm = alarms.firstOrNull { it.id == id } ?: return@locked Triple(null, emptyList(), emptyList())
       val now = System.currentTimeMillis()
       val occurrence = AlarmRules.occurrence(alarm, dueAt, now)
-      val record = occurrence?.let { recordDose(alarm, it, outcome, now) }
+      val recorded = occurrence?.let { recordDose(alarm, it, outcome, now) }
+      val record = recorded?.record
       if (alarm.enabled) {
         val ended = AlarmRules.ringEnded(alarm, now, zone())
         bestEffort("the end of $id's ring") { store.saveAlarms(alarms.replace(ended)) }
         scheduler.sync(ended)
       }
+      // A step of its own after the dose is saved: a failed count never costs the dose.
+      val notices = if (recorded?.takenNow == true && record != null) lowerCounts(record, now) else emptyList()
       val missed =
         if (outcome == DoseOutcome.MISSED && record?.outcome == DoseOutcome.MISSED) {
           MissedAlarm(alarm.id, namesOf(record), occurrence)
@@ -294,10 +312,11 @@ class AlarmEngine private constructor(context: Context) {
           null
         }
       // This ring is over, so its card no longer counts as busy.
-      missed to housekeeping(now, endedId = id)
+      Triple(missed, notices, housekeeping(now, endedId = id))
     }
     stopRings(removed)
     missed?.let { Notifications.postMissed(context, it) }
+    notices.forEach { Notifications.postRefill(context, it) }
   }
 
   fun onSnoozed(id: String) {
@@ -449,20 +468,42 @@ class AlarmEngine private constructor(context: Context) {
 
   /**
    * Records [alarm]'s dose at [occurrenceAt] on the ringing path. Returns the dose as it now
-   * stands, which stays taken if it already was, or null when nothing was due.
+   * stands, which stays taken if it already was, and whether this write made it taken; null when
+   * nothing was due.
    */
-  private fun recordDose(alarm: Alarm, occurrenceAt: Long, outcome: DoseOutcome, now: Long): DoseRecord? {
-    var record: DoseRecord? = null
+  private fun recordDose(alarm: Alarm, occurrenceAt: Long, outcome: DoseOutcome, now: Long): Recorded? {
+    var recorded: Recorded? = null
     bestEffort("the $outcome dose of ${alarm.id}") {
-      record = DoseRules.doseRecord(alarm, store.loadPills(), occurrenceAt, outcome, now, zone())
-      record?.let { r ->
-        val doses = DoseRules.withRecord(store.loadDoses(), r, dateOf(now))
+      val r = DoseRules.doseRecord(alarm, store.loadPills(), occurrenceAt, outcome, now, zone())
+      if (r != null) {
+        // Until the write succeeds, the dose isn't counted as taken.
+        recorded = Recorded(r, takenNow = false)
+        val stored = store.loadDoses()
+        val doses = DoseRules.withRecord(stored, r, dateOf(now))
         store.saveDoses(doses)
-        record = DoseRules.recordOf(doses, r.date, r.hour, r.minute) ?: r
+        val after = DoseRules.recordOf(doses, r.date, r.hour, r.minute) ?: r
+        val before = DoseRules.recordOf(stored, r.date, r.hour, r.minute)
+        recorded = Recorded(after, RefillRules.takenNow(before, after))
       }
     }
-    if (record == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
-    return record
+    if (recorded == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
+    return recorded
+  }
+
+  /**
+   * Lowers the counts of the pills [taken] covered ([RefillRules.afterTaken]) under the store lock,
+   * best effort, after the dose is saved. Returns the refill notices to post once the lock is
+   * released; none if the count couldn't be saved.
+   */
+  private fun lowerCounts(taken: DoseRecord, now: Long): List<RefillWarning> {
+    var notices = emptyList<RefillWarning>()
+    bestEffort("the counts after the dose at ${taken.date} ${taken.hour}:${taken.minute}") {
+      val pills = store.loadPills()
+      val update = RefillRules.afterTaken(pills, taken, now, zone())
+      if (update.pills != pills) store.savePills(update.pills)
+      notices = update.notices
+    }
+    return notices
   }
 
   /**

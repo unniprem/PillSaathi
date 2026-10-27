@@ -16,6 +16,7 @@ import java.util.Date
 object Notifications {
   const val CHANNEL_RINGING = "alarms_ringing"
   const val CHANNEL_MISSED = "alarms_missed"
+  const val CHANNEL_REFILL = "refill_reminders"
   const val RINGING_ID = 1001
 
   private const val FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -34,7 +35,11 @@ object Notifications {
       NotificationChannelCompat.Builder(CHANNEL_MISSED, NotificationManagerCompat.IMPORTANCE_DEFAULT)
         .setName(words.getString(R.string.channel_missed))
         .build()
-    NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed))
+    val refill =
+      NotificationChannelCompat.Builder(CHANNEL_REFILL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+        .setName(words.getString(R.string.channel_refill))
+        .build()
+    NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed, refill))
   }
 
   /** The ongoing ring: its pills by name, and expanded, one "name · amount" line per pill. */
@@ -87,6 +92,47 @@ object Notifications {
       Log.w(LOG_TAG, "Notifications not allowed; missed alarm ${missed.id} not shown", e)
     }
   }
+
+  /**
+   * "Telma 40: 9 tablets left · about 4 days", or "Telma 40: none left", with the amount in the
+   * app's language. One per pill, so a later level replaces an earlier one; tapping it opens the app.
+   */
+  fun postRefill(context: Context, w: RefillWarning) {
+    val words = words(context)
+    val text =
+      if (w.level == RefillLevel.OUT) {
+        words.getString(R.string.refill_out, w.name)
+      } else {
+        val days =
+          if (w.daysLeft == 0) words.getString(R.string.refill_less_than_day)
+          else words.resources.getQuantityString(R.plurals.refill_days, w.daysLeft, w.daysLeft)
+        words.getString(R.string.refill_low, w.name, DoseRules.amountText(w.form, w.remaining, language(context)), days)
+      }
+    val open =
+      PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
+    val notification =
+      NotificationCompat.Builder(context, CHANNEL_REFILL)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentText(text)
+        .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+        .setContentIntent(open)
+        .setAutoCancel(true)
+        .build()
+    try {
+      NotificationManagerCompat.from(context).notify("refill:${w.pillId}".hashCode(), notification)
+    } catch (e: SecurityException) {
+      Log.w(LOG_TAG, "Notifications not allowed; refill for ${w.pillId} not shown", e)
+    }
+  }
+
+  /** The app's language, or English if it can't be read. */
+  private fun language(context: Context): AppLanguage =
+    try {
+      AlarmEngine.get(context).language()
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not read the app language; using English", e)
+      AppLanguage.EN
+    }
 
   /**
    * [context] in the app's language, for the app's own words. Times are still formatted with
