@@ -249,4 +249,22 @@ export const ml: Strings = {
       'നിങ്ങളുടെ ഫോണിന് ഉറക്കെ വായിക്കാനാവില്ല. ഫോണിന്റെ ക്രമീകരണങ്ങളിൽ ഒരു text-to-speech ശബ്ദം ചേർക്കുക.',
     openVoiceSettings: 'ശബ്ദ ക്രമീകരണങ്ങൾ തുറക്കുക',
   },
+  report: {
+    title: (range: string) => `PillSaathi · ${range}`,
+    taken: (taken: number, total: number, percent: number) =>
+      `${total} ഡോസിൽ ${taken} എണ്ണം കഴിച്ചു (${percent}%)`,
+    noDoses: 'ഡോസുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല',
+    notTaken: 'കഴിക്കാത്തവ:',
+    notTakenNone: 'കഴിക്കാത്തവ: ഇല്ല',
+    doseLine: (day: string, time: string, outcome: string, pills: string) =>
+      `• ${day}, ${time}: ${outcome} (${pills})`,
+    missed: 'നഷ്ടമായി',
+    skipped: 'ഒഴിവാക്കി',
+    medicines: 'ഇപ്പോഴത്തെ മരുന്നുകൾ:',
+    medicinesNone: 'ഇപ്പോഴത്തെ മരുന്നുകൾ: ഇല്ല',
+    pillLine: (name: string, amount: string, times: string, end: string) =>
+      `• ${name}: ${amount}, ${times}, ${end}`,
+    noEnd: 'അവസാന തീയതിയില്ല',
+    lastDay: (day: string) => `അവസാന ദിവസം ${day}`,
+  },
 };

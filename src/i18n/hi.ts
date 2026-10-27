@@ -245,4 +245,22 @@ export const hi: Strings = {
       'आपका फ़ोन ज़ोर से नहीं पढ़ सकता। फ़ोन की सेटिंग्स में एक text-to-speech आवाज़ जोड़ें।',
     openVoiceSettings: 'आवाज़ सेटिंग्स खोलें',
   },
+  report: {
+    title: (range: string) => `PillSaathi · ${range}`,
+    taken: (taken: number, total: number, percent: number) =>
+      `${total} में से ${taken} खुराकें ली गईं (${percent}%)`,
+    noDoses: 'कोई खुराक दर्ज नहीं',
+    notTaken: 'नहीं ली गईं:',
+    notTakenNone: 'नहीं ली गईं: कोई नहीं',
+    doseLine: (day: string, time: string, outcome: string, pills: string) =>
+      `• ${day}, ${time}: ${outcome} (${pills})`,
+    missed: 'छूट गई',
+    skipped: 'छोड़ दी',
+    medicines: 'अभी की दवाएँ:',
+    medicinesNone: 'अभी की दवाएँ: कोई नहीं',
+    pillLine: (name: string, amount: string, times: string, end: string) =>
+      `• ${name}: ${amount}, ${times} पर, ${end}`,
+    noEnd: 'कोई अंतिम तिथि नहीं',
+    lastDay: (day: string) => `अंतिम दिन ${day}`,
+  },
 };

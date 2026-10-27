@@ -240,6 +240,24 @@ export const en = {
       "Your phone can't read aloud. Add a text-to-speech voice in your phone's settings.",
     openVoiceSettings: 'Open voice settings',
   },
+  report: {
+    title: (range: string) => `PillSaathi · ${range}`,
+    taken: (taken: number, total: number, percent: number) =>
+      `Taken ${taken} of ${total} doses (${percent}%)`,
+    noDoses: 'No doses recorded',
+    notTaken: 'Not taken:',
+    notTakenNone: 'Not taken: none',
+    doseLine: (day: string, time: string, outcome: string, pills: string) =>
+      `• ${day}, ${time}: ${outcome} (${pills})`,
+    missed: 'missed',
+    skipped: 'skipped',
+    medicines: 'Medicines now:',
+    medicinesNone: 'Medicines now: none',
+    pillLine: (name: string, amount: string, times: string, end: string) =>
+      `• ${name}: ${amount} at ${times}, ${end}`,
+    noEnd: 'no end',
+    lastDay: (day: string) => `last day ${day}`,
+  },
 };
 
 export type Strings = typeof en;
