@@ -117,6 +117,9 @@ export const hi: Strings = {
       'इसके बिना Android आपकी दवाओं का अलार्म समय पर नहीं बजा सकता।',
     notNow: 'अभी नहीं',
     allow: 'अनुमति दें',
+    tabletsLeft: 'बची गोलियाँ',
+    capsulesLeft: 'बचे कैप्सूल',
+    countNote: 'ज़रूरी नहीं। हर बार लेने पर उतनी मात्रा घटती है।',
   },
   health: {
     notifications:
@@ -244,5 +247,52 @@ export const hi: Strings = {
     noSpeech:
       'आपका फ़ोन ज़ोर से नहीं पढ़ सकता। फ़ोन की सेटिंग्स में एक text-to-speech आवाज़ जोड़ें।',
     openVoiceSettings: 'आवाज़ सेटिंग्स खोलें',
+  },
+  refill: {
+    left: (name: string, amount: string) => `${name}: ${amount} बची हैं`,
+    out: (name: string) => `${name}: कुछ नहीं बचा`,
+    aboutDays: (days: number) => `लगभग ${days} दिन।`,
+    aboutOneDay: 'लगभग 1 दिन।',
+    lessThanDay: 'एक दिन से कम।',
+    addTablets: 'गोलियाँ जोड़ें',
+    addCapsules: 'कैप्सूल जोड़ें',
+  },
+  history: {
+    title: 'इतिहास',
+    share: 'शेयर करें',
+    previousMonth: 'पिछला महीना',
+    nextMonth: 'अगला महीना',
+    month: (month: string, year: number) => `${month} ${year}`,
+    percentTaken: (percent: number) => `${percent}% ली गईं`,
+    doseCount: (taken: number, total: number) =>
+      `${total} में से ${taken} खुराकें`,
+    noDoses: 'कोई खुराक दर्ज नहीं',
+    allTaken: 'सब ली गईं',
+    someNotTaken: 'कुछ नहीं ली गईं',
+    noneTaken: 'कोई नहीं ली गई',
+    dayLabel: (day: string, state: string) => `${day}: ${state}`,
+    shareFailed: 'रिपोर्ट शेयर नहीं हो सकी',
+    loadFailed: 'इतिहास नहीं दिखा सके।',
+    dayEmpty: 'इस दिन कुछ दर्ज नहीं हुआ।',
+    takenMarked: (day: string, time: string) =>
+      `✓ ली गई (बाद में दर्ज: ${day}, ${time})`,
+  },
+  report: {
+    title: (range: string) => `PillSaathi · ${range}`,
+    taken: (taken: number, total: number, percent: number) =>
+      `${total} में से ${taken} खुराकें ली गईं (${percent}%)`,
+    noDoses: 'कोई खुराक दर्ज नहीं',
+    notTaken: 'नहीं ली गईं:',
+    notTakenNone: 'नहीं ली गईं: कोई नहीं',
+    doseLine: (day: string, time: string, outcome: string, pills: string) =>
+      `• ${day}, ${time}: ${outcome} (${pills})`,
+    missed: 'छूट गई',
+    skipped: 'छोड़ दी',
+    medicines: 'अभी की दवाएँ:',
+    medicinesNone: 'अभी की दवाएँ: कोई नहीं',
+    pillLine: (name: string, amount: string, times: string, end: string) =>
+      `• ${name}: ${amount}, ${times} पर, ${end}`,
+    noEnd: 'कोई अंतिम तिथि नहीं',
+    lastDay: (day: string) => `अंतिम दिन ${day}`,
   },
 };

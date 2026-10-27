@@ -2,7 +2,9 @@ package com.pillsaathi.alarm
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 /**
  * Pure rules for pills, their time cards and dose records. A time card is an [Alarm] for one hour
@@ -192,6 +194,44 @@ object DoseRules {
     )
   }
 
+  /**
+   * A missed record (at [now]) for every time [alarm] was due from [firstDue] through [now], oldest
+   * first: [firstDue] itself, then the card's time on each later day in [Alarm.days] (empty means
+   * any day). A day with no pill due gets none, so the time between two courses stays empty. No
+   * record is older than [RECORD_KEEP_DAYS], so a gap of years still looks at only a year of days.
+   */
+  fun gapRecords(alarm: Alarm, pills: List<Pill>, firstDue: Long, now: Long, zone: ZoneId): List<DoseRecord> {
+    val today = dateOf(now, zone)
+    val first = dateOf(firstDue, zone)
+    var date = maxOf(first, today.minusDays(RECORD_KEEP_DAYS))
+    val records = mutableListOf<DoseRecord>()
+    repeat(RECORD_KEEP_DAYS.toInt() + 1) {
+      if (date.isAfter(today)) return records
+      val dueAt =
+        if (date == first) firstDue
+        else ZonedDateTime.of(date, LocalTime.of(alarm.hour, alarm.minute), zone).toInstant().toEpochMilli()
+      if (dueAt <= now && (alarm.days.isEmpty() || date.dayOfWeek.value in alarm.days)) {
+        doseRecord(alarm, pills, dueAt, DoseOutcome.MISSED, now, zone)?.let(records::add)
+      }
+      date = date.plusDays(1)
+    }
+    return records
+  }
+
+  /**
+   * [records] without those dated after [today] that weren't taken. Only a clock moved back (a
+   * wrong date put right) leaves them, and a missed one would show a dose as missed before it is
+   * due. A taken one stays, as a taken dose always does.
+   */
+  fun withoutFuture(records: List<DoseRecord>, today: LocalDate): List<DoseRecord> =
+    records.filterNot { it.date.isAfter(today) && it.outcome != DoseOutcome.TAKEN }
+
+  /** The records from [from] through [to], by date and then time. */
+  fun dosesBetween(records: List<DoseRecord>, from: LocalDate, to: LocalDate): List<DoseRecord> =
+    records
+      .filter { !it.date.isBefore(from) && !it.date.isAfter(to) }
+      .sortedWith(compareBy({ it.date }, { it.hour }, { it.minute }))
+
   /** The record of the dose at [date] [hour]:[minute], or null. */
   fun recordOf(records: List<DoseRecord>, date: LocalDate, hour: Int, minute: Int): DoseRecord? =
     records.firstOrNull { it.date == date && it.hour == hour && it.minute == minute }
@@ -228,7 +268,10 @@ object DoseRules {
     return updated.filterNot { it.date.isBefore(oldest) }
   }
 
-  /** [records] with the dose at [date] [hour]:[minute] marked taken [at], or null if none exists. */
+  /**
+   * [records] with the dose at [date] [hour]:[minute] marked taken [at], and [DoseRecord.marked],
+   * or null if none exists.
+   */
   fun markedTaken(
     records: List<DoseRecord>,
     date: LocalDate,
@@ -239,7 +282,7 @@ object DoseRules {
     val match = { r: DoseRecord -> r.date == date && r.hour == hour && r.minute == minute }
     val existing = records.firstOrNull(match) ?: return null
     if (existing.outcome == DoseOutcome.TAKEN) return records
-    return records.map { if (match(it)) it.copy(outcome = DoseOutcome.TAKEN, at = at) else it }
+    return records.map { if (match(it)) it.copy(outcome = DoseOutcome.TAKEN, at = at, marked = true) else it }
   }
 
   /**

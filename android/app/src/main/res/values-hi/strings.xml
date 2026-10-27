@@ -11,4 +11,12 @@
     <string name="ringing_title">दवा लेने का समय हो गया</string>
     <string name="missed_alarm">छूट गई: %1$s, %2$s</string>
     <string name="ringing_sound">🔊 %1$s</string>
+    <string name="channel_refill">दवा खत्म होने की याद</string>
+    <string name="refill_low">%1$s: %2$s बची हैं · %3$s</string>
+    <string name="refill_out">%1$s: कुछ नहीं बचा</string>
+    <plurals name="refill_days">
+        <item quantity="one">लगभग %d दिन</item>
+        <item quantity="other">लगभग %d दिन</item>
+    </plurals>
+    <string name="refill_less_than_day">एक दिन से कम</string>
 </resources>

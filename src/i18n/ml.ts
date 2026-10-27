@@ -119,6 +119,9 @@ export const ml: Strings = {
       'അനുമതിയില്ലെങ്കിൽ Android കൃത്യസമയത്ത് മരുന്ന് ഓർമ്മിപ്പിച്ചേക്കില്ല.',
     notNow: 'ഇപ്പോൾ വേണ്ട',
     allow: 'അനുവദിക്കുക',
+    tabletsLeft: 'ബാക്കിയുള്ള ഗുളികകൾ',
+    capsulesLeft: 'ബാക്കിയുള്ള ക്യാപ്സ്യൂളുകൾ',
+    countNote: 'നിർബന്ധമില്ല. ഓരോ തവണ കഴിക്കുമ്പോഴും ആ അളവ് കുറയും.',
   },
   health: {
     notifications:
@@ -248,5 +251,52 @@ export const ml: Strings = {
     noSpeech:
       'നിങ്ങളുടെ ഫോണിന് ഉറക്കെ വായിക്കാനാവില്ല. ഫോണിന്റെ ക്രമീകരണങ്ങളിൽ ഒരു text-to-speech ശബ്ദം ചേർക്കുക.',
     openVoiceSettings: 'ശബ്ദ ക്രമീകരണങ്ങൾ തുറക്കുക',
+  },
+  refill: {
+    left: (name: string, amount: string) => `${name}: ${amount} ബാക്കി`,
+    out: (name: string) => `${name}: ഒന്നും ബാക്കിയില്ല`,
+    aboutDays: (days: number) => `ഏകദേശം ${days} ദിവസം.`,
+    aboutOneDay: 'ഏകദേശം 1 ദിവസം.',
+    lessThanDay: 'ഒരു ദിവസത്തിൽ കുറവ്.',
+    addTablets: 'ഗുളികകൾ ചേർക്കുക',
+    addCapsules: 'ക്യാപ്സ്യൂളുകൾ ചേർക്കുക',
+  },
+  history: {
+    title: 'ചരിത്രം',
+    share: 'പങ്കിടുക',
+    previousMonth: 'മുൻ മാസം',
+    nextMonth: 'അടുത്ത മാസം',
+    month: (month: string, year: number) => `${month} ${year}`,
+    percentTaken: (percent: number) => `${percent}% കഴിച്ചു`,
+    doseCount: (taken: number, total: number) =>
+      `${total} ഡോസിൽ ${taken} എണ്ണം`,
+    noDoses: 'ഡോസുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല',
+    allTaken: 'എല്ലാം കഴിച്ചു',
+    someNotTaken: 'ചിലത് കഴിച്ചില്ല',
+    noneTaken: 'ഒന്നും കഴിച്ചില്ല',
+    dayLabel: (day: string, state: string) => `${day}: ${state}`,
+    shareFailed: 'റിപ്പോർട്ട് പങ്കിടാനായില്ല',
+    loadFailed: 'ചരിത്രം കാണിക്കാനായില്ല.',
+    dayEmpty: 'ഈ ദിവസം ഒന്നും രേഖപ്പെടുത്തിയിട്ടില്ല.',
+    takenMarked: (day: string, time: string) =>
+      `✓ കഴിച്ചു (പിന്നീട് രേഖപ്പെടുത്തി: ${day}, ${time})`,
+  },
+  report: {
+    title: (range: string) => `PillSaathi · ${range}`,
+    taken: (taken: number, total: number, percent: number) =>
+      `${total} ഡോസിൽ ${taken} എണ്ണം കഴിച്ചു (${percent}%)`,
+    noDoses: 'ഡോസുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല',
+    notTaken: 'കഴിക്കാത്തവ:',
+    notTakenNone: 'കഴിക്കാത്തവ: ഇല്ല',
+    doseLine: (day: string, time: string, outcome: string, pills: string) =>
+      `• ${day}, ${time}: ${outcome} (${pills})`,
+    missed: 'നഷ്ടമായി',
+    skipped: 'ഒഴിവാക്കി',
+    medicines: 'ഇപ്പോഴത്തെ മരുന്നുകൾ:',
+    medicinesNone: 'ഇപ്പോഴത്തെ മരുന്നുകൾ: ഇല്ല',
+    pillLine: (name: string, amount: string, times: string, end: string) =>
+      `• ${name}: ${amount}, ${times}, ${end}`,
+    noEnd: 'അവസാന തീയതിയില്ല',
+    lastDay: (day: string) => `അവസാന ദിവസം ${day}`,
   },
 };

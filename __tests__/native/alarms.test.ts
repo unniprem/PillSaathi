@@ -82,3 +82,43 @@ test('passes the photo source to native', async () => {
   expect(native.pickPhoto).toHaveBeenCalledWith('camera');
   expect(alarms.AlarmErrors.PhotoError).toBe('PHOTO_ERROR');
 });
+
+test('passes getHistory through', async () => {
+  const history = {
+    today: '2026-10-26',
+    oldest: '2026-09-10',
+    firstDayOfWeek: 1,
+    doses: [
+      {
+        date: '2026-10-06',
+        hour: 21,
+        minute: 0,
+        outcome: 'missed',
+        at: 1791300000000,
+        marked: false,
+        pills: [
+          {
+            pillId: 'p1',
+            name: 'Telma 40',
+            form: 'tablet',
+            amount: 1,
+            exists: true,
+            photoUri: null,
+          },
+        ],
+      },
+    ],
+  };
+  const native = { getHistory: jest.fn().mockResolvedValue(history) };
+  jest.resetModules();
+  jest.doMock('../../specs/NativeAlarms', () => ({
+    __esModule: true,
+    default: native,
+  }));
+  const alarms: typeof AlarmsModule = require('../../src/native/alarms');
+
+  await expect(alarms.getHistory('2026-10-01', '2026-10-31')).resolves.toEqual(
+    history,
+  );
+  expect(native.getHistory).toHaveBeenCalledWith('2026-10-01', '2026-10-31');
+});

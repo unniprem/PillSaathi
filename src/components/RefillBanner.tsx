@@ -1,0 +1,73 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useI18n } from '../i18n';
+import type { Strings } from '../i18n';
+import { formatAmount } from '../lib/amount';
+import type { Refill } from '../native/alarms';
+import { colors, spacing } from '../theme';
+
+type Props = {
+  refills: Refill[];
+  onOpen: (pillId: string) => void;
+};
+
+/** "About 4 days.", "About 1 day." or "Less than a day." */
+function daysText(daysLeft: number, t: Strings): string {
+  if (daysLeft === 0) {
+    return t.refill.lessThanDay;
+  }
+  return daysLeft === 1 ? t.refill.aboutOneDay : t.refill.aboutDays(daysLeft);
+}
+
+/** One row per counted pill running low or out; tapping a row opens the pill at its count. */
+export default function RefillBanner({ refills, onOpen }: Props) {
+  const { lang, t } = useI18n();
+  return (
+    <>
+      {refills.map(r => (
+        <Pressable
+          key={r.pillId}
+          accessibilityRole="button"
+          onPress={() => onOpen(r.pillId)}
+          style={styles.banner}
+        >
+          <View style={styles.text}>
+            <Text style={styles.title}>
+              {r.level === 'out'
+                ? t.refill.out(r.name)
+                : t.refill.left(
+                    r.name,
+                    formatAmount(r.form, r.remaining, lang),
+                  )}
+            </Text>
+            {r.level === 'low' ? (
+              <Text style={styles.days}>{daysText(r.daysLeft, t)}</Text>
+            ) : null}
+          </View>
+          <Text style={styles.action}>
+            {r.form === 'capsule' ? t.refill.addCapsules : t.refill.addTablets}
+          </Text>
+        </Pressable>
+      ))}
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  // At a large text size the action drops under the text rather than squeezing it.
+  banner: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    backgroundColor: '#FEF3C7',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F59E0B',
+    padding: spacing.md,
+  },
+  text: { flexShrink: 1 },
+  title: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  days: { color: colors.text, fontSize: 16 },
+  action: { color: colors.primary, fontSize: 16, fontWeight: '600' },
+});

@@ -39,6 +39,46 @@ class PillJsonTest {
     assertNull(PillJson.pillsFromJson(json).single().photo)
   }
 
+  @Test fun pill_countRoundTrip() {
+    val pill = Pill(
+      "p1", "Telma 40", PillForm.TABLET, 1.0, listOf(DoseTime(8, 0)), LocalDate.of(2026, 10, 26), null, 100L,
+      remaining = 9.5, refillNotified = RefillLevel.LOW,
+    )
+    val json = PillJson.pillsToJson(listOf(pill))
+    assertTrue(json.contains("\"remaining\":9.5") && json.contains("\"refillNotified\":\"low\""))
+    assertEquals(listOf(pill), PillJson.pillsFromJson(json))
+    val out = pill.copy(remaining = 0.0, refillNotified = RefillLevel.OUT)
+    assertEquals(listOf(out), PillJson.pillsFromJson(PillJson.pillsToJson(listOf(out))))
+    val uncounted = pill.copy(remaining = null, refillNotified = null)
+    assertEquals(listOf(uncounted), PillJson.pillsFromJson(PillJson.pillsToJson(listOf(uncounted))))
+  }
+
+  @Test fun pill_withoutCount_notCounted() {
+    val json =
+      "[{\"id\":\"p1\",\"name\":\"A\",\"form\":\"tablet\",\"amount\":1,\"times\":[{\"hour\":8,\"minute\":0}]," +
+        "\"startDate\":\"2026-10-26\",\"days\":null,\"createdAt\":1,\"photo\":null}]"
+    val pill = PillJson.pillsFromJson(json).single()
+    assertNull(pill.remaining)
+    assertNull(pill.refillNotified)
+    val unknownLevel = json.replace("\"photo\":null", "\"photo\":null,\"remaining\":4,\"refillNotified\":\"empty\"")
+    assertNull(PillJson.pillsFromJson(unknownLevel).single().refillNotified)
+    assertEquals(4.0, PillJson.pillsFromJson(unknownLevel).single().remaining!!, 0.0)
+  }
+
+  @Test fun dose_markedRoundTrip_andMissingFalse() {
+    val marked = DoseRecord(
+      LocalDate.of(2026, 10, 6), 21, 0, DoseOutcome.TAKEN, 1000L,
+      listOf(DosePill("p1", "Telma 40", PillForm.TABLET, 1.0)), marked = true,
+    )
+    val json = PillJson.dosesToJson(listOf(marked))
+    assertTrue(json.contains("\"marked\":true"))
+    assertEquals(listOf(marked), PillJson.dosesFromJson(json))
+    val old =
+      "[{\"date\":\"2026-10-06\",\"hour\":21,\"minute\":0,\"outcome\":\"taken\",\"at\":1000," +
+        "\"pills\":[{\"pillId\":\"p1\",\"name\":\"Telma 40\",\"form\":\"tablet\",\"amount\":1}]}]"
+    assertEquals(false, PillJson.dosesFromJson(old).single().marked)
+  }
+
   @Test fun doses_roundTrip() {
     val doses = listOf(
       DoseRecord(

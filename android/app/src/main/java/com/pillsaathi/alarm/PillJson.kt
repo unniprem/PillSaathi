@@ -18,7 +18,9 @@ object PillJson {
           .put("startDate", p.startDate.toString())
           .put("days", p.days ?: JSONObject.NULL)
           .put("createdAt", p.createdAt)
-          .put("photo", p.photo ?: JSONObject.NULL),
+          .put("photo", p.photo ?: JSONObject.NULL)
+          .put("remaining", p.remaining ?: JSONObject.NULL)
+          .put("refillNotified", p.refillNotified?.json ?: JSONObject.NULL),
       )
     }
     return arr.toString()
@@ -40,6 +42,9 @@ object PillJson {
         createdAt = o.getLong("createdAt"),
         // Missing in pills saved before photos.
         photo = if (o.isNull("photo")) null else o.getString("photo"),
+        // Missing in pills saved before tablet counts: not counted.
+        remaining = if (o.isNull("remaining")) null else o.getDouble("remaining"),
+        refillNotified = if (o.isNull("refillNotified")) null else RefillLevel.fromJson(o.getString("refillNotified")),
       )
     }
   }
@@ -64,7 +69,8 @@ object PillJson {
           .put("minute", d.minute)
           .put("outcome", d.outcome.json)
           .put("at", d.at)
-          .put("pills", pills),
+          .put("pills", pills)
+          .put("marked", d.marked),
       )
     }
     return arr.toString()
@@ -88,6 +94,8 @@ object PillJson {
           val p = pills.getJSONObject(j)
           DosePill(p.getString("pillId"), p.getString("name"), formOf(p), p.getDouble("amount"))
         },
+        // Missing in doses recorded before History.
+        marked = o.optBoolean("marked", false),
       )
     }
   }

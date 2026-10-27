@@ -1,4 +1,9 @@
-import { Alert } from 'react-native';
+import {
+  Alert,
+  DeviceEventEmitter,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { ml } from '../../src/i18n/ml';
 import { courseSummary, toISODate } from '../../src/lib/course';
@@ -21,6 +26,7 @@ const telma: Pill = {
   days: 12,
   photo: null,
   photoUri: null,
+  remaining: null,
 };
 
 beforeEach(() => {
@@ -106,6 +112,8 @@ test('saves a new pill with what was entered', async () => {
     startsTomorrow: false,
     days: 5,
     photo: null,
+    remaining: null,
+    remainingChanged: false,
   });
 });
 
@@ -225,6 +233,8 @@ test('loads an existing pill and saves it with its id', async () => {
     startsTomorrow: false,
     days: 12,
     photo: null,
+    remaining: null,
+    remainingChanged: false,
   });
 });
 
@@ -427,4 +437,168 @@ test('asks for the exact alarm permission when it is missing', async () => {
     buttons.find(b => b.text === 'Allow')!.onPress!();
   });
   expect(alarms.openSetting).toHaveBeenCalledWith('exactAlarm');
+});
+
+/** Lets a scroll queued for the next frame run. */
+const nextFrame = () => act(() => new Promise<void>(r => setTimeout(r, 0)));
+
+describe('tablets left', () => {
+  test('adds tablets with the quick buttons', async () => {
+    await newPill();
+    await fireEvent.press(screen.getByText('No end'));
+    await fireEvent.press(screen.getByText('+10'));
+    await fireEvent.press(screen.getByText('+15'));
+    expect(screen.getByLabelText('Tablets left').props.value).toBe('25');
+    await save();
+    expect(alarms.savePill).toHaveBeenCalledWith(
+      expect.objectContaining({ remaining: 25, remainingChanged: true }),
+    );
+  });
+
+  test.each([
+    ['40', 40],
+    ['', null],
+  ])('types a count and clears it (%p)', async (typed, remaining) => {
+    jest
+      .mocked(alarms.listPills)
+      .mockResolvedValue([{ ...telma, remaining: 9 }]);
+    await renderApp('PillEdit', { pillId: 'p1' });
+    await fireEvent.changeText(await screen.findByDisplayValue('9'), typed);
+    await save();
+    expect(alarms.savePill).toHaveBeenCalledWith(
+      expect.objectContaining({ remaining, remainingChanged: true }),
+    );
+  });
+
+  // A ring's Taken may have lowered the count while the page was open; Save must not put 9 back.
+  test('keeps the stored count when the field is untouched', async () => {
+    jest
+      .mocked(alarms.listPills)
+      .mockResolvedValue([{ ...telma, remaining: 9 }]);
+    await renderApp('PillEdit', { pillId: 'p1' });
+    expect(await screen.findByDisplayValue('9')).toBeTruthy();
+    await fireEvent.changeText(
+      screen.getByDisplayValue('Telma 40'),
+      'Telma 80',
+    );
+    await save();
+    expect(alarms.savePill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Telma 80',
+        remaining: 9,
+        remainingChanged: false,
+      }),
+    );
+  });
+
+  test('refuses a count that is not a whole or half number', async () => {
+    await newPill();
+    await fireEvent.press(screen.getByText('No end'));
+    const saveDisabled = () =>
+      screen.getByRole('button', { name: 'Save' }).props.accessibilityState
+        .disabled;
+    for (const typed of ['9.3', '1000', '-1', '9.', 'ten']) {
+      await fireEvent.changeText(screen.getByLabelText('Tablets left'), typed);
+      expect([typed, saveDisabled()]).toEqual([typed, true]);
+    }
+    for (const typed of ['9.5', '0', '999', '']) {
+      await fireEvent.changeText(screen.getByLabelText('Tablets left'), typed);
+      expect([typed, saveDisabled()]).toEqual([typed, false]);
+    }
+  });
+
+  test('hides the count for syrup and drops', async () => {
+    await newPill();
+    await fireEvent.press(screen.getByText('No end'));
+    await fireEvent.changeText(screen.getByLabelText('Tablets left'), '20');
+    await fireEvent.press(screen.getByText('Syrup'));
+    expect(screen.queryByLabelText('Tablets left')).toBeNull();
+    expect(screen.queryByText('+10')).toBeNull();
+    await fireEvent.press(screen.getByText('Drops'));
+    expect(screen.queryByLabelText('Tablets left')).toBeNull();
+    await save();
+    expect(alarms.savePill).toHaveBeenCalledWith(
+      expect.objectContaining({ form: 'drops', remaining: null }),
+    );
+  });
+
+  test('says Capsules left for capsules', async () => {
+    await newPill();
+    await fireEvent.press(screen.getByText('Capsule'));
+    expect(screen.getByLabelText('Capsules left')).toBeTruthy();
+    expect(screen.getByText('Capsules left')).toBeTruthy();
+    expect(
+      screen.getByText('Optional. It goes down by the amount at each Taken.'),
+    ).toBeTruthy();
+  });
+
+  test('opens at the count from the refill banner', async () => {
+    await renderApp('PillEdit', { pillId: 'p1', focusCount: true });
+    await screen.findByDisplayValue('Telma 40');
+    expect(screen.getByLabelText('Tablets left').props.autoFocus).toBe(true);
+  });
+
+  // The keyboard covers the lower half of the page: bring the count up above it.
+  test('scrolls the count into view from the refill banner', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    await renderApp('PillEdit', { pillId: 'p1', focusCount: true });
+    await screen.findByDisplayValue('Telma 40');
+    const layout = (y: number) =>
+      fireEvent(screen.getByTestId('count-section'), 'layout', {
+        nativeEvent: { layout: { x: 0, y, width: 360, height: 120 } },
+      });
+    await layout(640);
+    await waitFor(() =>
+      expect(scrollTo).toHaveBeenLastCalledWith({ y: 640, animated: false }),
+    );
+    // The keyboard's room below the page arrives later: scroll again once the page can go further.
+    await fireEvent(
+      screen.getByTestId('pill-page'),
+      'contentSizeChange',
+      360,
+      1200,
+    );
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledTimes(2));
+    // Once the page is scrolled by hand, it stays where it was put.
+    await fireEvent(screen.getByTestId('pill-page'), 'scrollBeginDrag');
+    await layout(700);
+    await nextFrame();
+    expect(scrollTo).toHaveBeenCalledTimes(2);
+  });
+
+  // The keyboard covers the page rather than shrinking it, so the page makes room below itself.
+  test('makes room under the page for the keyboard', async () => {
+    await renderApp('PillEdit', { pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    const bottom = () =>
+      StyleSheet.flatten(
+        screen.getByTestId('pill-page').props.contentContainerStyle,
+      ).paddingBottom;
+    const closed = bottom();
+    await act(() =>
+      DeviceEventEmitter.emit('keyboardDidShow', {
+        endCoordinates: { height: 300, width: 411, screenX: 0, screenY: 534 },
+      }),
+    );
+    expect(bottom()).toBe(closed + 300);
+    await act(() => DeviceEventEmitter.emit('keyboardDidHide', null));
+    expect(bottom()).toBe(closed);
+  });
+
+  test('does not scroll to the count otherwise', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    await renderApp('PillEdit', { pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    await fireEvent(screen.getByTestId('count-section'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 640, width: 360, height: 120 } },
+    });
+    await nextFrame();
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  test('does not focus the count otherwise', async () => {
+    await renderApp('PillEdit', { pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    expect(screen.getByLabelText('Tablets left').props.autoFocus).toBeFalsy();
+  });
 });

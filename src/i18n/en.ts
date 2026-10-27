@@ -114,6 +114,9 @@ export const en = {
     exactAlarmBody: 'Without it, Android may not ring your medicines on time.',
     notNow: 'Not now',
     allow: 'Allow',
+    tabletsLeft: 'Tablets left',
+    capsulesLeft: 'Capsules left',
+    countNote: 'Optional. It goes down by the amount at each Taken.',
   },
   health: {
     notifications:
@@ -239,6 +242,52 @@ export const en = {
     noSpeech:
       "Your phone can't read aloud. Add a text-to-speech voice in your phone's settings.",
     openVoiceSettings: 'Open voice settings',
+  },
+  refill: {
+    left: (name: string, amount: string) => `${name}: ${amount} left`,
+    out: (name: string) => `${name}: none left`,
+    aboutDays: (days: number) => `About ${days} days.`,
+    aboutOneDay: 'About 1 day.',
+    lessThanDay: 'Less than a day.',
+    addTablets: 'Add tablets',
+    addCapsules: 'Add capsules',
+  },
+  history: {
+    title: 'History',
+    share: 'Share',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    month: (month: string, year: number) => `${month} ${year}`,
+    percentTaken: (percent: number) => `${percent}% taken`,
+    doseCount: (taken: number, total: number) => `${taken} of ${total} doses`,
+    noDoses: 'No doses recorded',
+    allTaken: 'All taken',
+    someNotTaken: 'Some not taken',
+    noneTaken: 'None taken',
+    dayLabel: (day: string, state: string) => `${day}: ${state}`,
+    shareFailed: 'Could not share the report',
+    loadFailed: "Couldn't load the history.",
+    dayEmpty: 'Nothing was recorded on this day.',
+    takenMarked: (day: string, time: string) =>
+      `✓ Taken (marked ${day}, ${time})`,
+  },
+  report: {
+    title: (range: string) => `PillSaathi · ${range}`,
+    taken: (taken: number, total: number, percent: number) =>
+      `Taken ${taken} of ${total} doses (${percent}%)`,
+    noDoses: 'No doses recorded',
+    notTaken: 'Not taken:',
+    notTakenNone: 'Not taken: none',
+    doseLine: (day: string, time: string, outcome: string, pills: string) =>
+      `• ${day}, ${time}: ${outcome} (${pills})`,
+    missed: 'missed',
+    skipped: 'skipped',
+    medicines: 'Medicines now:',
+    medicinesNone: 'Medicines now: none',
+    pillLine: (name: string, amount: string, times: string, end: string) =>
+      `• ${name}: ${amount} at ${times}, ${end}`,
+    noEnd: 'no end',
+    lastDay: (day: string) => `last day ${day}`,
   },
 };
 

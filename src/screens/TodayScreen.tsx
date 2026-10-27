@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DoseCard from '../components/DoseCard';
 import HealthBanner from '../components/HealthBanner';
+import RefillBanner from '../components/RefillBanner';
 import { formatDay } from '../lib/course';
 import { healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
@@ -172,16 +173,26 @@ export default function TodayScreen({ navigation }: Props) {
     }, [refresh]),
   );
 
-  const renderGear = useCallback(
+  const renderHeaderButtons = useCallback(
     () => (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.settings.title}
-        onPress={() => navigation.navigate('Settings')}
-        hitSlop={spacing.sm}
-      >
-        <Text style={styles.gear}>⚙</Text>
-      </Pressable>
+      <View style={styles.headerButtons}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.history.title}
+          onPress={() => navigation.navigate('History')}
+          hitSlop={spacing.sm}
+        >
+          <Text style={styles.gear}>📅</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.settings.title}
+          onPress={() => navigation.navigate('Settings')}
+          hitSlop={spacing.sm}
+        >
+          <Text style={styles.gear}>⚙</Text>
+        </Pressable>
+      </View>
     ),
     [navigation, t],
   );
@@ -190,9 +201,9 @@ export default function TodayScreen({ navigation }: Props) {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: date ? t.today.titleOn(formatDay(date, t)) : t.today.title,
-      headerRight: renderGear,
+      headerRight: renderHeaderButtons,
     });
-  }, [navigation, date, t, renderGear]);
+  }, [navigation, date, t, renderHeaderButtons]);
 
   // Only a missed or skipped dose: someone took it but didn't tap Taken.
   const confirmTaken = (card: TodayCard) => {
@@ -237,6 +248,12 @@ export default function TodayScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <HealthBanner issues={issues} onAction={runAction} />
+      <RefillBanner
+        refills={today?.refills ?? []}
+        onOpen={pillId =>
+          navigation.navigate('PillEdit', { pillId, focusCount: true })
+        }
+      />
       <FlatList
         data={today?.cards ?? []}
         keyExtractor={c => `${c.hour}:${c.minute}`}
@@ -296,4 +313,9 @@ const styles = StyleSheet.create({
   },
   addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
   gear: { fontSize: 26, color: colors.text },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
 });

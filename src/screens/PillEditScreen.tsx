@@ -8,6 +8,7 @@ import React, {
 import {
   Alert,
   Image,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import type { LayoutChangeEvent, ScrollViewInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AmountStepper from '../components/AmountStepper';
 import { AMOUNT_RULES, FORMS } from '../lib/amount';
@@ -47,11 +49,17 @@ const PRESETS: (5 | 7 | 10 | 20)[] = [5, 7, 10, 20];
 const MAX_TIMES = 6;
 const MAX_DAYS = 365;
 const FIRST_TIME: DoseTime = { hour: 8, minute: 0 };
+const QUICK_COUNTS = [10, 15, 30];
+/** Tablets left: up to 999, in halves. Empty means not counted. */
+const COUNT = /^\d{1,3}(\.[05])?$/;
 
 const sameTime = (a: DoseTime, b: DoseTime) =>
   a.hour === b.hour && a.minute === b.minute;
 const byTime = (a: DoseTime, b: DoseTime) =>
   a.hour - b.hour || a.minute - b.minute;
+
+/** Only tablets and capsules are counted. */
+const isCountable = (form: PillForm) => form === 'tablet' || form === 'capsule';
 
 /** The days a duration stands for: a number, null for no end, or undefined when not valid yet. */
 function daysOf(
@@ -96,6 +104,7 @@ function Chip({
 
 export default function PillEditScreen({ navigation, route }: Props) {
   const pillId = route.params?.pillId;
+  const focusCount = route.params?.focusCount ?? false;
   const { t } = useI18n();
   // For the load, which must not run again (and undo edits) when the language changes.
   const words = useRef(t);
@@ -112,7 +121,19 @@ export default function PillEditScreen({ navigation, route }: Props) {
   // The photo's file name; saving without it would delete the pill's photo.
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  // Tablets left as typed; empty means not counted. Sent as changed only once touched, so a count
+  // a Taken lowered while the page was open isn't put back.
+  const [count, setCount] = useState('');
+  const [countChanged, setCountChanged] = useState(false);
   const picking = useRef(false);
+  // Opened from the running-low banner: keep the count in view above the keyboard while the page
+  // settles, until the page is scrolled by hand.
+  const scroll = useRef<ScrollViewInstance>(null);
+  const countY = useRef<number | null>(null);
+  const followCount = useRef(focusCount);
+  // The keyboard covers the page instead of shrinking it (edge to edge), so the page adds this
+  // much room below itself while it is open, and its lower fields can scroll above it.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   // Editing: Save waits for the pill, or it would overwrite it with the new-pill defaults.
   const [loaded, setLoaded] = useState(!pillId);
   const [saving, setSaving] = useState(false);
@@ -133,6 +154,19 @@ export default function PillEditScreen({ navigation, route }: Props) {
     mounted.current = true;
     return () => {
       mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', e =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hidden = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      shown.remove();
+      hidden.remove();
     };
   }, []);
 
@@ -173,6 +207,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         setStartDate(pill.startDate);
         setPhoto(pill.photo);
         setPhotoUri(pill.photoUri);
+        setCount(pill.remaining === null ? '' : String(pill.remaining));
         if (pill.days === null) {
           setDuration('none');
         } else if ((PRESETS as number[]).includes(pill.days)) {
@@ -247,9 +282,42 @@ export default function PillEditScreen({ navigation, route }: Props) {
     setPhotoUri(null);
   };
 
+  // A frame later: Android ignores a scroll made while the page is still taking its new size.
+  const scrollToCount = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (followCount.current && loaded && countY.current !== null) {
+        scroll.current?.scrollTo({ y: countY.current, animated: false });
+      }
+    });
+  }, [loaded]);
+
+  useEffect(scrollToCount, [scrollToCount]);
+
+  const onCountLayout = (e: LayoutChangeEvent) => {
+    countY.current = e.nativeEvent.layout.y;
+    scrollToCount();
+  };
+
+  const changeCount = (text: string) => {
+    setCount(text);
+    setCountChanged(true);
+  };
+
+  /** Adds [n] to the count; an empty field counts as 0. */
+  const addToCount = (n: number) =>
+    changeCount(String((COUNT.test(count) ? Number(count) : 0) + n));
+
+  const counted = isCountable(form);
+  const countValid = !counted || count === '' || COUNT.test(count);
+  const remaining = counted && count !== '' ? Number(count) : null;
+
   const days = daysOf(duration, otherDays);
   const ready =
-    loaded && name.trim() !== '' && times.length > 0 && days !== undefined;
+    loaded &&
+    name.trim() !== '' &&
+    times.length > 0 &&
+    days !== undefined &&
+    countValid;
   const courseStart = startDate ?? (startsTomorrow ? addDays(today, 1) : today);
 
   // Runs after a successful save; it never throws, so the user always leaves.
@@ -281,6 +349,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
         startsTomorrow: pillId ? false : startsTomorrow,
         days,
         photo,
+        remaining,
+        remainingChanged: countChanged,
       });
     } catch (e) {
       console.warn('Could not save the pill', e);
@@ -332,6 +402,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
     times,
     startsTomorrow,
     photo,
+    remaining,
+    countChanged,
     finish,
     t,
   ]);
@@ -394,9 +466,18 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView
+      ref={scroll}
+      testID="pill-page"
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: styles.content.paddingBottom + keyboardHeight },
+      ]}
       keyboardShouldPersistTaps="handled"
+      onContentSizeChange={scrollToCount}
+      onScrollBeginDrag={() => {
+        followCount.current = false;
+      }}
     >
       <Text style={styles.label}>{t.pill.name}</Text>
       <TextInput
@@ -460,6 +541,42 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
       <Text style={styles.label}>{t.pill.howMuch}</Text>
       <AmountStepper form={form} amount={amount} onChange={setAmount} />
+
+      {counted ? (
+        <View testID="count-section" onLayout={onCountLayout}>
+          <Text style={styles.label}>
+            {form === 'capsule' ? t.pill.capsulesLeft : t.pill.tabletsLeft}
+          </Text>
+          <View style={styles.countRow}>
+            <TextInput
+              value={count}
+              onChangeText={changeCount}
+              accessibilityLabel={
+                form === 'capsule' ? t.pill.capsulesLeft : t.pill.tabletsLeft
+              }
+              autoFocus={focusCount}
+              keyboardType="decimal-pad"
+              maxLength={5}
+              style={[
+                styles.input,
+                styles.countInput,
+                !countValid && styles.invalid,
+              ]}
+            />
+            {QUICK_COUNTS.map(n => (
+              <Pressable
+                key={n}
+                accessibilityRole="button"
+                onPress={() => addToCount(n)}
+                style={styles.chip}
+              >
+                <Text style={styles.chipText}>{`+${n}`}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.note}>{t.pill.countNote}</Text>
+        </View>
+      ) : null}
 
       <Text style={styles.label}>{t.pill.when}</Text>
       {times.map((time, i) => {
@@ -586,6 +703,16 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   daysInput: { marginTop: spacing.sm, width: 120 },
+  // At a large text size the + buttons wrap under the field rather than being cut off.
+  countRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  countInput: { minWidth: 100 },
+  invalid: { borderColor: colors.danger },
+  note: { marginTop: spacing.sm, fontSize: 14, color: colors.textMuted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     paddingHorizontal: spacing.md,

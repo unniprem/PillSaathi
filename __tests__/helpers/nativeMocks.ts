@@ -12,7 +12,11 @@ export const healthy: Health = {
   alarmVolumeLow: false,
 };
 
-export const emptyToday: Today = { date: '2026-10-26', cards: [] };
+export const emptyToday: Today = {
+  date: '2026-10-26',
+  cards: [],
+  refills: [],
+};
 
 /** Defaults for a mocked `src/native/alarms`: no pills, nothing missed, healthy. */
 export function mockAlarmsDefaults() {
@@ -27,6 +31,12 @@ export function mockAlarmsDefaults() {
   });
   jest.mocked(alarms.setCardSound).mockResolvedValue();
   jest.mocked(alarms.markDoseTaken).mockResolvedValue();
+  jest.mocked(alarms.getHistory).mockResolvedValue({
+    today: '2026-10-26',
+    oldest: null,
+    firstDayOfWeek: 0,
+    doses: [],
+  });
   jest.mocked(alarms.currentLanguage).mockReturnValue('en');
   jest.mocked(alarms.getSettings).mockResolvedValue({
     language: 'en',

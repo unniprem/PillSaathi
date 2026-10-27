@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
-import { FORM_ICONS, formatAmount } from '../lib/amount';
+import { formatAmount } from '../lib/amount';
 import { courseLabel, nextLabel } from '../lib/course';
 import { formatTime } from '../lib/time';
 import type { TodayCard, TodayPill } from '../native/alarms';
 import { colors, spacing } from '../theme';
+import PillPicture from './PillPicture';
 
 type Props = {
   card: TodayCard;
@@ -62,27 +63,6 @@ function pillDetail(pill: TodayPill, date: string, t: Strings) {
   return pill.startDate === null
     ? ''
     : courseLabel(pill.startDate, pill.days, date, t);
-}
-
-/** The pill's photo, or its type's icon when it has none or the photo can't be read. */
-function PillPicture({ pill }: { pill: TodayPill }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <View style={styles.picture}>
-      {pill.photoUri && !failed ? (
-        <Image
-          testID={`pill-photo-${pill.pillId}`}
-          source={{ uri: pill.photoUri }}
-          onError={() => setFailed(true)}
-          style={styles.photo}
-        />
-      ) : (
-        <Text testID={`pill-icon-${pill.pillId}`} style={styles.icon}>
-          {FORM_ICONS[pill.form]}
-        </Text>
-      )}
-    </View>
-  );
 }
 
 /** One time on the Today screen: its status, its pills and its sound. */
@@ -193,15 +173,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     marginTop: spacing.sm,
   },
-  picture: {
-    width: 40,
-    height: 40,
-    marginRight: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photo: { width: 40, height: 40, borderRadius: 8 },
-  icon: { fontSize: 26 },
   pillText: { flex: 1 },
   pillName: { fontSize: 20, color: colors.text },
   detail: { fontSize: 16, color: colors.textMuted },

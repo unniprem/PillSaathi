@@ -82,6 +82,7 @@ test('picking a sound sets it on the card and returns to Today', async () => {
         pills: [],
       },
     ],
+    refills: [],
   });
   await renderApp();
   await fireEvent.press(await screen.findByText('♪ Default alarm tone'));

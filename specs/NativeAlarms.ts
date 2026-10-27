@@ -13,6 +13,7 @@ export type NativePill = {
   days: number | null; // null = no end
   photo: string | null; // the photo's file name
   photoUri: string | null; // file:// URI to show it
+  remaining: number | null; // tablets or capsules left; null = not counted
 };
 
 export type PillInput = {
@@ -24,6 +25,8 @@ export type PillInput = {
   startsTomorrow: boolean; // new pills only; an edit keeps its start date
   days: number | null;
   photo: string | null; // a name from pickPhoto, or null for none
+  remaining: number | null; // 0 to 999 in halves, tablets and capsules only; null = not counted
+  remainingChanged: boolean; // false keeps the stored count, which a Taken may have lowered
 };
 
 export type NativeTodayPill = {
@@ -48,7 +51,48 @@ export type NativeTodayCard = {
   pills: NativeTodayPill[];
 };
 
-export type NativeToday = { date: string; cards: NativeTodayCard[] };
+/** A counted pill running low or out. */
+export type NativeRefill = {
+  pillId: string;
+  name: string;
+  form: string; // tablet | capsule
+  remaining: number;
+  daysLeft: number;
+  level: string; // low | out
+};
+
+export type NativeToday = {
+  date: string;
+  cards: NativeTodayCard[];
+  refills: NativeRefill[]; // in the order the pills were added
+};
+
+/** A pill as a dose recorded it, with whether it still exists and its photo now. */
+export type NativeHistoryPill = {
+  pillId: string;
+  name: string;
+  form: string;
+  amount: number;
+  exists: boolean;
+  photoUri: string | null;
+};
+
+export type NativeHistoryDose = {
+  date: string; // YYYY-MM-DD, the day it was due
+  hour: number;
+  minute: number;
+  outcome: string; // taken | skipped | missed
+  at: number; // when it was answered or found missed
+  marked: boolean; // marked taken later
+  pills: NativeHistoryPill[];
+};
+
+export type NativeHistory = {
+  today: string;
+  oldest: string | null; // the oldest record kept
+  firstDayOfWeek: number; // 0 = Sunday, as Date.getDay()
+  doses: NativeHistoryDose[]; // by date, then time
+};
 
 export type Health = {
   notificationsEnabled: boolean;
@@ -78,6 +122,7 @@ export interface Spec extends TurboModule {
   getToday(): Promise<NativeToday>;
   setCardSound(alarmId: string, soundId: string | null): Promise<void>; // NOT_FOUND
   markDoseTaken(date: string, hour: number, minute: number): Promise<void>; // NOT_FOUND
+  getHistory(from: string, to: string): Promise<NativeHistory>; // YYYY-MM-DD, both inclusive
   reconcileOnAppOpen(): Promise<MissedAlarm[]>;
   getHealth(): Promise<Health>;
   openSetting(target: string): Promise<boolean>; // true = specific page, false = App info fallback
