@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -21,4 +21,11 @@ export function renderApp(
       </NavigationContainer>
     </SafeAreaProvider>,
   );
+}
+
+/** The titles in the native stack's headers, bottom screen first. */
+export function headerTitles(): string[] {
+  return screen.container
+    .queryAll(n => n.type === 'RNSScreenStackHeaderConfig')
+    .map(n => n.props.title);
 }

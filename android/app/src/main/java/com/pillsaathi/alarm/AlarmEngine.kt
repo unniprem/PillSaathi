@@ -1,12 +1,14 @@
 package com.pillsaathi.alarm
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.util.Log
 import com.pillsaathi.R
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Locale
 import java.util.UUID
 
 internal const val LOG_TAG = "PillSaathiAlarm"
@@ -40,8 +42,9 @@ class AlarmEngine private constructor(context: Context) {
 
   /**
    * Adds a pill ([PillDraft.id] null) or edits one, then runs housekeeping. A new pill starts today,
-   * or tomorrow when asked; an edit keeps its start date. Throws [NoSuchElementException] for an
-   * unknown id and [StorageException] when either write fails.
+   * or tomorrow when asked; an edit keeps its start date. The draft's photo is kept only if its file
+   * exists, and a photo it replaces is deleted. Throws [NoSuchElementException] for an unknown id
+   * and [StorageException] when either write fails.
    */
   fun savePill(draft: PillDraft): Pill {
     val (pill, removed) = store.locked {
@@ -50,6 +53,11 @@ class AlarmEngine private constructor(context: Context) {
       val existing = draft.id?.let { id ->
         pills.firstOrNull { it.id == id } ?: throw NoSuchElementException("No pill $id")
       }
+      val photo = draft.photo?.takeIf { name ->
+        File(store.photosDir, name).exists().also {
+          if (!it) Log.w(LOG_TAG, "Photo $name is gone; saving the pill without one")
+        }
+      }
       val pill =
         existing?.copy(
           name = draft.name,
@@ -57,6 +65,7 @@ class AlarmEngine private constructor(context: Context) {
           amount = draft.amount,
           times = draft.times,
           days = draft.days,
+          photo = photo,
         )
           ?: Pill(
             id = UUID.randomUUID().toString(),
@@ -67,21 +76,46 @@ class AlarmEngine private constructor(context: Context) {
             startDate = dateOf(now).plusDays(if (draft.startsTomorrow) 1L else 0L),
             days = draft.days,
             createdAt = now,
+            photo = photo,
           )
-      store.savePills(if (existing == null) pills + pill else pills.map { if (it.id == pill.id) pill else it })
+      val saved = if (existing == null) pills + pill else pills.map { if (it.id == pill.id) pill else it }
+      store.savePills(saved)
+      existing?.photo?.takeIf { it != photo }?.let { deletePhotoUnlessUsed(it, saved) }
       pill to syncCards(now)
     }
     stopRings(removed)
     return pill
   }
 
-  /** Deletes pill [id], then runs housekeeping: a card left with no pills goes, ring and all. */
+  /**
+   * Deletes pill [id] and its photo, then runs housekeeping: a card left with no pills goes, ring
+   * and all.
+   */
   fun deletePill(id: String) {
     val removed = store.locked {
-      store.savePills(store.loadPills().filterNot { it.id == id })
+      val pills = store.loadPills()
+      val left = pills.filterNot { it.id == id }
+      store.savePills(left)
+      pills.firstOrNull { it.id == id }?.photo?.let { deletePhotoUnlessUsed(it, left) }
       syncCards(System.currentTimeMillis())
     }
     stopRings(removed)
+  }
+
+  /**
+   * Deletes photos no pill uses once they are a day old ([PhotoRules.orphans]): photos picked for
+   * a pill page that was then left without saving, for example.
+   */
+  fun cleanUpPhotos(now: Long) {
+    store.locked {
+      val used = store.loadPills().mapNotNull { it.photo }.toSet()
+      val dir = store.photosDir
+      val files = dir.listFiles().orEmpty().filter { it.isFile }.map { it.name to it.lastModified() }
+      PhotoRules.orphans(files, used, now).forEach { name ->
+        if (File(dir, name).delete()) Log.i(LOG_TAG, "Deleted unused photo $name")
+        else Log.w(LOG_TAG, "Could not delete unused photo $name")
+      }
+    }
   }
 
   /** Sets card [alarmId]'s sound; null is the default alarm tone. */
@@ -274,27 +308,87 @@ class AlarmEngine private constructor(context: Context) {
 
   /**
    * The pills due on [alarm]'s ring, with their amounts: those due on its occurrence's date, so a
-   * dose snoozed past midnight still lists its pills. Empty if the pills can't be read; the ring
-   * then shows the card's name.
+   * dose snoozed past midnight still lists its pills, with amounts in the app's language. Empty if
+   * the pills can't be read; the ring then shows the card's name.
    */
   fun ringPills(alarm: Alarm): List<RingPill> =
     try {
       val date = dateOf(alarm.nextTriggerAt ?: System.currentTimeMillis())
+      val lang = language()
+      val photos = store.photosDir
       DoseRules.pillsDue(store.locked { store.loadPills() }, alarm.hour, alarm.minute, date).map {
-        RingPill(it.name, DoseRules.amountText(it.form, it.amount))
+        RingPill(
+          it.name,
+          DoseRules.amountText(it.form, it.amount, lang),
+          DoseRules.spokenAmount(it.form, it.amount, lang),
+          DoseRules.spokenAmount(it.form, it.amount, AppLanguage.EN),
+          it.form,
+          it.photo?.let { name -> File(photos, name).absolutePath },
+        )
       }
     } catch (e: Exception) {
       Log.e(LOG_TAG, "Could not read the pills of ${alarm.id}; ringing with its name", e)
       emptyList()
     }
 
+  fun settings(): AppSettings = store.locked { store.loadSettings() }
+
+  /** Changes the settings: a user's change, so a failed write throws [StorageException]. */
+  fun updateSettings(change: (AppSettings) -> AppSettings) {
+    store.locked { store.saveSettings(change(store.loadSettings())) }
+  }
+
+  /** The languages to offer: all of them in a debug build, only checked ones in a release. */
+  fun availableLanguages(): List<AppLanguage> =
+    LanguageRules.available(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)
+
+  /**
+   * The language the app speaks now ([LanguageRules.effective]). Read without the store lock and
+   * never throws, so the ringing path can call it before anything else.
+   */
+  fun language(): AppLanguage =
+    LanguageRules.effective(store.peekSettings().language, Locale.getDefault().language, availableLanguages())
+
+  /**
+   * What a ring with [pills] says ([SpeechText.parts]): the title in the app's language, then each
+   * pill as on the ringing screen; also all in English, for a phone with no voice for the app's
+   * language. Null when read aloud is off, or if anything fails: a ring never waits on, or fails
+   * for, its speech. Lock-free, like [language].
+   */
+  fun ringSpeech(pills: List<RingPill>): RingSpeech? =
+    try {
+      if (!store.peekSettings().readAloud) {
+        null
+      } else {
+        val lang = language()
+        RingSpeech(
+          lang,
+          speech(lang, pills.map { SpokenPill(it.name, it.spokenAmount) }),
+          speech(AppLanguage.EN, pills.map { SpokenPill(it.name, it.spokenEnglish) }),
+        )
+      }
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not build the ring's speech; ringing without it", e)
+      null
+    }
+
+  /** The ringing screen's title in [lang], then [pills]. */
+  fun speech(lang: AppLanguage, pills: List<SpokenPill>): List<SpeechPart> =
+    SpeechText.parts(context.localized(lang).getString(R.string.ringing_title), lang, pills)
+
   fun soundFileFor(alarm: Alarm): File? {
     val sound = soundOf(alarm) ?: return null
     return File(store.soundsDir, sound.fileName)
   }
 
-  fun soundNameFor(alarm: Alarm): String =
-    soundOf(alarm)?.name ?: context.getString(R.string.default_alarm_tone)
+  /** The name of [alarm]'s sound; the default tone's in the app's language. */
+  fun soundNameFor(alarm: Alarm): String = soundOf(alarm)?.name ?: defaultToneName()
+
+  /** "Default alarm tone" in the app's language. */
+  fun defaultToneName(): String = words().getString(R.string.default_alarm_tone)
+
+  /** The app context in the app's language ([language]), for the app's own words. */
+  fun words(): Context = context.localized(language())
 
   /** Points every alarm that uses [soundId] back at the default tone. */
   fun clearSound(soundId: String) {
@@ -364,6 +458,15 @@ class AlarmEngine private constructor(context: Context) {
     }
     if (record == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
     return record
+  }
+
+  /**
+   * Deletes photo [name] after a user's change no longer needs it, unless one of [pills] still
+   * does. The change is already saved, so a failure is only logged; cleanup gets it later.
+   */
+  private fun deletePhotoUnlessUsed(name: String, pills: List<Pill>) {
+    if (!PhotoRules.isPhotoName(name) || pills.any { it.photo == name }) return
+    if (!File(store.photosDir, name).delete()) Log.w(LOG_TAG, "Could not delete photo $name")
   }
 
   private fun stillMissed(doses: List<DoseRecord>, record: DoseRecord): Boolean =

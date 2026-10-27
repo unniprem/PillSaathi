@@ -7,6 +7,8 @@ import {
   nextLabel,
   toISODate,
 } from '../../src/lib/course';
+import { hi } from '../../src/i18n/hi';
+import { ml } from '../../src/i18n/ml';
 
 test('toISODate gives the local date', () => {
   expect(toISODate(new Date(2026, 9, 26, 23, 59))).toBe('2026-10-26');
@@ -29,6 +31,15 @@ test('formatDay names the weekday, day and month', () => {
   expect(formatDay('2026-10-30')).toBe('Fri 30 Oct');
   expect(formatDay('2026-10-28')).toBe('Wed 28 Oct');
   expect(formatDay('2027-01-03')).toBe('Sun 3 Jan');
+});
+
+test('names days and months in Malayalam', () => {
+  expect(formatDay('2026-10-30', ml)).toBe('വെള്ളി 30 ഒക്ടോ');
+  expect(formatDay('2027-01-03', hi)).toBe('रवि 3 जन');
+  expect(courseLabel('2026-10-26', 5, '2026-10-27', ml)).toBe(ml.course.dayOf(2, 5));
+  expect(nextLabel(new Date(2026, 9, 27, 8).getTime(), '2026-10-26', hi)).toBe(
+    hi.status.nextTomorrow,
+  );
 });
 
 test('courseLabel says where today is in the course', () => {

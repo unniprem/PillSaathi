@@ -22,6 +22,7 @@ import {
 } from '../native/sounds';
 import type { Sound } from '../native/sounds';
 import { setCardSound } from '../native/alarms';
+import { useI18n } from '../i18n';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
 
@@ -35,6 +36,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const { t } = useI18n();
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
     } catch (e) {
       console.warn('Could not change the sound', e);
       if (mounted.current) {
-        Alert.alert('Could not change the sound', 'Please try again.');
+        Alert.alert(t.sound.changeFailed, t.common.tryAgain);
       }
       return;
     }
@@ -98,7 +100,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
       console.warn('Could not preview the sound', e);
       if (mounted.current) {
         setPlayingId(current => (current === id ? null : current));
-        Alert.alert('Could not play the sound', 'Please try again.');
+        Alert.alert(t.sound.playFailed, t.common.tryAgain);
       }
     });
   };
@@ -119,12 +121,10 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
         return;
       }
       if (code === SoundErrors.UnsupportedAudio) {
-        Alert.alert(
-          "That file can't be played. Try an mp3, m4a, wav or ogg file.",
-        );
+        Alert.alert(t.sound.unsupported);
       } else {
         console.warn('Could not import the sound', e);
-        Alert.alert('Could not import the file', 'Please try again.');
+        Alert.alert(t.sound.importFailed, t.common.tryAgain);
       }
     } finally {
       if (mounted.current) {
@@ -135,14 +135,12 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
 
   const confirmDelete = (sound: Sound) => {
     const message = sound.usedBy.length
-      ? `It's used by: ${sound.usedBy.join(
-          ', ',
-        )}. Those alarms will use the default alarm tone.`
+      ? t.sound.usedBy(sound.usedBy.join(', '))
       : undefined;
-    Alert.alert(`Delete “${sound.name}”?`, message, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t.sound.deleteTitle(sound.name), message, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Delete',
+        text: t.common.delete,
         style: 'destructive',
         onPress: async () => {
           if (playingId === sound.id) {
@@ -154,7 +152,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
           } catch (e) {
             console.warn('Could not delete the sound', e);
             if (mounted.current) {
-              Alert.alert('Could not delete the sound', 'Please try again.');
+              Alert.alert(t.sound.deleteFailed, t.common.tryAgain);
               reload();
             }
             return;
@@ -176,7 +174,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
           onPress={() => navigation.navigate('Record', { alarmId })}
           style={styles.bigButton}
         >
-          <Text style={styles.bigButtonText}>● Record</Text>
+          <Text style={styles.bigButtonText}>{t.sound.record}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -186,14 +184,14 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
           style={[styles.bigButton, importing && styles.busy]}
         >
           <Text style={styles.bigButtonText}>
-            {importing ? 'Importing…' : '⇪ Import'}
+            {importing ? t.sound.importing : t.sound.import}
           </Text>
         </Pressable>
       </View>
 
-      <Text style={styles.heading}>Your sounds</Text>
+      <Text style={styles.heading}>{t.sound.yourSounds}</Text>
       <SoundRow
-        name="Default alarm tone"
+        name={t.common.defaultTone}
         selected={selectedId === null}
         onPress={() => pick(null)}
       />
@@ -202,7 +200,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
           key={sound.id}
           name={sound.name}
           detail={`${
-            sound.kind === 'recorded' ? 'Recorded' : 'Imported'
+            sound.kind === 'recorded' ? t.sound.recorded : t.sound.imported
           } · ${formatDuration(sound.durationMs)}`}
           selected={selectedId === sound.id}
           playing={playingId === sound.id}

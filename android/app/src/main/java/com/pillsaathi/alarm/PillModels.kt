@@ -2,18 +2,22 @@ package com.pillsaathi.alarm
 
 import java.time.LocalDate
 
-/** A pill's type, with how its amount steps on the − / + stepper. */
+/**
+ * A pill's type, with how its amount steps on the − / + stepper, and the [icon] shown where a pill
+ * has no photo.
+ */
 enum class PillForm(
   val json: String,
   val step: Double,
   val min: Double,
   val max: Double,
   val initial: Double,
+  val icon: String,
 ) {
-  TABLET("tablet", 0.5, 0.5, 10.0, 1.0),
-  CAPSULE("capsule", 1.0, 1.0, 10.0, 1.0),
-  SYRUP("syrup", 2.5, 2.5, 50.0, 5.0),
-  DROPS("drops", 1.0, 1.0, 30.0, 2.0);
+  TABLET("tablet", 0.5, 0.5, 10.0, 1.0, "⚪"),
+  CAPSULE("capsule", 1.0, 1.0, 10.0, 1.0, "💊"),
+  SYRUP("syrup", 2.5, 2.5, 50.0, 5.0, "🧴"),
+  DROPS("drops", 1.0, 1.0, 30.0, 2.0, "💧");
 
   companion object {
     fun fromJson(s: String): PillForm? = values().firstOrNull { it.json == s }
@@ -27,7 +31,7 @@ data class DoseTime(val hour: Int, val minute: Int) : Comparable<DoseTime> {
 
 /**
  * A medicine taken every day at [times], from [startDate] for [days] days, or with no end when
- * [days] is null.
+ * [days] is null. [photo] is its photo's file name in the store's photos, if it has one.
  */
 data class Pill(
   val id: String,
@@ -38,6 +42,7 @@ data class Pill(
   val startDate: LocalDate,
   val days: Int?,
   val createdAt: Long,
+  val photo: String? = null,
 )
 
 /** A pill as the app sends it to be saved: [id] is null for a new pill. */
@@ -49,6 +54,7 @@ data class PillDraft(
   val times: List<DoseTime>,
   val startsTomorrow: Boolean,
   val days: Int?,
+  val photo: String? = null,
 )
 
 enum class DoseOutcome(val json: String) {
@@ -83,7 +89,8 @@ enum class DoseStatus(val json: String) {
 
 /**
  * A pill row on the Today screen. [exists] is false for a pill deleted since its dose was recorded;
- * [fromTomorrow] marks a pill added to a card after today's dose was recorded.
+ * [fromTomorrow] marks a pill added to a card after today's dose was recorded. [photo] is the pill's
+ * photo as it is now, null for a deleted pill.
  */
 data class TodayPill(
   val pillId: String,
@@ -94,6 +101,7 @@ data class TodayPill(
   val days: Int?,
   val exists: Boolean,
   val fromTomorrow: Boolean,
+  val photo: String? = null,
 )
 
 /** One time on the Today screen. [alarmId] is null when the card is gone but today has a record. */

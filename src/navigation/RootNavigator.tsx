@@ -1,10 +1,12 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { I18nProvider, useI18n } from '../i18n';
 import TodayScreen from '../screens/TodayScreen';
 import PillEditScreen from '../screens/PillEditScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
 import RecordScreen from '../screens/RecordScreen';
 import SetupScreen from '../screens/SetupScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   Today: undefined;
@@ -13,17 +15,27 @@ export type RootStackParamList = {
   SoundPicker: { alarmId: string; selectedSoundId: string | null };
   Record: { alarmId: string };
   Setup: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export function RootNavigator({
-  initialRouteName = 'Today',
-  initialParams,
-}: {
+type Props = {
   initialRouteName?: keyof RootStackParamList;
   initialParams?: object;
-}) {
+};
+
+/** Every screen, in the app's language. */
+export function RootNavigator(props: Props) {
+  return (
+    <I18nProvider>
+      <RootStack {...props} />
+    </I18nProvider>
+  );
+}
+
+function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
+  const { t } = useI18n();
   // Only the first screen takes params from outside (tests open any screen first).
   const paramsFor = (name: keyof RootStackParamList) =>
     name === initialRouteName ? (initialParams as never) : undefined;
@@ -32,7 +44,7 @@ export function RootNavigator({
       <Stack.Screen
         name="Today"
         component={TodayScreen}
-        options={{ title: 'Today' }}
+        options={{ title: t.today.title }}
       />
       <Stack.Screen
         name="PillEdit"
@@ -42,19 +54,24 @@ export function RootNavigator({
       <Stack.Screen
         name="SoundPicker"
         component={SoundPickerScreen}
-        options={{ title: 'Sound' }}
+        options={{ title: t.sound.title }}
         initialParams={paramsFor('SoundPicker')}
       />
       <Stack.Screen
         name="Record"
         component={RecordScreen}
-        options={{ title: 'Record' }}
+        options={{ title: t.record.title }}
         initialParams={paramsFor('Record')}
       />
       <Stack.Screen
         name="Setup"
         component={SetupScreen}
-        options={{ title: 'Make alarms reliable' }}
+        options={{ title: t.setup.title }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: t.settings.title }}
       />
     </Stack.Navigator>
   );

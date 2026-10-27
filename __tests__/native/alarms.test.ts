@@ -64,3 +64,21 @@ test('passes calls and results through to the native module', async () => {
   expect(native.openSetting).toHaveBeenCalledWith('exactAlarm');
   expect(alarms.is24HourFormat()).toBe(true);
 });
+
+test('passes the photo source to native', async () => {
+  const picked = {
+    name: '3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg',
+    uri: 'file:///data/user_de/0/com.pillsaathi/files/photos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg',
+  };
+  const native = { pickPhoto: jest.fn().mockResolvedValue(picked) };
+  jest.resetModules();
+  jest.doMock('../../specs/NativeAlarms', () => ({
+    __esModule: true,
+    default: native,
+  }));
+  const alarms: typeof AlarmsModule = require('../../src/native/alarms');
+
+  await expect(alarms.pickPhoto('camera')).resolves.toEqual(picked);
+  expect(native.pickPhoto).toHaveBeenCalledWith('camera');
+  expect(alarms.AlarmErrors.PhotoError).toBe('PHOTO_ERROR');
+});

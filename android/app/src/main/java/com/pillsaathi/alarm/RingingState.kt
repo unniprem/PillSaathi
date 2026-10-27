@@ -3,8 +3,19 @@ package com.pillsaathi.alarm
 import android.util.Log
 import java.util.concurrent.CopyOnWriteArrayList
 
-/** A pill on a ring, with its amount as text ("½ tablet", "5 ml"). */
-data class RingPill(val name: String, val amount: String)
+/**
+ * A pill on a ring, with its amount as text ("½ tablet", "5 ml") and as read aloud, in the app's
+ * language and in English. [photoPath] is its photo's absolute path; without one the ringing
+ * screen shows [form]'s icon.
+ */
+data class RingPill(
+  val name: String,
+  val amount: String,
+  val spokenAmount: String = "",
+  val spokenEnglish: String = "",
+  val form: PillForm = PillForm.TABLET,
+  val photoPath: String? = null,
+)
 
 /** What is ringing right now, in this process. Only [RingingService] changes it, on the main thread. */
 object RingingState {

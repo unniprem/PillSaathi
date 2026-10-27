@@ -1,6 +1,8 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatAmount } from '../lib/amount';
+import React, { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useI18n } from '../i18n';
+import type { Strings } from '../i18n';
+import { FORM_ICONS, formatAmount } from '../lib/amount';
 import { courseLabel, nextLabel } from '../lib/course';
 import { formatTime } from '../lib/time';
 import type { TodayCard, TodayPill } from '../native/alarms';
@@ -24,35 +26,63 @@ function clock(millis: number, is24h: boolean) {
 }
 
 /** "✓ Taken 8:02 AM", "Snoozed until 8:10 AM", "Next: tomorrow"…; empty for a card that is done. */
-export function statusText(card: TodayCard, date: string, is24h: boolean) {
+export function statusText(
+  card: TodayCard,
+  date: string,
+  is24h: boolean,
+  t: Strings,
+) {
   const at = card.statusAt;
   switch (card.status) {
     case 'taken':
-      return at === null ? '✓ Taken' : `✓ Taken ${clock(at, is24h)}`;
+      return at === null ? t.status.taken : t.status.takenAt(clock(at, is24h));
     case 'skipped':
-      return 'Skipped';
+      return t.status.skipped;
     case 'missed':
-      return 'Missed';
+      return t.status.missed;
     case 'ringing':
-      return 'Ringing now';
+      return t.status.ringing;
     case 'snoozed':
-      return at === null ? 'Snoozed' : `Snoozed until ${clock(at, is24h)}`;
+      return at === null
+        ? t.status.snoozed
+        : t.status.snoozedUntil(clock(at, is24h));
     case 'upcoming':
-      return 'Coming up';
+      return t.status.upcoming;
     case 'later':
-      return at === null ? '' : nextLabel(at, date);
+      return at === null ? '' : nextLabel(at, date, t);
     default:
       return '';
   }
 }
 
-function pillDetail(pill: TodayPill, date: string) {
+function pillDetail(pill: TodayPill, date: string, t: Strings) {
   if (pill.fromTomorrow) {
-    return 'from tomorrow';
+    return t.course.fromTomorrow;
   }
   return pill.startDate === null
     ? ''
-    : courseLabel(pill.startDate, pill.days, date);
+    : courseLabel(pill.startDate, pill.days, date, t);
+}
+
+/** The pill's photo, or its type's icon when it has none or the photo can't be read. */
+function PillPicture({ pill }: { pill: TodayPill }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <View style={styles.picture}>
+      {pill.photoUri && !failed ? (
+        <Image
+          testID={`pill-photo-${pill.pillId}`}
+          source={{ uri: pill.photoUri }}
+          onError={() => setFailed(true)}
+          style={styles.photo}
+        />
+      ) : (
+        <Text testID={`pill-icon-${pill.pillId}`} style={styles.icon}>
+          {FORM_ICONS[pill.form]}
+        </Text>
+      )}
+    </View>
+  );
 }
 
 /** One time on the Today screen: its status, its pills and its sound. */
@@ -65,7 +95,8 @@ export default function DoseCard({
   onOpenSound,
   onMarkTaken,
 }: Props) {
-  const status = statusText(card, date, is24h);
+  const { lang, t } = useI18n();
+  const status = statusText(card, date, is24h, t);
   const canMark = card.status === 'missed' || card.status === 'skipped';
   return (
     <View style={styles.card}>
@@ -93,7 +124,7 @@ export default function DoseCard({
         ) : null}
       </View>
       {card.pills.map(pill => {
-        const detail = pillDetail(pill, date);
+        const detail = pillDetail(pill, date, t);
         return (
           <Pressable
             key={pill.pillId}
@@ -102,12 +133,13 @@ export default function DoseCard({
             onPress={() => onOpenPill(pill.pillId)}
             style={styles.pillRow}
           >
+            <PillPicture key={pill.photoUri ?? ''} pill={pill} />
             <View style={styles.pillText}>
               <Text style={styles.pillName}>{pill.name}</Text>
               {detail ? <Text style={styles.detail}>{detail}</Text> : null}
             </View>
             <Text style={styles.amount}>
-              {formatAmount(pill.form, pill.amount)}
+              {formatAmount(pill.form, pill.amount, lang)}
             </Text>
           </Pressable>
         );
@@ -119,7 +151,7 @@ export default function DoseCard({
           style={styles.soundRow}
         >
           <Text style={styles.sound}>
-            {`♪ ${soundName ?? 'Default alarm tone'}`}
+            {`♪ ${soundName ?? t.common.defaultTone}`}
           </Text>
         </Pressable>
       ) : null}
@@ -135,12 +167,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.surface,
   },
+  // At a large text size the status drops under the time rather than squeezing it.
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  time: { fontSize: 28, fontWeight: '300', color: colors.text },
+  time: { fontSize: 32, fontWeight: '300', color: colors.text },
   status: { paddingVertical: spacing.xs },
   statusAction: {
     paddingHorizontal: spacing.sm,
@@ -148,7 +182,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.danger,
   },
-  statusText: { fontSize: 16, color: colors.textMuted },
+  statusText: { fontSize: 18, color: colors.textMuted },
   taken: { color: colors.success },
   attention: { color: colors.danger },
   pillRow: {
@@ -159,10 +193,19 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     marginTop: spacing.sm,
   },
+  picture: {
+    width: 40,
+    height: 40,
+    marginRight: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photo: { width: 40, height: 40, borderRadius: 8 },
+  icon: { fontSize: 26 },
   pillText: { flex: 1 },
-  pillName: { fontSize: 18, color: colors.text },
-  detail: { fontSize: 14, color: colors.textMuted },
-  amount: { fontSize: 16, color: colors.textMuted, marginLeft: spacing.md },
+  pillName: { fontSize: 20, color: colors.text },
+  detail: { fontSize: 16, color: colors.textMuted },
+  amount: { fontSize: 18, color: colors.textMuted, marginLeft: spacing.md },
   soundRow: { paddingTop: spacing.sm },
-  sound: { fontSize: 14, color: colors.primary },
+  sound: { fontSize: 16, color: colors.primary },
 });

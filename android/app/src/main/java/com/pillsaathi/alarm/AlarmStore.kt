@@ -9,7 +9,7 @@ import java.io.IOException
 class StorageException(message: String, cause: Throwable?) : IOException(message, cause)
 
 /**
- * Alarm, pill, dose, sound and setup data, kept in device-protected storage so alarms can ring before the
+ * Alarm, pill, dose, sound, setup and settings data, kept in device-protected storage so alarms can ring before the
  * first unlock after a reboot. Shared by the main and `:ringing` processes: each value is a JSON
  * file under `store/`, read fresh from disk every time, so one process always sees the other's
  * writes.
@@ -50,6 +50,23 @@ class AlarmStore(context: Context) {
 
   fun saveSetup(state: SetupState) = save(SETUP, AlarmJson.setupToJson(state))
 
+  fun loadSettings(): AppSettings = load(SETTINGS, AppSettings(), AlarmJson::settingsFromJson)
+
+  fun saveSettings(s: AppSettings) = save(SETTINGS, AlarmJson.settingsToJson(s))
+
+  /**
+   * The settings without the store lock, for the ringing path, which must never wait on it. Any
+   * problem gives the defaults; an unreadable file is left where it is for [loadSettings] to back
+   * up.
+   */
+  fun peekSettings(): AppSettings =
+    try {
+      AlarmJson.settingsFromJson(files.peek(SETTINGS))
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not peek at the settings; using the defaults", e)
+      AppSettings()
+    }
+
   /** What the `:ringing` process is ringing, or null. A crashed process can leave a stale one. */
   fun loadRingingMarker(): RingingMarker? = load(RINGING, null, AlarmJson::ringingMarkerFromJson)
 
@@ -57,6 +74,10 @@ class AlarmStore(context: Context) {
 
   val soundsDir: File
     get() = File(storage.filesDir, SOUNDS_DIR).apply { mkdirs() }
+
+  /** Pill photos ([PhotoRules]), here so a ring before the first unlock can show them. */
+  val photosDir: File
+    get() = File(storage.filesDir, PHOTOS_DIR).apply { mkdirs() }
 
   /**
    * Parses [name], or returns [empty] if the stored value can't be read. Unreadable data is moved
@@ -87,7 +108,9 @@ class AlarmStore(context: Context) {
     const val DOSES = "doses.json"
     const val SOUNDS = "sounds.json"
     const val SETUP = "setup.json"
+    const val SETTINGS = "settings.json"
     const val RINGING = "ringing.json"
     const val SOUNDS_DIR = "sounds"
+    const val PHOTOS_DIR = "photos"
   }
 }

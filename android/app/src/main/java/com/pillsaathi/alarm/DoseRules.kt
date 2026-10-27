@@ -28,8 +28,12 @@ object DoseRules {
       .filter { DoseTime(hour, minute) in it.times && isDueOn(it, date) }
       .sortedBy { it.createdAt }
 
-  /** "½ tablet", "1½ tablets", "7.5 ml", "2 drops": the same text wherever an amount shows. */
-  fun amountText(form: PillForm, amount: Double): String {
+  /**
+   * "½ tablet", "1½ tablets", "7.5 ml", "2 drops": the same text wherever an amount shows, in
+   * [lang]. Digits stay Western in every language. English is plural above 1, Hindi from 2, and
+   * Malayalam never.
+   */
+  fun amountText(form: PillForm, amount: Double, lang: AppLanguage = AppLanguage.EN): String {
     val whole = amount.toLong()
     val half = amount - whole >= 0.25
     val number = when {
@@ -37,14 +41,72 @@ object DoseRules {
       half -> amount.toString()
       else -> whole.toString()
     }
-    val plural = amount > 1.0
-    return when (form) {
-      PillForm.TABLET -> "$number ${if (plural) "tablets" else "tablet"}"
-      PillForm.CAPSULE -> "$number ${if (plural) "capsules" else "capsule"}"
-      PillForm.SYRUP -> "$number ml"
-      PillForm.DROPS -> "$number ${if (plural) "drops" else "drop"}"
+    if (form == PillForm.SYRUP) return "$number ml"
+    val (one, many) = unitWords(form, lang)
+    val plural = when (lang) {
+      AppLanguage.EN -> amount > 1.0
+      AppLanguage.ML -> false
+      AppLanguage.HI -> amount >= 2.0
     }
+    return "$number ${if (plural) many else one}"
   }
+
+  /**
+   * An amount as it is read aloud in [lang]: half tablets in words ("half a tablet", "ഒന്നര
+   * ഗുളിക", "ढाई गोलियाँ"), syrup in millilitres, and everything else as [amountText].
+   */
+  fun spokenAmount(form: PillForm, amount: Double, lang: AppLanguage): String {
+    val whole = amount.toLong()
+    val half = amount - whole >= 0.25
+    if (form == PillForm.TABLET && half) {
+      return when (lang) {
+        AppLanguage.EN -> if (whole == 0L) "half a tablet" else "$whole and a half tablets"
+        AppLanguage.ML -> "${ML_HALVES[whole.toInt()]} ഗുളിക"
+        AppLanguage.HI -> "${HI_HALVES[whole.toInt()]} ${if (amount >= 2.0) "गोलियाँ" else "गोली"}"
+      }
+    }
+    if (form == PillForm.SYRUP) {
+      val number = if (half) amount.toString() else whole.toString()
+      return when (lang) {
+        AppLanguage.EN -> "$number millilitres"
+        AppLanguage.ML -> "$number മില്ലിലിറ്റർ"
+        AppLanguage.HI -> "$number मिलीलीटर"
+      }
+    }
+    return amountText(form, amount, lang)
+  }
+
+  /** ½, 1½ … 9½ in words, indexed by the whole part. */
+  private val ML_HALVES =
+    listOf("അര", "ഒന്നര", "രണ്ടര", "മൂന്നര", "നാലര", "അഞ്ചര", "ആറര", "ഏഴര", "എട്ടര", "ഒമ്പതര")
+  private val HI_HALVES =
+    listOf(
+      "आधी", "डेढ़", "ढाई", "साढ़े तीन", "साढ़े चार", "साढ़े पाँच", "साढ़े छह", "साढ़े सात", "साढ़े आठ",
+      "साढ़े नौ",
+    )
+
+  /** The unit of [form] in [lang], singular then plural. */
+  private fun unitWords(form: PillForm, lang: AppLanguage): Pair<String, String> =
+    when (lang) {
+      AppLanguage.EN -> when (form) {
+        PillForm.TABLET -> "tablet" to "tablets"
+        PillForm.CAPSULE -> "capsule" to "capsules"
+        PillForm.SYRUP -> "ml" to "ml"
+        PillForm.DROPS -> "drop" to "drops"
+      }
+      AppLanguage.ML -> when (form) {
+        PillForm.TABLET -> "ഗുളിക" to "ഗുളിക"
+        PillForm.CAPSULE -> "ക്യാപ്സ്യൂൾ" to "ക്യാപ്സ്യൂൾ"
+        PillForm.SYRUP -> "ml" to "ml"
+        PillForm.DROPS -> "തുള്ളി" to "തുള്ളി"
+      }
+      AppLanguage.HI -> when (form) {
+        PillForm.TABLET -> "गोली" to "गोलियाँ"
+        PillForm.CAPSULE -> "कैप्सूल" to "कैप्सूल"
+        PillForm.SYRUP -> "ml" to "ml"
+        PillForm.DROPS -> "बूंद" to "बूंदें"
+      }
+    }
 
   /**
    * Housekeeping: the time cards [pills] need, made from [alarms].
@@ -207,7 +269,10 @@ object DoseRules {
       } else {
         record.pills.map { snap ->
           val live = pills.firstOrNull { it.id == snap.pillId }
-          TodayPill(snap.pillId, snap.name, snap.form, snap.amount, live?.startDate, live?.days, live != null, false)
+          TodayPill(
+            snap.pillId, snap.name, snap.form, snap.amount, live?.startDate, live?.days, live != null, false,
+            live?.photo,
+          )
         } + onTime.filter { p -> record.pills.none { it.pillId == p.id } }.map { todayPill(it, fromTomorrow = true) }
       }
       val (status, statusAt) = statusOf(alarm, record, ringingIds, today, zone)
@@ -242,7 +307,7 @@ object DoseRules {
   }
 
   private fun todayPill(p: Pill, fromTomorrow: Boolean) =
-    TodayPill(p.id, p.name, p.form, p.amount, p.startDate, p.days, exists = true, fromTomorrow = fromTomorrow)
+    TodayPill(p.id, p.name, p.form, p.amount, p.startDate, p.days, exists = true, fromTomorrow = fromTomorrow, photo = p.photo)
 
   private fun updated(
     alarm: Alarm,

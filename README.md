@@ -4,6 +4,15 @@ PillSaathi is an Android medicine reminder (React Native 0.88). You add each pil
 
 Each time can play a sound you recorded or imported, and it rings as reliably as the phone's built-in Clock app: with the screen locked, in silent or Do Not Disturb mode, after the app is swiped away, and after a reboot.
 
+It is made for elders and the relatives who set it up for them:
+
+- **A photo of each pill**, taken with the phone's camera or chosen from the gallery on the pill page. It shows on the ringing screen (tap it to see it full width), on Today and on the pill page. A pill without one shows an icon for its type.
+- **The app in English, Malayalam or Hindi**, chosen in Settings (the ⚙ on Today), or the phone's language by default. Pill names stay as typed, and numbers stay Western (1, ½, 2.5).
+- **Pill names read aloud** while it rings, at breaks in the alarm sound: "Time for your medicines. Telma 40, one tablet." Speech waits for a play of the sound to end, so a relative's short recording is never cut off. It plays at alarm volume through silent mode. Settings can turn it off, and **Try it** plays a sample.
+- **Bigger text**, and every screen works at the phone's largest text size. On the ringing screen, Taken, Snooze and Skip always stay on screen.
+
+**Draft languages:** Malayalam and Hindi are drafts until someone who reads each language checks them. A release build lists only checked languages (English for now), and a phone set to a hidden language gets English everywhere, the ringing screen included. Debug builds list all three, with "(draft)" after the unchecked ones. Showing a language once it is checked is a one-line change (`LanguageRules.CHECKED` in `AppSettings.kt`).
+
 Android only for now. The JS bundle still builds for iOS, but the alarm features throw `PillSaathi alarms are Android-only for now`.
 
 ## How it is built
@@ -12,10 +21,12 @@ Android only for now. The JS bundle still builds for iOS, but the alarm features
 - Everything that rings (`AlarmFireReceiver`, `SystemEventReceiver`, `RingingService`, `RingingActivity`) runs in a separate `:ringing` process, so a React Native or JS crash in the main process can't silence an alarm.
 - Each distinct pill time is a **time card**: one engine alarm that repeats every day and rings only between the earliest start and the latest last day of its pills. Housekeeping (`DoseRules.planCards`) keeps the cards in step with the pills after every pill change, reconcile and ring end, so courses end on their own. At fire time the engine checks again and doesn't ring a card with nothing due.
 - Every dose is recorded natively on the ringing path (`doses.json`, kept 365 days) with a snapshot of its pills, so later edits don't rewrite history. The pure rules (due pills, cards, records, Today statuses, amount text) live in `DoseRules.kt` with JVM tests.
-- Pills, cards, records, sounds and setup state live in a multi-process-safe file store in device-protected storage, so alarms ring before the first unlock after a reboot.
-- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the five screens in `src/screens/`: Today, the pill page, Sound, Record and Setup.
+- Pills, cards, records, sounds, photos, settings and setup state live in a multi-process-safe file store in device-protected storage, so alarms ring before the first unlock after a reboot, with the right photo and language. The ringing path reads the language without taking the store lock.
+- Read aloud (`ReadAloud`, `ReadAloudRules`, `SpeechText`) drives the alarm player and the phone's text-to-speech through small interfaces, so its timing is JVM-tested with fakes. The sound starts exactly as before, and pauses only once the voice has started.
+- Native words use Android string resources (`values-ml`, `values-hi`) through a context in the app's language. JS words are typed tables in `src/i18n/` (`en`, `ml`, `hi`).
+- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the six screens in `src/screens/`: Today, the pill page, Sound, Record, Setup and Settings.
 
-The designs are in [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
+The designs are in [`docs/superpowers/specs/2026-10-26-easy-for-amma-design.md`](docs/superpowers/specs/2026-10-26-easy-for-amma-design.md) (photos, languages, read aloud, bigger text), [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
 
 ## Run it
 
@@ -33,7 +44,7 @@ To build an APK to install on a phone without Metro:
 cd android && ./gradlew assembleRelease
 ```
 
-It writes one APK per CPU type to `android/app/build/outputs/apk/release/`. Share `app-arm64-v8a-release.apk` (about 23 MB), which fits almost every phone from the last several years, or `app-armeabi-v7a-release.apk` for an old 32-bit phone. The x86 ones are for emulators. It is signed with the debug key, so it is for testing only.
+It writes one APK per CPU type to `android/app/build/outputs/apk/release/`. Share `app-arm64-v8a-release.apk` (about 25 MB), which fits almost every phone from the last several years, or `app-armeabi-v7a-release.apk` for an old 32-bit phone. The x86 ones are for emulators. It is signed with the debug key, so it is for testing only.
 
 Setup gotchas:
 
@@ -48,7 +59,7 @@ Setup gotchas:
 ```sh
 npm test                                          # Jest: screens and lib
 npx tsc --noEmit && npm run lint                  # types and lint
-cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm and dose rules, pill input, ring commands, JSON, file store
+cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm, dose, language, speech, read-aloud and photo rules, pill input, ring commands, JSON, file store
 ```
 
 ## Debug broadcasts (debug builds only)
@@ -61,7 +72,8 @@ adb shell am broadcast -a <ACTION> -n com.pillsaathi/.alarm.debug.DebugAlarmRece
 
 | Action                                 | Extras                                                                                                                                                                                                                                   | Effect                                                                                                    |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `com.pillsaathi.DEBUG_ADD_PILL`        | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug pill`), `--es form tablet\|capsule\|syrup\|drops` (default `tablet`), `--ef amount A` (default: the form's), `--ei days N` (0 = no end), `--ez start_tomorrow true` | Saves a pill whose one time is N minutes from now; pills at the same minute share one card                |
+| `com.pillsaathi.DEBUG_ADD_PILL`        | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug pill`), `--es form tablet\|capsule\|syrup\|drops` (default `tablet`), `--ef amount A` (default: the form's), `--ei days N` (0 = no end), `--ez start_tomorrow true`, `--es photo <uuid>.jpg` (a photo already in the store) | Saves a pill whose one time is N minutes from now; pills at the same minute share one card                |
+| `com.pillsaathi.DEBUG_SETTINGS`        | optional `--es lang en\|ml\|hi\|phone` (`phone` follows the phone's language), optional `--ez read_aloud true\|false`                                                                                                                                  | Changes the app's language and read aloud, and logs the settings and the language the app now speaks      |
 | `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                                                                     | Logs every card with its next trigger, snooze and last-fired times, every pill, and `today()`'s cards     |
 | `com.pillsaathi.DEBUG_TAKEN`           | optional `--es alarm_id ID`                                                                                                                                                                                                              | Ends whatever rings now and records it taken; with an id, only that card's ring, as the Taken button does |
 | `com.pillsaathi.DEBUG_SKIP`            | optional `--es alarm_id ID`                                                                                                                                                                                                              | Ends the ring and records it skipped, like Skip this time                                                 |
@@ -78,6 +90,31 @@ To move the emulator's clock without root (Play Store images): `adb shell cmd al
 Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb shell dumpsys activity services com.pillsaathi`, `adb shell dumpsys audio` (look for the `USAGE_ALARM` player), `adb shell am force-stop com.pillsaathi` (simulates an OEM kill).
 
 ## Device test matrix
+
+### Easy for Amma
+
+Last run: 2026-10-26, emulator API 34 (`Medium_Phone_API_34`, arm64, Google Play image, Google text-to-speech with an ml-IN voice). Rings used the debug receiver; photos, Settings, Today and the pill page used the real UI. Times are from the fire.
+
+- [x] A ring with read aloud: the tone started 0.6 s after the fire; speech came at the end of the tone's first play (2.1 s), the tone paused once the voice had started, and it resumed from the start after the 6.5 s speech. The next speech came at the first play end 46.5 s later.
+- [x] Taken 2 s into a speech: silence at once, the sound did not come back, and no player was left (`dumpsys audio`). Speech plays as `USAGE_ALARM` / `CONTENT_TYPE_SPEECH`.
+- [x] Read aloud off (`DEBUG_SETTINGS --ez read_aloud false`): tone only. The Settings switch showed that stored state and turned it back on.
+- [x] The engine not ready at the first play end (a cold start takes 1–3 s): that play end is not counted as a speech, and speech comes at the next one (4.5–5 s).
+- [x] A ring before the first unlock after `adb reboot` (PIN set, `RUNNING_LOCKED`): the ringing screen showed over the keyguard in Malayalam with the pill's camera photo; the sound played 0.4 s after the fire (the media tone can't be read before unlock, so the cached tone played); on this image speech also worked before unlock.
+- [x] The largest text (`font_scale 2.0`) with ten pills: Taken, Snooze and Skip fully visible, the list scrolls, and long names wrap at spaces (the amount goes under the name).
+- [x] A gallery photo (a portrait shot stored sideways with EXIF orientation 6, picked through the system photo picker with no permission prompt) was stored upright at 768×1024 and showed upright on the pill page, Today and the ringing screen, and full width when tapped. A camera photo (emulated camera, `-camera-back emulated`) went through the FileProvider and showed on the pill page and Today. Cancelling either pick kept the page as it was.
+- [x] Replacing a photo kept the old file while another pill still used it; deleting that pill then deleted the file. (Replacing a photo no other pill uses deletes it too; that case wasn't run on the emulator.)
+- [x] Malayalam (chosen in Settings): Settings, Today, the pill page and Try it changed at once; the next ring's screen, notification actions and speech were Malayalam (the English name "Telma 40" in the English voice); an auto-silenced ring posted "നഷ്ടമായി: 9:10 PM, Iron".
+- [x] A release build installed over a stored Malayalam choice lists English only in Settings, and the app, the ringing screen, its notification and its speech were all English.
+
+**Observed:** on this emulator (no audio output), the player's reported position is sometimes stale for a second or more (the same value at two looks 0.9–1.4 s apart). Then the looks aimed at play ends miss them, and speech comes at the forced time instead (15 s into the ring, or 60 s after the last speech). The sound keeps playing throughout. A real phone may report the position smoothly; the 10-second recording case below decides it. If a phone shows the same, the fix is to loop the sound in the app (restart on the player's completion event) so each play end is an exact event.
+
+**Pending, needs a real phone (Redmi Note 10 was not connected):**
+
+- [ ] No voice for the app's language: speech in English (covered by a JVM test; the emulator has a Malayalam voice).
+- [ ] How Malayalam sounds with "Telma 40": the Malayalam words and the English name each natural, with no long gap at the switch.
+- [ ] A relative's 10-second recording: speech always after the recording ends, never in the middle. Watch `adb logcat -s PillSaathiAlarm` for "Read aloud … SPEAK_FROM_START" near 10 s (good) or "SPEAK_AND_RESUME" at 15 s (a missed play end).
+- [ ] The delay from speech starting to the sound pausing (the start of the next play is heard until then; 0.15–1 s on the emulator).
+- [ ] The camera photo of a real pill strip, taken in portrait, upright everywhere.
 
 ### Pills and doses
 

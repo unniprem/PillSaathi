@@ -101,6 +101,22 @@ object AlarmJson {
     )
   }
 
+  fun settingsToJson(s: AppSettings): String =
+    JSONObject()
+      .put("language", s.language?.code ?: JSONObject.NULL)
+      .put("readAloud", s.readAloud)
+      .toString()
+
+  /** Missing values take their defaults; a language the app doesn't know follows the phone. */
+  fun settingsFromJson(json: String?): AppSettings {
+    if (json.isNullOrBlank()) return AppSettings()
+    val o = JSONObject(json)
+    return AppSettings(
+      language = if (o.isNull("language")) null else AppLanguage.fromCode(o.getString("language")),
+      readAloud = o.optBoolean("readAloud", true),
+    )
+  }
+
   fun ringingMarkerToJson(m: RingingMarker): String =
     JSONObject()
       .put("alarmId", m.alarmId)

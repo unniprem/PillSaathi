@@ -20,23 +20,26 @@ object Notifications {
 
   private const val FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
 
+  /** Creates the channels, or renames them after a language change. */
   fun ensureChannels(context: Context) {
+    val words = words(context)
     val ringing =
       NotificationChannelCompat.Builder(CHANNEL_RINGING, NotificationManagerCompat.IMPORTANCE_HIGH)
-        .setName(context.getString(R.string.channel_ringing))
+        .setName(words.getString(R.string.channel_ringing))
         // RingingService plays and vibrates itself, at alarm volume.
         .setSound(null, null)
         .setVibrationEnabled(false)
         .build()
     val missed =
       NotificationChannelCompat.Builder(CHANNEL_MISSED, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-        .setName(context.getString(R.string.channel_missed))
+        .setName(words.getString(R.string.channel_missed))
         .build()
     NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(ringing, missed))
   }
 
   /** The ongoing ring: its pills by name, and expanded, one "name · amount" line per pill. */
   fun ringing(context: Context, ring: RingingState.Ring): Notification {
+    val words = words(context)
     val screen = ringingScreenIntent(context)
     val names = if (ring.pills.isEmpty()) ring.name else ring.pills.joinToString(", ") { it.name }
     val lines =
@@ -54,12 +57,12 @@ object Notifications {
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .addAction(
         0,
-        context.getString(R.string.action_taken),
+        words.getString(R.string.action_taken),
         serviceIntent(context, RingingService.ACTION_TAKEN, ring.alarmId),
       )
       .addAction(
         0,
-        context.getString(R.string.action_snooze),
+        words.getString(R.string.action_snooze),
         serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
       )
       .build()
@@ -68,7 +71,7 @@ object Notifications {
   /** "Missed: 8:00 AM, Azithromycin 500, Telma 40": [MissedAlarm.name] holds the pill names. */
   fun postMissed(context: Context, missed: MissedAlarm) {
     val text =
-      context.getString(R.string.missed_alarm, formatTime(context, missed.dueAt), missed.name)
+      words(context).getString(R.string.missed_alarm, formatTime(context, missed.dueAt), missed.name)
     val open =
       PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
     val notification =
@@ -84,6 +87,18 @@ object Notifications {
       Log.w(LOG_TAG, "Notifications not allowed; missed alarm ${missed.id} not shown", e)
     }
   }
+
+  /**
+   * [context] in the app's language, for the app's own words. Times are still formatted with
+   * [context], so they look the same in every language.
+   */
+  private fun words(context: Context): Context =
+    try {
+      context.localized(AlarmEngine.get(context).language())
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not localise the notification; using the phone's language", e)
+      context
+    }
 
   private fun ringingScreenIntent(context: Context): PendingIntent =
     PendingIntent.getActivity(context, 0, Intent(context, RingingActivity::class.java), FLAGS)

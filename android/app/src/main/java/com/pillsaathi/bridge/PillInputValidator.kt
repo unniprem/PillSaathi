@@ -1,6 +1,7 @@
 package com.pillsaathi.bridge
 
 import com.pillsaathi.alarm.DoseTime
+import com.pillsaathi.alarm.PhotoRules
 import com.pillsaathi.alarm.PillDraft
 import com.pillsaathi.alarm.PillForm
 import kotlin.math.abs
@@ -22,8 +23,8 @@ object PillInputValidator {
   /**
    * Throws [AlarmException] with code [INVALID_PILL] on any bad value: a name blank or over
    * [MAX_NAME_LENGTH] after trimming, an unknown form, an amount off its form's steps or range,
-   * 1 to [MAX_TIMES] distinct times, and days null (no end) or 1 to [MAX_DAYS]. Times come back
-   * sorted.
+   * 1 to [MAX_TIMES] distinct times, days null (no end) or 1 to [MAX_DAYS], and a photo that is
+   * null (or missing) or a photo's file name, never a path. Times come back sorted.
    */
   fun validate(raw: Map<String, Any?>): PillDraft {
     val id = raw["id"]
@@ -36,7 +37,11 @@ object PillInputValidator {
     val times = times(raw["times"])
     val startsTomorrow = raw["startsTomorrow"] as? Boolean ?: throw invalid("startsTomorrow must be true or false")
     val days = raw["days"]?.let { whole(it, 1..MAX_DAYS, "days") }
-    return PillDraft(id as String?, name, form, amount(raw["amount"], form), times, startsTomorrow, days)
+    val photo = raw["photo"]?.let {
+      if (it !is String || !PhotoRules.isPhotoName(it)) throw invalid("photo must be a photo's name or null")
+      it
+    }
+    return PillDraft(id as String?, name, form, amount(raw["amount"], form), times, startsTomorrow, days, photo)
   }
 
   /** The amount as a whole number of [form]'s steps, within its range. */

@@ -4,6 +4,81 @@ Session log, newest first.
 
 ---
 
+## 2026-10-26 21:57 IST — Session: Easy for Amma build
+
+### Summary
+
+The user asked to execute the latest plan (`docs/superpowers/plans/2026-10-26-easy-for-amma.md`). It ran inline, task by task, with TDD, a ledger and one fresh whole-branch review at the end. PillSaathi now has a photo per pill (camera or gallery, no new permissions), shown on the ringing screen, Today and the pill page. The app speaks English, Malayalam or Hindi, chosen in a new Settings screen. Malayalam and Hindi are drafts, hidden in release builds. While a card rings, the phone reads its pills aloud at breaks in the alarm sound. Text is bigger, and every screen works at the largest text size. Every emulator case in the plan passed except one, which needs a real phone (the Redmi wasn't connected). The review found no Critical issues and two Important ones, both fixed with tests. A last sanity ring found that the emulator's player position can be stale, which is now the main open question for the phone check.
+
+### Changes Made
+
+| Commit    | Type | Description                                                                         |
+| --------- | ---- | ----------------------------------------------------------------------------------- |
+| `ffbbe77` | feat | Language and read-aloud settings in the store; lock-free language read for the ring |
+| `687d4e4` | feat | Ringing screen and notifications in English, Malayalam or Hindi                     |
+| `8db5606` | feat | Spoken pill list in parts, each in its own voice; half tablets in words             |
+| `e5707cf` | feat | Read aloud at breaks in the alarm sound (`ReadAloud`, `TtsVoice`)                    |
+| `5400040` | feat | One photo per pill: storage, camera and gallery picks, cleanup                      |
+| `c176a09` | feat | Photos and icons on the ringing screen; buttons stay visible at large text          |
+| `db59e84` | feat | JS copy in three languages and the language setting (`src/i18n/`)                   |
+| `ce07670` | feat | Today and the pill page with photos, bigger text and the chosen language            |
+| `d5aab17` | feat | Sound, Record and Setup in the chosen language                                      |
+| `c0fde2c` | feat | Settings screen with Try it                                                         |
+| `7479e92` | fix  | Catch a play end when the looping player's position jumps past it                   |
+| `275aec6` | docs | README and device matrix for Easy for Amma                                          |
+| `74be4ef` | fix  | Count a ring's first look just past the loop point as a play end (review)           |
+| `55ce72f` | fix  | Read the app language again when the app comes back (review)                        |
+| `f2c7155` | docs | Note the emulator's stale player position and what the phone check decides          |
+
+### Key Decisions
+
+- **The sound starts exactly as before, and speech only pauses it once the voice has started**: a slow, missing or locked-out speech engine can never silence an alarm. A voice that isn't ready yet doesn't count as a speech, so the next play end tries again instead of waiting 45 s (found on the emulator: the engine takes 1–3 s to start).
+- **No voice for the app's language means the whole speech in English**, not Malayalam text read by an English voice. The ring carries both versions (spec over plan).
+- **The ringing path reads the language without the store lock** (`FileStore.peek`), so a slow lock can't delay a ring. The JS reads the same value synchronously at start and on every return to the foreground, so the app and the next ring always agree.
+- **Unchecked languages are hidden in release builds**: checked on the emulator by installing a release build over a stored Malayalam choice. The app, ring, notification and speech all came out English.
+- **Photos live in device-protected storage under UUID names**: a ring before the first unlock shows them (checked with a PIN after `adb reboot`), and a photo name can never be a path.
+- **At large text the ringing row puts the amount under the name**: at font scale 2.0 a name next to "1 capsule" broke mid-word.
+
+### Issues Encountered
+
+- The emulator's camera was set to the Mac's webcam and gave no frames; it was restarted with `-camera-back emulated` for the camera check. A pushed test photo stayed `is_pending` until a media scan broadcast.
+- The player's reported position stalls and jumps around the loop point, and on a fresh emulator boot it was stale for over a second at a time. Two fixes now catch the jump. A stale position still makes speech miss play ends and wait for the forced 15 s. Whether a real phone does this is the open question for the Redmi (a 10-second recording). If it does, the fix is to loop the sound in the app, which needs the user's decision.
+- One i18n test rendered the app twice with a manual unmount, which left the next test's render empty. It was split in two.
+- The emulator shut down once mid-check and was restarted.
+- Pending on the Redmi Note 10: the 10-second recording, the delay from speech starting to the sound pausing, Malayalam with "Telma 40", no voice for the language, and a real portrait photo.
+
+---
+
+## 2026-10-26 19:17 IST — Session: Next stages brainstorm, Easy for Amma and History designs
+
+### Summary
+
+The build from PR #5 went out for a few days of testing, and the user asked what comes next. Brainstorming with browser mockups laid out four possible stages for elders and their relatives: family can see doses, set up from afar, Easy for Amma, and History over time. The user chose stages 3 and 4 now, in that order, with caregiver features left until the app goes online. A son or daughter sets up the pills on the elder's phone, and the elder answers the rings. Two designs were written, each checked by a fresh builder-review subagent, and accepted as starting points to revise after the testing feedback. No app code changed.
+
+### Changes Made
+
+| Commit    | Type | Description                                                                |
+| --------- | ---- | -------------------------------------------------------------------------- |
+| `0a78ae5` | docs | Design for Easy for Amma: pill photos, language, read aloud, bigger text   |
+| `8e8e001` | docs | Design for History, shared reports and refill counts                       |
+| `1579e7f` | docs | Mark both designs as accepted starting points                              |
+
+### Key Decisions
+
+- **Offline stages first**: stages 3 and 4 work on the elder's phone alone. Stages 1 and 2 need internet, sign-in and a server for the first time, so they wait.
+- **Easy for Amma before History**: an elder meets it on the first ring, and it changes the ringing screen, the riskiest part, so it should be built and tested early. History only pays off after weeks of records.
+- **Speech waits for a break in the sound**: the first speech comes when a play of the sound ends, or after 15 s for a long sound. A relative's short recorded message is never cut off.
+- **English-letter pill names use the English voice**: a Malayalam or Hindi voice may read "Telma 40" badly, so speech is built in parts with a language each.
+- **Unchecked languages stay hidden**: the branch can merge and APKs can be shared without an elder seeing draft translations. Who checks Malayalam and Hindi is still open.
+- **Reconcile records every missed dose in a gap**: today it records only each card's first missed time, so History would overstate adherence after the phone was off for days.
+
+### Issues Encountered
+
+- The builder checks found two real gaps: the read-aloud timing contradicted itself for long sounds, and "no record" days would have blamed the phone between courses. Both were fixed in the designs.
+- The Redmi's wireless debugging connection went offline (`adb devices` shows it offline), which ended a log recording left running from the earlier session.
+
+---
+
 ## 2026-10-26 16:00 IST — Session: First real phone, smaller APK, pill page top bar
 
 ### Summary

@@ -1,11 +1,14 @@
 import NativeAlarms from '../../specs/NativeAlarms';
 import type {
+  AppSettings,
   DoseTime,
   Health,
+  LanguageOption,
   MissedAlarm,
   NativePill,
   NativeTodayCard,
   NativeTodayPill,
+  PickedPhoto,
   PickedTime,
   PillInput as NativePillInput,
   SetupState,
@@ -13,7 +16,17 @@ import type {
 } from '../../specs/NativeAlarms';
 import type { PillForm } from '../lib/amount';
 
-export type { DoseTime, Health, MissedAlarm, PickedTime, PillForm, SetupState };
+export type {
+  AppSettings,
+  DoseTime,
+  Health,
+  LanguageOption,
+  MissedAlarm,
+  PickedPhoto,
+  PickedTime,
+  PillForm,
+  SetupState,
+};
 
 /** A dose's state on the Today screen. */
 export type DoseStatus =
@@ -45,13 +58,18 @@ export type SettingTarget =
   | 'alarmVolume'
   | 'appInfo'
   | 'oemAutostart'
-  | 'oemBattery';
+  | 'oemBattery'
+  | 'tts';
 
 /** The codes the native module rejects its promises with. */
 export const AlarmErrors = {
   InvalidPill: 'INVALID_PILL',
+  /** A language the app doesn't offer (a draft one in a release build, say). */
+  InvalidLanguage: 'INVALID_LANGUAGE',
   NoActivity: 'NO_ACTIVITY',
   NotFound: 'NOT_FOUND',
+  /** A photo couldn't be taken in, or another pick is still open. */
+  PhotoError: 'PHOTO_ERROR',
   /** The app's storage couldn't be read or written, often because the phone is full. */
   StorageError: 'STORAGE_ERROR',
 } as const;
@@ -142,4 +160,47 @@ export async function pickTime(
 /** The phone's 12/24-hour setting. */
 export function is24HourFormat(): boolean {
   return native().is24HourFormat();
+}
+
+/**
+ * Takes a pill photo with the phone's camera or picks one from the gallery, and stores it. Saving
+ * the pill with its `name` keeps it. Null if cancelled; rejects `PHOTO_ERROR` or `NO_ACTIVITY`.
+ */
+export async function pickPhoto(
+  source: 'camera' | 'gallery',
+): Promise<PickedPhoto | null> {
+  return native().pickPhoto(source);
+}
+
+/** The language the app speaks, whether it reads pills aloud, and the languages it offers. */
+export async function getSettings(): Promise<AppSettings> {
+  return native().getSettings();
+}
+
+/** The language the app speaks now, read at once; the ringing screen uses the same one. */
+export function currentLanguage(): string {
+  return native().currentLanguage();
+}
+
+/** Saves the app's language. Rejects `INVALID_LANGUAGE` for one it doesn't offer. */
+export async function setLanguage(code: string): Promise<void> {
+  return native().setLanguage(code);
+}
+
+export async function setReadAloud(on: boolean): Promise<void> {
+  return native().setReadAloud(on);
+}
+
+/**
+ * How Try it went: `spoken` in the app's language, `english` because the phone has no voice for
+ * it, or `none` because it has no voice at all.
+ */
+export type TryResult = 'spoken' | 'english' | 'none';
+
+/**
+ * Reads today's first pills aloud as a ring would, at alarm volume. Resolves once the voice
+ * starts, or at once with `none`.
+ */
+export async function tryReadAloud(): Promise<TryResult> {
+  return (await native().tryReadAloud()) as TryResult;
 }

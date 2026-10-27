@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useI18n } from '../i18n';
 import { colors, spacing } from '../theme';
 
 type Props = {
@@ -24,6 +25,7 @@ export default function SoundRow({
   onLongPress,
   onTogglePreview,
 }: Props) {
+  const { t } = useI18n();
   return (
     <Pressable
       accessibilityRole="radio"
@@ -37,7 +39,9 @@ export default function SoundRow({
           <Pressable
             testID={`preview-${previewId}`}
             accessibilityRole="button"
-            accessibilityLabel={`${playing ? 'Stop' : 'Play'} ${name}`}
+            accessibilityLabel={
+              playing ? t.sound.stop(name) : t.sound.play(name)
+            }
             hitSlop={8}
             onPress={onTogglePreview}
           >

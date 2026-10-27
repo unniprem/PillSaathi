@@ -26,6 +26,7 @@ import {
   stopRecording,
 } from '../native/sounds';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useI18n } from '../i18n';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Record'>;
@@ -36,10 +37,14 @@ const MAX_BAR_HEIGHT = 60;
 
 export default function RecordScreen({ navigation, route }: Props) {
   const { alarmId } = route.params;
+  const { t } = useI18n();
+  // For the native event callbacks, which subscribe once.
+  const words = useRef(t);
+  words.current = t;
   const [phase, setPhaseState] = useState<Phase>('idle');
   const [elapsedMs, setElapsedMs] = useState(0);
   const [levels, setLevels] = useState<number[]>([]);
-  const [name, setName] = useState('My recording');
+  const [name, setName] = useState(() => t.record.defaultName);
   const [listening, setListening] = useState(false);
   const [saving, setSaving] = useState(false);
   const mounted = useRef(true);
@@ -93,7 +98,7 @@ export default function RecordScreen({ navigation, route }: Props) {
         }
         if (durationMs <= 0) {
           // The take couldn't be finalised, so it is lost.
-          Alert.alert("That recording couldn't be saved. Try again.");
+          Alert.alert(words.current.record.notSaved);
           backToIdle();
           return;
         }
@@ -117,12 +122,12 @@ export default function RecordScreen({ navigation, route }: Props) {
 
   const micOff = useCallback(() => {
     Alert.alert(
-      'Microphone access is off',
-      'PillSaathi needs the microphone to record your alarm sound.',
+      t.record.micOffTitle,
+      t.record.micMessage,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Open settings',
+          text: t.common.openSettings,
           onPress: () =>
             Linking.openSettings().catch(e =>
               console.warn('Could not open settings', e),
@@ -130,7 +135,7 @@ export default function RecordScreen({ navigation, route }: Props) {
         },
       ],
     );
-  }, []);
+  }, [t]);
 
   const start = async () => {
     if (busy.current) {
@@ -141,10 +146,9 @@ export default function RecordScreen({ navigation, route }: Props) {
       const result = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
         {
-          title: 'Allow microphone',
-          message:
-            'PillSaathi needs the microphone to record your alarm sound.',
-          buttonPositive: 'OK',
+          title: t.record.allowMic,
+          message: t.record.micMessage,
+          buttonPositive: t.common.ok,
         },
       );
       if (!mounted.current) {
@@ -171,7 +175,7 @@ export default function RecordScreen({ navigation, route }: Props) {
         micOff();
       } else {
         console.warn('Could not start recording', e);
-        Alert.alert('Could not start recording', 'Please try again.');
+        Alert.alert(t.record.startFailed, t.common.tryAgain);
       }
     } finally {
       busy.current = false;
@@ -195,10 +199,10 @@ export default function RecordScreen({ navigation, route }: Props) {
         return;
       }
       if ((e as { code?: string })?.code === SoundErrors.TooShort) {
-        Alert.alert('That recording was too short. Try again.');
+        Alert.alert(t.record.tooShort);
       } else {
         console.warn('Could not stop recording', e);
-        Alert.alert('Could not save the recording', 'Please try again.');
+        Alert.alert(t.record.saveFailed, t.common.tryAgain);
       }
       // Whatever went wrong, make sure the microphone is released.
       discard();
@@ -219,7 +223,7 @@ export default function RecordScreen({ navigation, route }: Props) {
       console.warn('Could not play the recording', e);
       if (mounted.current) {
         setListening(false);
-        Alert.alert('Could not play the recording', 'Please try again.');
+        Alert.alert(t.record.playFailed, t.common.tryAgain);
       }
     });
   };
@@ -239,7 +243,9 @@ export default function RecordScreen({ navigation, route }: Props) {
     savingRef.current = true;
     setSaving(true);
     try {
-      const sound = await saveRecording(name.trim() || 'My recording');
+      const sound = await saveRecording(
+        name.trim() || t.record.defaultName,
+      );
       saved.current = true;
       try {
         await setCardSound(alarmId, sound.id);
@@ -247,7 +253,7 @@ export default function RecordScreen({ navigation, route }: Props) {
         // The recording is kept and listed in the picker; only the card's sound didn't change.
         console.warn('Could not set the recording on the card', e);
         if (mounted.current) {
-          Alert.alert('Could not change the sound', 'Please try again.');
+          Alert.alert(t.record.changeFailed, t.common.tryAgain);
           if (navigation.canGoBack()) {
             navigation.goBack();
           } else {
@@ -263,7 +269,7 @@ export default function RecordScreen({ navigation, route }: Props) {
       console.warn('Could not save the recording', e);
       savingRef.current = false;
       if (mounted.current) {
-        Alert.alert('Could not save the recording', 'Please try again.');
+        Alert.alert(t.record.saveFailed, t.common.tryAgain);
         setSaving(false);
       } else {
         // The user left mid-save and it failed: the take is still unsaved.
@@ -287,10 +293,10 @@ export default function RecordScreen({ navigation, route }: Props) {
 
       {phase === 'idle' ? (
         <>
-          <Text style={styles.hint}>Up to 2:00</Text>
+          <Text style={styles.hint}>{t.record.upTo}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Start recording"
+            accessibilityLabel={t.record.start}
             onPress={() => {
               start();
             }}
@@ -310,7 +316,7 @@ export default function RecordScreen({ navigation, route }: Props) {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Stop recording"
+            accessibilityLabel={t.record.stop}
             onPress={() => {
               stop();
             }}
@@ -318,7 +324,7 @@ export default function RecordScreen({ navigation, route }: Props) {
           >
             <View style={styles.stopSquare} />
           </Pressable>
-          <Text style={styles.hint}>Tap to stop</Text>
+          <Text style={styles.hint}>{t.record.tapToStop}</Text>
         </>
       ) : null}
 
@@ -331,7 +337,7 @@ export default function RecordScreen({ navigation, route }: Props) {
               style={styles.secondary}
             >
               <Text style={styles.secondaryText}>
-                {listening ? '■ Stop' : '▶ Listen'}
+                {listening ? t.record.stopListening : t.record.listen}
               </Text>
             </Pressable>
             <Pressable
@@ -339,14 +345,14 @@ export default function RecordScreen({ navigation, route }: Props) {
               onPress={redo}
               style={styles.secondary}
             >
-              <Text style={styles.secondaryText}>↺ Redo</Text>
+              <Text style={styles.secondaryText}>{t.record.redo}</Text>
             </Pressable>
           </View>
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>{t.record.name}</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="My recording"
+            placeholder={t.record.defaultName}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
           />
@@ -358,7 +364,7 @@ export default function RecordScreen({ navigation, route }: Props) {
             }}
             style={styles.primary}
           >
-            <Text style={styles.primaryText}>Use this sound</Text>
+            <Text style={styles.primaryText}>{t.record.use}</Text>
           </Pressable>
         </>
       ) : null}

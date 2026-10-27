@@ -127,6 +127,8 @@ class RingingService : Service() {
   private lateinit var engine: AlarmEngine
   private lateinit var player: AlarmPlayer
   private lateinit var vibrator: AlarmVibrator
+  private var readAloud: ReadAloud? = null
+  private var voice: TtsVoice? = null
   private var ringing = false
   private var lastStartId = 0
 
@@ -275,7 +277,10 @@ class RingingService : Service() {
               saveMarker(marker)
             }
           }
-        alarm?.let { FoundRing(it, engine.soundNameFor(it), engine.soundFileFor(it), engine.ringPills(it)) }
+        alarm?.let {
+          val pills = engine.ringPills(it)
+          FoundRing(it, engine.soundNameFor(it), engine.soundFileFor(it), pills, engine.ringSpeech(pills))
+        }
       }
     if (found == null) {
       Log.i(LOG_TAG, "Not ringing $alarmId: it is gone or off")
@@ -286,12 +291,13 @@ class RingingService : Service() {
     return true
   }
 
-  /** What a ring needs from the store, read under one lock. */
+  /** What a ring needs from the store, read under one lock. [speech] is null when read aloud is off. */
   private class FoundRing(
     val alarm: Alarm,
     val soundName: String,
     val sound: File?,
     val pills: List<RingPill>,
+    val speech: RingSpeech?,
   )
 
   private fun startRing(found: FoundRing, startedAt: Long, followsAnother: Boolean) {
@@ -322,9 +328,44 @@ class RingingService : Service() {
       RingWakeLock.release("ring of ${ring.alarmId} started")
     }
     Log.i(LOG_TAG, "Ringing ${alarm.id} (${alarm.name}), ${queue.size} queued")
+    // Only once the sound plays: speech never delays, and can never stop, a ring.
+    found.speech?.let { startReadAloud(it) }
+  }
+
+  private fun startReadAloud(speech: RingSpeech) {
+    try {
+      val voice = TtsVoice(this).also { this.voice = it }
+      readAloud =
+        ReadAloud(player, voice, HandlerTicker(handler), speech, SystemClock.elapsedRealtime()) {
+          Log.i(LOG_TAG, it)
+        }.also {
+          it.start()
+        }
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not start reading the pills aloud; ringing with sound only", e)
+      stopReadAloud()
+    }
+  }
+
+  private fun stopReadAloud() {
+    val reading = readAloud
+    val speaking = voice
+    readAloud = null
+    voice = null
+    try {
+      reading?.stop()
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not stop reading aloud", e)
+    }
+    try {
+      speaking?.shutdown()
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not shut down the voice", e)
+    }
   }
 
   private fun silence() {
+    stopReadAloud()
     ringing = false
     handler.removeCallbacks(autoSilence)
     player.stop()
@@ -391,9 +432,18 @@ class RingingService : Service() {
     RingingState.Ring(
       alarmId.orEmpty(),
       AlarmEngine.DEFAULT_NAME,
-      getString(R.string.default_alarm_tone),
+      defaultToneName(),
       System.currentTimeMillis(),
     )
+
+  /** The default tone's name in the app's language, or the phone's if that fails. */
+  private fun defaultToneName(): String =
+    try {
+      engine.defaultToneName()
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not name the default tone in the app's language", e)
+      getString(R.string.default_alarm_tone)
+    }
 
   /** Nothing on the ringing path may crash the process; on failure, end cleanly if silent. */
   private fun guarded(action: String?, alarmId: String?, block: () -> Unit) {
@@ -413,4 +463,15 @@ class RingingService : Service() {
 
   private fun Intent.dueAt(): Long? =
     if (hasExtra(EXTRA_DUE_AT)) getLongExtra(EXTRA_DUE_AT, 0L) else null
+}
+
+/** [Ticker] on [handler]'s thread, on the elapsed-time clock. */
+private class HandlerTicker(private val handler: Handler) : Ticker {
+  override fun now(): Long = SystemClock.elapsedRealtime()
+
+  override fun after(delayMs: Long, block: () -> Unit): () -> Unit {
+    val task = Runnable(block)
+    handler.postDelayed(task, delayMs)
+    return { handler.removeCallbacks(task) }
+  }
 }

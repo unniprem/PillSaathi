@@ -1,4 +1,6 @@
 import { Platform } from 'react-native';
+import { en } from '../i18n/en';
+import type { Strings } from '../i18n/en';
 import type { SettingTarget } from '../native/alarms';
 
 export type SetupStep = {
@@ -45,85 +47,45 @@ export function isAggressiveMaker(manufacturer: string): boolean {
   return makerKey(manufacturer) !== 'other';
 }
 
-const lockRecents = (): SetupStep => ({
-  key: 'lockRecents',
-  title: 'Lock PillSaathi in recent apps',
-  body: 'Open recent apps, then touch and hold the PillSaathi card and tap Lock.',
-});
+/** A step before its words: [copy] names them in `t.setup.steps`. */
+type StepDef = Omit<SetupStep, 'title' | 'body'> & { copy: StepCopy };
+type StepCopy = keyof Strings['setup']['steps'];
 
-const BATTERY_STEP: SetupStep = {
+const LOCK_RECENTS: StepDef = { key: 'lockRecents', copy: 'lockRecents' };
+
+const BATTERY_STEP: StepDef = {
   key: 'battery',
-  title: 'Allow unrestricted battery use',
-  body: "Battery saving can delay or stop alarms. On the next screen, switch to All apps, find PillSaathi and choose Don't optimise.",
+  copy: 'battery',
   setting: 'batteryOptimization',
   autoDone: 'batteryOptimization',
 };
 
-const STEPS: Record<MakerKey, SetupStep[]> = {
+const STEPS: Record<MakerKey, StepDef[]> = {
   xiaomi: [
-    {
-      key: 'autostart',
-      title: 'Turn on Autostart',
-      body: 'Find PillSaathi in the list and switch it on.',
-      setting: 'oemAutostart',
-    },
-    {
-      key: 'oemBattery',
-      title: 'Set Battery saver to No restrictions',
-      body: 'Tap PillSaathi, then choose No restrictions.',
-      setting: 'oemBattery',
-    },
-    lockRecents(),
+    { key: 'autostart', copy: 'xiaomiAutostart', setting: 'oemAutostart' },
+    { key: 'oemBattery', copy: 'xiaomiBattery', setting: 'oemBattery' },
+    LOCK_RECENTS,
   ],
   oppo: [
-    {
-      key: 'autostart',
-      title: 'Allow auto-launch',
-      body: 'Find PillSaathi in the list and switch it on.',
-      setting: 'oemAutostart',
-    },
-    {
-      key: 'oemBattery',
-      title: 'Allow background activity',
-      body: 'Open Battery for PillSaathi and switch on Allow background activity.',
-      setting: 'oemBattery',
-    },
-    lockRecents(),
+    { key: 'autostart', copy: 'oppoAutostart', setting: 'oemAutostart' },
+    { key: 'oemBattery', copy: 'oppoBattery', setting: 'oemBattery' },
+    LOCK_RECENTS,
   ],
   vivo: [
-    {
-      key: 'autostart',
-      title: 'Allow background start (Autostart)',
-      body: 'Find PillSaathi in the list and switch it on.',
-      setting: 'oemAutostart',
-    },
-    {
-      key: 'oemBattery',
-      title: 'Allow high background power use',
-      body: 'Open Battery for PillSaathi and allow high background power use.',
-      setting: 'oemBattery',
-    },
-    lockRecents(),
+    { key: 'autostart', copy: 'vivoAutostart', setting: 'oemAutostart' },
+    { key: 'oemBattery', copy: 'vivoBattery', setting: 'oemBattery' },
+    LOCK_RECENTS,
   ],
   samsung: [
-    {
-      key: 'samsungSleeping',
-      title: 'Remove PillSaathi from Sleeping and Deep sleeping apps',
-      body: 'Open Sleeping apps and Deep sleeping apps, and remove PillSaathi from both lists.',
-      setting: 'oemBattery',
-    },
+    { key: 'samsungSleeping', copy: 'samsungSleeping', setting: 'oemBattery' },
   ],
-  huawei: [
-    {
-      key: 'autostart',
-      title: 'Set App launch to Manage manually and allow all',
-      body: 'Tap PillSaathi, choose Manage manually, and switch on all three options.',
-      setting: 'oemAutostart',
-    },
-  ],
+  huawei: [{ key: 'autostart', copy: 'huaweiLaunch', setting: 'oemAutostart' }],
   other: [],
 };
 
-export function stepsFor(manufacturer: string): SetupStep[] {
-  return [...STEPS[makerKey(manufacturer)], BATTERY_STEP];
+/** The maker's steps, then the battery step, in [t]'s language. */
+export function stepsFor(manufacturer: string, t: Strings = en): SetupStep[] {
+  return [...STEPS[makerKey(manufacturer)], BATTERY_STEP].map(
+    ({ copy, ...step }) => ({ ...step, ...t.setup.steps[copy] }),
+  );
 }

@@ -1,3 +1,4 @@
+import { hi } from '../../src/i18n/hi';
 import { healthIssues } from '../../src/lib/health';
 import type { Health } from '../../src/native/alarms';
 
@@ -101,5 +102,18 @@ test('every issue has its exact message and action', () => {
       'setup',
       'Finish setting up so alarms ring reliably on this phone.',
     ],
+  ]);
+});
+
+test('says what is wrong in the app language', () => {
+  const issues = healthIssues(
+    { ...ok, notificationsEnabled: false },
+    { seen: true, doneSteps: [] },
+    'Xiaomi',
+    hi,
+  );
+  expect(issues.map(i => i.message)).toEqual([
+    hi.health.notifications,
+    hi.health.setup,
   ]);
 });

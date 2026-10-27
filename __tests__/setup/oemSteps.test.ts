@@ -3,6 +3,7 @@ import {
   makerKey,
   stepsFor,
 } from '../../src/setup/oemSteps';
+import { hi } from '../../src/i18n/hi';
 
 test('maps makers to their skin family', () => {
   expect(makerKey('Xiaomi')).toBe('xiaomi');
@@ -66,4 +67,21 @@ test('settings per step follow the table', () => {
   expect(byKey('huawei').autostart).toBe('oemAutostart');
   expect(stepsFor('oppo')[0].title).toBe('Allow auto-launch');
   expect(stepsFor('vivo')[1].title).toBe('Allow high background power use');
+});
+
+test('gives each step in the app language', () => {
+  const steps = stepsFor('Xiaomi', hi);
+  expect(steps.map(s => s.title)).toEqual([
+    hi.setup.steps.xiaomiAutostart.title,
+    hi.setup.steps.xiaomiBattery.title,
+    hi.setup.steps.lockRecents.title,
+    hi.setup.steps.battery.title,
+  ]);
+  expect(stepsFor('oppo', hi)[0].body).toBe(hi.setup.steps.oppoAutostart.body);
+  expect(stepsFor('huawei', hi)[0].title).toBe(
+    hi.setup.steps.huaweiLaunch.title,
+  );
+  expect(stepsFor('samsung', hi)[0].title).toBe(
+    hi.setup.steps.samsungSleeping.title,
+  );
 });

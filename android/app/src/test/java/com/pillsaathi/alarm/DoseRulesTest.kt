@@ -96,7 +96,73 @@ class DoseRulesTest {
     )
     table.forEach { (form, amount, text) ->
       assertEquals("$form $amount", text, DoseRules.amountText(form, amount))
+      assertEquals("$form $amount", text, DoseRules.amountText(form, amount, AppLanguage.EN))
     }
+  }
+
+  @Test fun amountText_malayalam() {
+    val table = listOf(
+      Triple(PillForm.TABLET, 0.5, "½ ഗുളിക"),
+      Triple(PillForm.TABLET, 1.0, "1 ഗുളിക"),
+      Triple(PillForm.TABLET, 1.5, "1½ ഗുളിക"),
+      Triple(PillForm.TABLET, 2.0, "2 ഗുളിക"),
+      Triple(PillForm.CAPSULE, 1.0, "1 ക്യാപ്സ്യൂൾ"),
+      Triple(PillForm.CAPSULE, 2.0, "2 ക്യാപ്സ്യൂൾ"),
+      Triple(PillForm.SYRUP, 7.5, "7.5 ml"),
+      Triple(PillForm.SYRUP, 10.0, "10 ml"),
+      Triple(PillForm.DROPS, 1.0, "1 തുള്ളി"),
+      Triple(PillForm.DROPS, 2.0, "2 തുള്ളി"),
+    )
+    table.forEach { (form, amount, text) ->
+      assertEquals("$form $amount", text, DoseRules.amountText(form, amount, AppLanguage.ML))
+    }
+  }
+
+  @Test fun amountText_hindi() {
+    val table = listOf(
+      Triple(PillForm.TABLET, 0.5, "½ गोली"),
+      Triple(PillForm.TABLET, 1.0, "1 गोली"),
+      Triple(PillForm.TABLET, 1.5, "1½ गोली"),
+      Triple(PillForm.TABLET, 2.0, "2 गोलियाँ"),
+      Triple(PillForm.CAPSULE, 1.0, "1 कैप्सूल"),
+      Triple(PillForm.CAPSULE, 2.0, "2 कैप्सूल"),
+      Triple(PillForm.SYRUP, 7.5, "7.5 ml"),
+      Triple(PillForm.SYRUP, 10.0, "10 ml"),
+      Triple(PillForm.DROPS, 1.0, "1 बूंद"),
+      Triple(PillForm.DROPS, 2.0, "2 बूंदें"),
+    )
+    table.forEach { (form, amount, text) ->
+      assertEquals("$form $amount", text, DoseRules.amountText(form, amount, AppLanguage.HI))
+    }
+  }
+
+  // Shown wherever a pill has no photo.
+  @Test fun pillForm_icons() {
+    assertEquals("⚪", PillForm.TABLET.icon)
+    assertEquals("💊", PillForm.CAPSULE.icon)
+    assertEquals("🧴", PillForm.SYRUP.icon)
+    assertEquals("💧", PillForm.DROPS.icon)
+  }
+
+  @Test fun spokenAmount_halves() {
+    assertEquals("half a tablet", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.EN))
+    assertEquals("1 and a half tablets", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.EN))
+    assertEquals("ഒന്നര ഗുളിക", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.ML))
+    assertEquals("അര ഗുളിക", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.ML))
+    assertEquals("ഒമ്പതര ഗുളിക", DoseRules.spokenAmount(PillForm.TABLET, 9.5, AppLanguage.ML))
+    assertEquals("ढाई गोलियाँ", DoseRules.spokenAmount(PillForm.TABLET, 2.5, AppLanguage.HI))
+    assertEquals("डेढ़ गोली", DoseRules.spokenAmount(PillForm.TABLET, 1.5, AppLanguage.HI))
+    assertEquals("आधी गोली", DoseRules.spokenAmount(PillForm.TABLET, 0.5, AppLanguage.HI))
+    assertEquals("साढ़े नौ गोलियाँ", DoseRules.spokenAmount(PillForm.TABLET, 9.5, AppLanguage.HI))
+  }
+
+  @Test fun spokenAmount_syrupAndWhole() {
+    assertEquals("7.5 millilitres", DoseRules.spokenAmount(PillForm.SYRUP, 7.5, AppLanguage.EN))
+    assertEquals("5 मिलीलीटर", DoseRules.spokenAmount(PillForm.SYRUP, 5.0, AppLanguage.HI))
+    assertEquals("10 മില്ലിലിറ്റർ", DoseRules.spokenAmount(PillForm.SYRUP, 10.0, AppLanguage.ML))
+    assertEquals("2 capsules", DoseRules.spokenAmount(PillForm.CAPSULE, 2.0, AppLanguage.EN))
+    assertEquals("2 tablets", DoseRules.spokenAmount(PillForm.TABLET, 2.0, AppLanguage.EN))
+    assertEquals("2 തുള്ളി", DoseRules.spokenAmount(PillForm.DROPS, 2.0, AppLanguage.ML))
   }
 
   // Courses
@@ -423,6 +489,18 @@ class DoseRulesTest {
       card.pills[0],
     )
     assertTrue(card.pills[1].exists)
+  }
+
+  @Test fun todayCards_photoFromLivePill_nullWhenDeleted() {
+    val a = pill("a", listOf(t(8, 0)), name = "A").copy(photo = "a-new.jpg")
+    val b = pill("b", listOf(t(8, 0)), name = "B").copy(photo = "b.jpg")
+    val gone = pill("gone", listOf(t(8, 0)), name = "Gone").copy(photo = "gone.jpg")
+    // The record was made with a, b and a pill deleted since; a's photo has changed since too.
+    val rec = record(8, 0, DoseOutcome.TAKEN, oct(26, 8, 1), listOf(a.copy(photo = "a-old.jpg"), b, gone))
+    val recorded = DoseRules.todayCards(listOf(card("c8", 8, 0)), listOf(a, b), listOf(rec), emptySet(), NOW, IST)
+    assertEquals(listOf("a-new.jpg", "b.jpg", null), recorded.single().pills.map { it.photo })
+    val live = DoseRules.todayCards(listOf(card("c8", 8, 0)), listOf(a, b), emptyList(), emptySet(), NOW, IST)
+    assertEquals(listOf("a-new.jpg", "b.jpg"), live.single().pills.map { it.photo })
   }
 
   @Test fun todayCards_cardGoneButRecordToday_stillShown() {

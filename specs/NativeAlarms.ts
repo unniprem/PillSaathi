@@ -11,6 +11,8 @@ export type NativePill = {
   times: DoseTime[]; // sorted
   startDate: string; // YYYY-MM-DD
   days: number | null; // null = no end
+  photo: string | null; // the photo's file name
+  photoUri: string | null; // file:// URI to show it
 };
 
 export type PillInput = {
@@ -21,6 +23,7 @@ export type PillInput = {
   times: DoseTime[];
   startsTomorrow: boolean; // new pills only; an edit keeps its start date
   days: number | null;
+  photo: string | null; // a name from pickPhoto, or null for none
 };
 
 export type NativeTodayPill = {
@@ -32,6 +35,7 @@ export type NativeTodayPill = {
   days: number | null;
   exists: boolean;
   fromTomorrow: boolean; // added to the card after today's dose was recorded
+  photoUri: string | null; // the pill's photo now; null when it has none or was deleted
 };
 
 export type NativeTodayCard = {
@@ -59,6 +63,13 @@ export type Health = {
 export type SetupState = { seen: boolean; doneSteps: string[] };
 export type MissedAlarm = { id: string; name: string; dueAt: number };
 export type PickedTime = { hour: number; minute: number };
+export type PickedPhoto = { name: string; uri: string };
+export type LanguageOption = { code: string; label: string; draft: boolean };
+export type AppSettings = {
+  language: string; // the one the app speaks now
+  readAloud: boolean;
+  languages: LanguageOption[]; // the ones to offer, in order
+};
 
 export interface Spec extends TurboModule {
   listPills(): Promise<NativePill[]>; // in the order they were added
@@ -75,6 +86,14 @@ export interface Spec extends TurboModule {
   markSetupSeen(): Promise<void>;
   pickTime(hour: number, minute: number): Promise<PickedTime | null>; // null = cancelled
   is24HourFormat(): boolean;
+  // camera | gallery; null = cancelled. PHOTO_ERROR, NO_ACTIVITY
+  pickPhoto(source: string): Promise<PickedPhoto | null>;
+  getSettings(): Promise<AppSettings>;
+  currentLanguage(): string; // never throws; read without waiting on the store
+  setLanguage(code: string): Promise<void>; // INVALID_LANGUAGE
+  setReadAloud(on: boolean): Promise<void>;
+  // spoken | english (no voice for the app's language) | none (no voice at all)
+  tryReadAloud(): Promise<string>;
 }
 
 export default TurboModuleRegistry.get<Spec>('NativeAlarms');

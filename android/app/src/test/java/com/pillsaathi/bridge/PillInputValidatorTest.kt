@@ -96,4 +96,18 @@ class PillInputValidatorTest {
   }
 
   @Test fun rejectsNonStringId() = assertRejected("id" to 5.0)
+
+  @Test fun photo_nullOrUuidName_valid() {
+    val name = "3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg"
+    assertEquals(name, PillInputValidator.validate(input("photo" to name)).photo)
+    assertNull(PillInputValidator.validate(input("photo" to null)).photo)
+    assertNull(PillInputValidator.validate(input()).photo) // No key: an older app.
+  }
+
+  @Test fun photo_path_invalid() {
+    assertRejected("photo" to "../../store/pills.json")
+    assertRejected("photo" to "/data/x.jpg")
+    assertRejected("photo" to "a.jpg")
+    assertRejected("photo" to 5.0)
+  }
 }

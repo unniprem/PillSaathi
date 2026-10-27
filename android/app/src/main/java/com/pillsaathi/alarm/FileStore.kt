@@ -51,6 +51,16 @@ class FileStore(
     if (file.exists()) file.readText() else null
   }
 
+  /**
+   * The contents of [name] as they are now, or null if there is no such file, without taking the
+   * lock: a reader that must never wait. Safe because [write] replaces files by renaming, so a
+   * reader sees the old file or the new one, never half of one.
+   */
+  fun peek(name: String): String? {
+    val file = File(dir, name)
+    return if (file.exists()) file.readText() else null
+  }
+
   /** Replaces [name] with [content] atomically, or deletes it when [content] is null. */
   fun write(name: String, content: String?) {
     locked {
