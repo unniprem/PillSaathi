@@ -4,6 +4,66 @@ Session log, newest first.
 
 ---
 
+## 2026-10-27 18:08 IST — Session: History and refills build
+
+### Summary
+
+The user asked to execute the latest plan (`docs/superpowers/plans/2026-10-27-history-and-refills.md`). It ran inline, task by task, with TDD, a ledger and one fresh whole-branch review at the end, as for stage 3.
+
+PillSaathi now has:
+
+- **History:** a month calendar coloured by how each day's doses went, with the month's share taken, and a page for each day where a missed or skipped dose can be marked taken.
+- **A share report:** plain text of the month on screen, for WhatsApp, SMS or email.
+- **Tablets left (optional):** each Taken lowers it, Today shows a banner when about 5 days are left, and one "Refill reminders" notification is posted per level.
+- **Every missed dose in a gap is recorded**, so History never looks better than what happened.
+
+Every emulator case in the plan passed. The three device checks are pending, because the Redmi wasn't connected. The review found no Critical issues and one Important. A Minor about future-dated records was re-graded Important. Both are fixed with tests. PR #7 is open.
+
+### Changes Made
+
+| Commit    | Type | Description                                                         |
+| --------- | ---- | ------------------------------------------------------------------- |
+| `493b041` | feat | Record every dose missed while the phone was off or the app stopped |
+| `7ffcfa5` | feat | Store tablet counts on pills and mark doses taken later as marked   |
+| `2a692fa` | feat | Lower tablet counts on Taken and warn once before they run out      |
+| `9c4ae99` | feat | Read dose history for a date range from native (`getHistory`)       |
+| `2bf4ff6` | feat | Pure calendar rules for History (`src/lib/history.ts`)              |
+| `ae82f35` | feat | Plain-text dose report for a month (`src/lib/report.ts`)            |
+| `b6585c0` | feat | History calendar with a shareable monthly report                    |
+| `b4686ac` | feat | One day's doses in History, with Mark as taken                      |
+| `dcf247b` | feat | Tablets left on the pill page and a running-low banner on Today     |
+| `30b3ce2` | fix  | Read History again on Share and when the app comes back (review)    |
+| `00db7ca` | fix  | Drop missed doses a clock moved back left in the future (review)    |
+| `b407596` | docs | README and device matrix for History and refills                    |
+
+### Key Decisions
+
+- **Counts never touch the alarm.** The dose is written first. The count is lowered in its own best-effort step, and only when that write made the dose taken, so Mark as taken followed by the notification's Taken lowers it once. A refill notice is posted after the lock, once the ring has ended. A pill at 0 still rings, as checked on the emulator.
+- **A pill page left open can't put an old count back.** It sends the count as changed only once it is touched. On the native side, `RefillRules.savedCount` keeps the stored count otherwise.
+- **History asks for the whole month.** It drops records after native's "today", re-reads on Share, and re-reads when the app comes back. A report can never leave out a dose recorded since the screen was opened.
+- **Future-dated missed doses are dropped by date, not by time.** A clock moved back can leave them. Dropping by date means a skip a few seconds before its time is never lost.
+- **The banner opens the pill page at the count, above the keyboard.** The edge-to-edge window doesn't shrink for the keyboard, so the page makes room below its content and scrolls the count up, a frame later. Android ignored a scroll made during the resize.
+- **Plan defects were settled for the spec, not guessed.**
+  - The emulator step for the LOW notice used 6 tablets, not 11: at one dose a day, 10 left is more than 5 days.
+  - The leap-February row and the report example's 46-of-50 were corrected to what's true.
+
+### Issues Encountered
+
+- `DEBUG_ADD_PILL` can only start a pill today. To fill a month, the clock was moved back to 25 Sep, two pills were added, and the gap reconcile recorded the misses. `DEBUG_ADD_DOSE` then turned most of them into taken or skipped doses.
+- One History test unmounted and re-rendered inside the test, which left later renders empty (the same trap as stage 3). It became `it.each`.
+- A test mock returned a whole month to the day page, which native never does. That caused duplicate-key warnings until the mock honoured its range.
+- Android's emoji font draws 📅 as a page reading "July 17". It was kept as the plan's icon and flagged in the PR.
+- Deferred minors from the review, left for the user to decide:
+  - "999.5" passes the page's check but native refuses it.
+  - Mark as taken's refill notice isn't wrapped in a try/catch.
+  - +10/+15/+30 add to the count as loaded.
+  - A refill notice can sound just as a queued ring starts.
+  - Share has no disabled look while loading.
+  - One log line wrongly says reconcile will repair a lost count.
+- Pending on the Redmi Note 10: Taken with the app swiped away (MIUI), sharing into WhatsApp in English and Malayalam, and the calendar at the phone's text size.
+
+---
+
 ## 2026-10-26 21:57 IST — Session: Easy for Amma build
 
 ### Summary
