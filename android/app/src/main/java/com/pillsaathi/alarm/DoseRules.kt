@@ -2,7 +2,9 @@ package com.pillsaathi.alarm
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 /**
  * Pure rules for pills, their time cards and dose records. A time card is an [Alarm] for one hour
@@ -190,6 +192,30 @@ object DoseRules {
       at,
       due.map { DosePill(it.id, it.name, it.form, it.amount) },
     )
+  }
+
+  /**
+   * A missed record (at [now]) for every time [alarm] was due from [firstDue] through [now], oldest
+   * first: [firstDue] itself, then the card's time on each later day in [Alarm.days] (empty means
+   * any day). A day with no pill due gets none, so the time between two courses stays empty. No
+   * record is older than [RECORD_KEEP_DAYS], so a gap of years still looks at only a year of days.
+   */
+  fun gapRecords(alarm: Alarm, pills: List<Pill>, firstDue: Long, now: Long, zone: ZoneId): List<DoseRecord> {
+    val today = dateOf(now, zone)
+    val first = dateOf(firstDue, zone)
+    var date = maxOf(first, today.minusDays(RECORD_KEEP_DAYS))
+    val records = mutableListOf<DoseRecord>()
+    repeat(RECORD_KEEP_DAYS.toInt() + 1) {
+      if (date.isAfter(today)) return records
+      val dueAt =
+        if (date == first) firstDue
+        else ZonedDateTime.of(date, LocalTime.of(alarm.hour, alarm.minute), zone).toInstant().toEpochMilli()
+      if (dueAt <= now && (alarm.days.isEmpty() || date.dayOfWeek.value in alarm.days)) {
+        doseRecord(alarm, pills, dueAt, DoseOutcome.MISSED, now, zone)?.let(records::add)
+      }
+      date = date.plusDays(1)
+    }
+    return records
   }
 
   /** The record of the dose at [date] [hour]:[minute], or null. */

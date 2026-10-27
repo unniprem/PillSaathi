@@ -66,6 +66,16 @@ class DebugAlarmReceiver : BroadcastReceiver() {
         val pills = engine.pills()
         Log.i(LOG_TAG, "${pills.size} pill(s)")
         pills.forEach { Log.i(LOG_TAG, it.toString()) }
+        val doses = engine.store.locked { engine.store.loadDoses() }
+        Log.i(LOG_TAG, "${doses.size} dose record(s)")
+        doses.forEach {
+          Log.i(
+            LOG_TAG,
+            "Dose %s %02d:%02d %s at=%s pills=%s".format(
+              it.date, it.hour, it.minute, it.outcome, local(it.at), it.pills.map { p -> p.name },
+            ),
+          )
+        }
         val today = engine.today()
         Log.i(LOG_TAG, "Today ${today.date}: ${today.cards.size} card(s)")
         today.cards.forEach {

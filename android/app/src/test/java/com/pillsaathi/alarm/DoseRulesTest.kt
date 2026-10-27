@@ -371,6 +371,55 @@ class DoseRulesTest {
     assertNull(DoseRules.doseRecord(c, emptyList(), oct(26, 8, 0), DoseOutcome.MISSED, oct(26, 8, 12), IST))
   }
 
+  @Test fun gapRecords_everyDueTime() {
+    val a = pill("A", listOf(t(8, 0)), start = date(20))
+    val r = DoseRules.gapRecords(card("c8", 8, 0), listOf(a), oct(23, 8, 0), NOW, IST)
+    assertEquals(listOf(date(23), date(24), date(25), date(26)), r.map { it.date })
+    r.forEach {
+      assertEquals(DoseOutcome.MISSED, it.outcome)
+      assertEquals(NOW, it.at)
+      assertEquals(t(8, 0), t(it.hour, it.minute))
+    }
+  }
+
+  @Test fun gapRecords_skipsDaysWithNothingDue() {
+    val a = pill("A", listOf(t(8, 0)), start = date(22), days = 2, createdAt = 1L)
+    val b = pill("B", listOf(t(8, 0)), start = date(25), createdAt = 2L)
+    val r = DoseRules.gapRecords(card("c8", 8, 0), listOf(a, b), oct(23, 8, 0), NOW, IST)
+    assertEquals(listOf(date(23), date(25), date(26)), r.map { it.date })
+    assertEquals(listOf(listOf("A"), listOf("B"), listOf("B")), r.map { rec -> rec.pills.map { it.pillId } })
+  }
+
+  @Test fun gapRecords_todayNotYetDue() {
+    val a = pill("A", listOf(t(8, 0)), start = date(20))
+    val r = DoseRules.gapRecords(card("c8", 8, 0), listOf(a), oct(23, 8, 0), oct(26, 7, 0), IST)
+    assertEquals(listOf(date(23), date(24), date(25)), r.map { it.date })
+  }
+
+  @Test fun gapRecords_keepsAYear() {
+    val a = pill("A", listOf(t(8, 0)), start = TODAY.minusDays(500))
+    val firstDue = TODAY.minusDays(400).atTime(8, 0).atZone(IST).toInstant().toEpochMilli()
+    val r = DoseRules.gapRecords(card("c8", 8, 0), listOf(a), firstDue, NOW, IST)
+    assertEquals(TODAY.minusDays(365), r.first().date)
+    assertEquals(TODAY, r.last().date)
+    assertEquals(366, r.size)
+  }
+
+  @Test fun gapRecords_snapshotsPillsDueEachDay() {
+    val a = pill("A", listOf(t(8, 0)), start = date(20), createdAt = 1L)
+    val b = pill("B", listOf(t(8, 0)), start = date(24), days = 2, createdAt = 2L, form = PillForm.SYRUP, amount = 5.0)
+    val r = DoseRules.gapRecords(card("c8", 8, 0), listOf(b, a), oct(23, 8, 0), NOW, IST)
+    assertEquals(
+      listOf(
+        listOf(dosePill(a)),
+        listOf(dosePill(a), DosePill("B", "B", PillForm.SYRUP, 5.0)),
+        listOf(dosePill(a), DosePill("B", "B", PillForm.SYRUP, 5.0)),
+        listOf(dosePill(a)),
+      ),
+      r.map { it.pills },
+    )
+  }
+
   @Test fun withRecord_upsertsBySameDateAndTime() {
     val a = pill("A", listOf(t(8, 0), t(21, 0)))
     val missed8 = record(8, 0, DoseOutcome.MISSED, oct(26, 8, 12), listOf(a))

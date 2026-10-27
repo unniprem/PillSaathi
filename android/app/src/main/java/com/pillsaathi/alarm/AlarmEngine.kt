@@ -154,9 +154,10 @@ class AlarmEngine private constructor(context: Context) {
   /**
    * Repairs the schedule ([AlarmRules.reconcile]), reschedules every card, records each missed dose
    * and runs housekeeping. Alarms that the `:ringing` process is ringing or has queued, as its fresh
-   * marker says, are left alone: their time has passed, but they are not missed. A missed card with
-   * no pill due at that occurrence is dropped: nothing was missed. The rest are named after the
-   * pills they covered.
+   * marker says, are left alone: their time has passed, but they are not missed. A missed card
+   * records a dose for every time it was due since ([DoseRules.gapRecords]), so days the phone was
+   * off count too. It is still reported once, named after the pills of its first dose that stays
+   * missed, and dropped when none does (nothing was due, or all were taken).
    */
   fun reconcile(trigger: ReconcileTrigger): List<MissedAlarm> {
     val (missed, removed) = store.locked {
@@ -175,14 +176,15 @@ class AlarmEngine private constructor(context: Context) {
         var doses = store.loadDoses()
         result.missed.forEach { m ->
           val alarm = result.alarms.first { it.id == m.id }
-          val record = DoseRules.doseRecord(alarm, pills, m.dueAt, DoseOutcome.MISSED, now, zone())
-          if (record == null) {
+          val records = DoseRules.gapRecords(alarm, pills, m.dueAt, now, zone())
+          if (records.isEmpty()) {
             Log.i(LOG_TAG, "Missed ${m.id}: nothing was due, not recorded")
             return@forEach
           }
-          doses = DoseRules.withRecord(doses, record, dateOf(now))
+          doses = records.fold(doses) { acc, r -> DoseRules.withRecord(acc, r, dateOf(now)) }
+          Log.i(LOG_TAG, "Missed ${m.id}: recorded ${records.size} missed doses")
           // A dose already taken stays taken, and isn't reported missed.
-          if (stillMissed(doses, record)) missedDoses.add(m.copy(name = namesOf(record)))
+          records.firstOrNull { stillMissed(doses, it) }?.let { missedDoses.add(m.copy(name = namesOf(it))) }
         }
         if (result.missed.isNotEmpty()) store.saveDoses(doses)
       }
@@ -196,7 +198,8 @@ class AlarmEngine private constructor(context: Context) {
   /**
    * Handles an AlarmManager delivery for [id]. Returns the alarm to ring, or null when it must not
    * ring: it is gone, the delivery is stale ([FireDecision.STALE]), or it came too late and is
-   * reported as missed instead ([FireDecision.MISSED]).
+   * reported as missed instead ([FireDecision.MISSED]). A late fire records every time the card
+   * was due since its occurrence, as [reconcile] does, and is reported once.
    */
   fun onFired(id: String): Alarm? {
     val (ring, missed) = store.locked<Pair<Alarm?, MissedAlarm?>> {
@@ -219,11 +222,9 @@ class AlarmEngine private constructor(context: Context) {
           bestEffort("the missed fire of $id") { store.saveAlarms(alarms.replace(ended)) }
           scheduler.sync(ended)
           val occurrence = alarm.nextTriggerAt ?: AlarmRules.dueAt(alarm)
-          val record = occurrence?.let { recordDose(alarm, it, DoseOutcome.MISSED, now) }
+          val record = occurrence?.let { recordMissedGap(alarm, it, now) }
           housekeeping(now)
-          null to record?.takeIf { it.outcome == DoseOutcome.MISSED }?.let {
-            MissedAlarm(alarm.id, namesOf(it), occurrence)
-          }
+          null to record?.let { MissedAlarm(alarm.id, namesOf(it), occurrence) }
         }
         FireDecision.RING -> {
           if (!shouldRing(alarm, now)) {
@@ -458,6 +459,25 @@ class AlarmEngine private constructor(context: Context) {
     }
     if (record == null) Log.i(LOG_TAG, "No $outcome dose recorded for ${alarm.id}: nothing was due")
     return record
+  }
+
+  /**
+   * Records every dose [alarm] missed from [firstDue] through [now] ([DoseRules.gapRecords]) on the
+   * ringing path. Returns the first of them that is still missed (one already taken stays taken),
+   * or null when there is none or the write failed.
+   */
+  private fun recordMissedGap(alarm: Alarm, firstDue: Long, now: Long): DoseRecord? {
+    var missed: DoseRecord? = null
+    bestEffort("the missed doses of ${alarm.id}") {
+      val records = DoseRules.gapRecords(alarm, store.loadPills(), firstDue, now, zone())
+      if (records.isNotEmpty()) {
+        val doses = records.fold(store.loadDoses()) { acc, r -> DoseRules.withRecord(acc, r, dateOf(now)) }
+        store.saveDoses(doses)
+        missed = records.firstOrNull { stillMissed(doses, it) }
+      }
+    }
+    if (missed == null) Log.i(LOG_TAG, "No missed dose to report for ${alarm.id}")
+    return missed
   }
 
   /**
