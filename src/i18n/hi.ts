@@ -245,6 +245,23 @@ export const hi: Strings = {
       'आपका फ़ोन ज़ोर से नहीं पढ़ सकता। फ़ोन की सेटिंग्स में एक text-to-speech आवाज़ जोड़ें।',
     openVoiceSettings: 'आवाज़ सेटिंग्स खोलें',
   },
+  history: {
+    title: 'इतिहास',
+    share: 'शेयर करें',
+    previousMonth: 'पिछला महीना',
+    nextMonth: 'अगला महीना',
+    month: (month: string, year: number) => `${month} ${year}`,
+    percentTaken: (percent: number) => `${percent}% ली गईं`,
+    doseCount: (taken: number, total: number) =>
+      `${total} में से ${taken} खुराकें`,
+    noDoses: 'कोई खुराक दर्ज नहीं',
+    allTaken: 'सब ली गईं',
+    someNotTaken: 'कुछ नहीं ली गईं',
+    noneTaken: 'कोई नहीं ली गई',
+    dayLabel: (day: string, state: string) => `${day}: ${state}`,
+    shareFailed: 'रिपोर्ट शेयर नहीं हो सकी',
+    loadFailed: 'इतिहास नहीं दिखा सके।',
+  },
   report: {
     title: (range: string) => `PillSaathi · ${range}`,
     taken: (taken: number, total: number, percent: number) =>

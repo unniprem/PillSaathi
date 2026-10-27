@@ -240,6 +240,22 @@ export const en = {
       "Your phone can't read aloud. Add a text-to-speech voice in your phone's settings.",
     openVoiceSettings: 'Open voice settings',
   },
+  history: {
+    title: 'History',
+    share: 'Share',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    month: (month: string, year: number) => `${month} ${year}`,
+    percentTaken: (percent: number) => `${percent}% taken`,
+    doseCount: (taken: number, total: number) => `${taken} of ${total} doses`,
+    noDoses: 'No doses recorded',
+    allTaken: 'All taken',
+    someNotTaken: 'Some not taken',
+    noneTaken: 'None taken',
+    dayLabel: (day: string, state: string) => `${day}: ${state}`,
+    shareFailed: 'Could not share the report',
+    loadFailed: "Couldn't load the history.",
+  },
   report: {
     title: (range: string) => `PillSaathi · ${range}`,
     taken: (taken: number, total: number, percent: number) =>

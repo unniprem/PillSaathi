@@ -249,6 +249,23 @@ export const ml: Strings = {
       'നിങ്ങളുടെ ഫോണിന് ഉറക്കെ വായിക്കാനാവില്ല. ഫോണിന്റെ ക്രമീകരണങ്ങളിൽ ഒരു text-to-speech ശബ്ദം ചേർക്കുക.',
     openVoiceSettings: 'ശബ്ദ ക്രമീകരണങ്ങൾ തുറക്കുക',
   },
+  history: {
+    title: 'ചരിത്രം',
+    share: 'പങ്കിടുക',
+    previousMonth: 'മുൻ മാസം',
+    nextMonth: 'അടുത്ത മാസം',
+    month: (month: string, year: number) => `${month} ${year}`,
+    percentTaken: (percent: number) => `${percent}% കഴിച്ചു`,
+    doseCount: (taken: number, total: number) =>
+      `${total} ഡോസിൽ ${taken} എണ്ണം`,
+    noDoses: 'ഡോസുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല',
+    allTaken: 'എല്ലാം കഴിച്ചു',
+    someNotTaken: 'ചിലത് കഴിച്ചില്ല',
+    noneTaken: 'ഒന്നും കഴിച്ചില്ല',
+    dayLabel: (day: string, state: string) => `${day}: ${state}`,
+    shareFailed: 'റിപ്പോർട്ട് പങ്കിടാനായില്ല',
+    loadFailed: 'ചരിത്രം കാണിക്കാനായില്ല.',
+  },
   report: {
     title: (range: string) => `PillSaathi · ${range}`,
     taken: (taken: number, total: number, percent: number) =>

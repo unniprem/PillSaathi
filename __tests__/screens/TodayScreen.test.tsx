@@ -175,6 +175,14 @@ test('opens Settings from the gear', async () => {
   );
 });
 
+test('opens History from the calendar icon', async () => {
+  await renderApp();
+  await fireEvent.press(await screen.findByLabelText('History'));
+  await waitFor(() =>
+    expect(headerTitles()).toEqual(['Today · Mon 26 Oct', 'History']),
+  );
+});
+
 test('marks a missed dose taken after confirming', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await renderApp();

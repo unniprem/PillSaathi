@@ -7,6 +7,9 @@ import SoundPickerScreen from '../screens/SoundPickerScreen';
 import RecordScreen from '../screens/RecordScreen';
 import SetupScreen from '../screens/SetupScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import HistoryScreen from '../screens/HistoryScreen';
+import HistoryDayScreen from '../screens/HistoryDayScreen';
+import { formatDay } from '../lib/course';
 
 export type RootStackParamList = {
   Today: undefined;
@@ -16,6 +19,8 @@ export type RootStackParamList = {
   Record: { alarmId: string };
   Setup: undefined;
   Settings: undefined;
+  History: undefined;
+  HistoryDay: { date: string }; // YYYY-MM-DD
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -72,6 +77,17 @@ function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
         name="Settings"
         component={SettingsScreen}
         options={{ title: t.settings.title }}
+      />
+      <Stack.Screen
+        name="History"
+        component={HistoryScreen}
+        options={{ title: t.history.title }}
+      />
+      <Stack.Screen
+        name="HistoryDay"
+        component={HistoryDayScreen}
+        options={({ route }) => ({ title: formatDay(route.params.date, t) })}
+        initialParams={paramsFor('HistoryDay')}
       />
     </Stack.Navigator>
   );
