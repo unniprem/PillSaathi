@@ -218,6 +218,14 @@ object DoseRules {
     return records
   }
 
+  /**
+   * [records] without those dated after [today] that weren't taken. Only a clock moved back (a
+   * wrong date put right) leaves them, and a missed one would show a dose as missed before it is
+   * due. A taken one stays, as a taken dose always does.
+   */
+  fun withoutFuture(records: List<DoseRecord>, today: LocalDate): List<DoseRecord> =
+    records.filterNot { it.date.isAfter(today) && it.outcome != DoseOutcome.TAKEN }
+
   /** The records from [from] through [to], by date and then time. */
   fun dosesBetween(records: List<DoseRecord>, from: LocalDate, to: LocalDate): List<DoseRecord> =
     records

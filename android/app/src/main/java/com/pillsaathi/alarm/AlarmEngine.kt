@@ -186,7 +186,8 @@ class AlarmEngine private constructor(context: Context) {
    * marker says, are left alone: their time has passed, but they are not missed. A missed card
    * records a dose for every time it was due since ([DoseRules.gapRecords]), so days the phone was
    * off count too. It is still reported once, named after the pills of its first dose that stays
-   * missed, and dropped when none does (nothing was due, or all were taken).
+   * missed, and dropped when none does (nothing was due, or all were taken). Records a clock moved
+   * back left in the future go ([DoseRules.withoutFuture]).
    */
   fun reconcile(trigger: ReconcileTrigger): List<MissedAlarm> {
     val (missed, removed) = store.locked {
@@ -202,7 +203,8 @@ class AlarmEngine private constructor(context: Context) {
       val missedDoses = mutableListOf<MissedAlarm>()
       bestEffort("the missed doses") {
         val pills = store.loadPills()
-        var doses = store.loadDoses()
+        val stored = store.loadDoses()
+        var doses = DoseRules.withoutFuture(stored, dateOf(now))
         result.missed.forEach { m ->
           val alarm = result.alarms.first { it.id == m.id }
           val records = DoseRules.gapRecords(alarm, pills, m.dueAt, now, zone())
@@ -215,7 +217,7 @@ class AlarmEngine private constructor(context: Context) {
           // A dose already taken stays taken, and isn't reported missed.
           records.firstOrNull { stillMissed(doses, it) }?.let { missedDoses.add(m.copy(name = namesOf(it))) }
         }
-        if (result.missed.isNotEmpty()) store.saveDoses(doses)
+        if (doses != stored) store.saveDoses(doses)
       }
       missedDoses to housekeeping(now)
     }

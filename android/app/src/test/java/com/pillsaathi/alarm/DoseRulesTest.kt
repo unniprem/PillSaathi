@@ -420,6 +420,21 @@ class DoseRulesTest {
     )
   }
 
+  // Only a clock moved back leaves records dated after today. A missed one would show a dose as
+  // missed before it is due; a taken one stays, as a taken dose always does.
+  @Test fun withoutFuture_dropsUntakenRecordsAfterToday() {
+    val a = pill("A", listOf(t(8, 0), t(21, 0)))
+    val yesterday = record(8, 0, DoseOutcome.SKIPPED, oct(25, 8, 5), listOf(a), date = date(25))
+    val tonight = record(21, 0, DoseOutcome.MISSED, oct(28, 17, 3), listOf(a))
+    val tomorrow = record(8, 0, DoseOutcome.MISSED, oct(28, 17, 3), listOf(a), date = date(27))
+    val tomorrowTaken = record(21, 0, DoseOutcome.TAKEN, oct(27, 21, 1), listOf(a), date = date(27))
+    val later = record(8, 0, DoseOutcome.SKIPPED, oct(28, 8, 1), listOf(a), date = date(28))
+    assertEquals(
+      listOf(yesterday, tonight, tomorrowTaken),
+      DoseRules.withoutFuture(listOf(yesterday, tonight, tomorrow, tomorrowTaken, later), TODAY),
+    )
+  }
+
   @Test fun dosesBetween_inclusiveAndSorted() {
     val a = pill("A", listOf(t(8, 0), t(21, 0)))
     val on5 = record(8, 0, DoseOutcome.TAKEN, 0L, listOf(a), date = date(5))
