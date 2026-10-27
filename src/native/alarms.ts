@@ -5,6 +5,9 @@ import type {
   Health,
   LanguageOption,
   MissedAlarm,
+  NativeHistory,
+  NativeHistoryDose,
+  NativeHistoryPill,
   NativePill,
   NativeTodayCard,
   NativeTodayPill,
@@ -47,6 +50,13 @@ export type TodayCard = Omit<NativeTodayCard, 'status' | 'pills'> & {
   pills: TodayPill[];
 };
 export type Today = { date: string; cards: TodayCard[] };
+
+export type HistoryPill = Omit<NativeHistoryPill, 'form'> & { form: PillForm };
+export type HistoryDose = Omit<NativeHistoryDose, 'outcome' | 'pills'> & {
+  outcome: 'taken' | 'skipped' | 'missed';
+  pills: HistoryPill[];
+};
+export type History = Omit<NativeHistory, 'doses'> & { doses: HistoryDose[] };
 
 export type SettingTarget =
   | 'notifications'
@@ -118,6 +128,14 @@ export async function markDoseTaken(
   minute: number,
 ): Promise<void> {
   return native().markDoseTaken(date, hour, minute);
+}
+
+/**
+ * The doses recorded from `from` through `to` (YYYY-MM-DD, both included), by date and time, with
+ * the oldest record's date and the phone's first day of the week.
+ */
+export async function getHistory(from: string, to: string): Promise<History> {
+  return (await native().getHistory(from, to)) as History;
 }
 
 /** Re-checks the schedule; gives doses that were missed while the app was closed, named after their pills. */

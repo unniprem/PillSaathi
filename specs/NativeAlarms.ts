@@ -50,6 +50,33 @@ export type NativeTodayCard = {
 
 export type NativeToday = { date: string; cards: NativeTodayCard[] };
 
+/** A pill as a dose recorded it, with whether it still exists and its photo now. */
+export type NativeHistoryPill = {
+  pillId: string;
+  name: string;
+  form: string;
+  amount: number;
+  exists: boolean;
+  photoUri: string | null;
+};
+
+export type NativeHistoryDose = {
+  date: string; // YYYY-MM-DD, the day it was due
+  hour: number;
+  minute: number;
+  outcome: string; // taken | skipped | missed
+  at: number; // when it was answered or found missed
+  marked: boolean; // marked taken later
+  pills: NativeHistoryPill[];
+};
+
+export type NativeHistory = {
+  today: string;
+  oldest: string | null; // the oldest record kept
+  firstDayOfWeek: number; // 0 = Sunday, as Date.getDay()
+  doses: NativeHistoryDose[]; // by date, then time
+};
+
 export type Health = {
   notificationsEnabled: boolean;
   alarmChannelEnabled: boolean;
@@ -78,6 +105,7 @@ export interface Spec extends TurboModule {
   getToday(): Promise<NativeToday>;
   setCardSound(alarmId: string, soundId: string | null): Promise<void>; // NOT_FOUND
   markDoseTaken(date: string, hour: number, minute: number): Promise<void>; // NOT_FOUND
+  getHistory(from: string, to: string): Promise<NativeHistory>; // YYYY-MM-DD, both inclusive
   reconcileOnAppOpen(): Promise<MissedAlarm[]>;
   getHealth(): Promise<Health>;
   openSetting(target: string): Promise<boolean>; // true = specific page, false = App info fallback

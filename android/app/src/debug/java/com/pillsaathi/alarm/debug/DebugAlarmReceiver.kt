@@ -8,12 +8,15 @@ import com.pillsaathi.alarm.Alarm
 import com.pillsaathi.alarm.AlarmEngine
 import com.pillsaathi.alarm.AppLanguage
 import com.pillsaathi.alarm.DebugHooks
+import com.pillsaathi.alarm.DoseOutcome
+import com.pillsaathi.alarm.DoseRules
 import com.pillsaathi.alarm.DoseTime
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.PillDraft
 import com.pillsaathi.alarm.PillForm
 import com.pillsaathi.alarm.RingingService
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -61,6 +64,27 @@ class DebugAlarmReceiver : BroadcastReceiver() {
             ),
           )
         Log.i(LOG_TAG, "Added $pill")
+      }
+      // Records the pills due at date hour:minute as taken, skipped or missed, for checking History.
+      "com.pillsaathi.DEBUG_ADD_DOSE" -> {
+        val zone = ZoneId.systemDefault()
+        val date = LocalDate.parse(intent.getStringExtra("date") ?: return)
+        val hour = intent.getIntExtra("hour", 8)
+        val minute = intent.getIntExtra("minute", 0)
+        val outcome = DoseOutcome.values().firstOrNull { it.json == intent.getStringExtra("outcome") }
+        if (outcome == null) {
+          Log.w(LOG_TAG, "DEBUG_ADD_DOSE needs --es outcome taken|skipped|missed")
+          return
+        }
+        val dueAt = date.atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+        val card = Alarm("debug", hour, minute, DoseRules.EVERY_DAY, "", null, true, null, null, null, 0L)
+        val store = engine.store
+        val record = store.locked {
+          DoseRules.doseRecord(card, store.loadPills(), dueAt, outcome, dueAt, zone)?.also {
+            store.saveDoses(DoseRules.withRecord(store.loadDoses(), it, LocalDate.now(zone)))
+          }
+        }
+        Log.i(LOG_TAG, record?.let { "Added dose $it" } ?: "No pill due on $date at $hour:$minute; nothing added")
       }
       "com.pillsaathi.DEBUG_LIST" -> {
         val alarms = engine.alarms()

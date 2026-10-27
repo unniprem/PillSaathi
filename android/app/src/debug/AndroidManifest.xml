@@ -17,6 +17,7 @@
             <action android:name="com.pillsaathi.DEBUG_AUTO_SILENCE_MS" />
             <action android:name="com.pillsaathi.DEBUG_STOP_SERVICE" />
             <action android:name="com.pillsaathi.DEBUG_SETTINGS" />
+            <action android:name="com.pillsaathi.DEBUG_ADD_DOSE" />
         </intent-filter>
       </receiver>
     </application>

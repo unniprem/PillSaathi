@@ -13,6 +13,7 @@ import android.text.format.DateFormat
 import android.util.Log
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.core.text.util.LocalePreferences
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.LifecycleEventListener
@@ -44,6 +45,7 @@ import com.pillsaathi.photo.PillPhotos
 import com.pillsaathi.specs.NativeAlarmsSpec
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
+import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -142,6 +144,62 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
         putArray("cards", Arguments.createArray().apply { today.cards.forEach { pushMap(cardToJs(it)) } })
         putArray("refills", Arguments.createArray().apply { today.refills.forEach { pushMap(refillToJs(it)) } })
       }
+    }
+
+  override fun getHistory(from: String, to: String, promise: Promise) =
+    onWorker(promise) {
+      val history = engine.history(LocalDate.parse(from), LocalDate.parse(to))
+      val live = history.pills.associateBy { it.id }
+      Arguments.createMap().apply {
+        putString("today", history.today.toString())
+        putString("oldest", history.oldest?.toString())
+        putInt("firstDayOfWeek", firstDayOfWeek())
+        putArray(
+          "doses",
+          Arguments.createArray().apply {
+            history.doses.forEach { d ->
+              pushMap(
+                Arguments.createMap().apply {
+                  putString("date", d.date.toString())
+                  putInt("hour", d.hour)
+                  putInt("minute", d.minute)
+                  putString("outcome", d.outcome.json)
+                  putDouble("at", d.at.toDouble())
+                  putBoolean("marked", d.marked)
+                  putArray(
+                    "pills",
+                    Arguments.createArray().apply {
+                      d.pills.forEach { p ->
+                        val now = live[p.pillId]
+                        pushMap(
+                          Arguments.createMap().apply {
+                            putString("pillId", p.pillId)
+                            putString("name", p.name)
+                            putString("form", p.form.json)
+                            putDouble("amount", p.amount)
+                            putBoolean("exists", now != null)
+                            putString("photoUri", now?.photo?.let(photos::fileUri))
+                          },
+                        )
+                      }
+                    },
+                  )
+                },
+              )
+            }
+          },
+        )
+      }
+    }
+
+  /** The phone's first day of the week, from 0 for Sunday, as JS's `Date.getDay()` counts. */
+  private fun firstDayOfWeek(): Int =
+    try {
+      WEEKDAYS.indexOf(LocalePreferences.getFirstDayOfWeek()).takeIf { it >= 0 }
+        ?: (Calendar.getInstance().firstDayOfWeek - 1)
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not read the first day of the week", e)
+      Calendar.getInstance().firstDayOfWeek - 1
     }
 
   override fun setCardSound(alarmId: String, soundId: String?, promise: Promise) =
@@ -546,5 +604,6 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     private const val SAMPLE_PILL = "Telma 40"
     private const val REQUEST_CAMERA = 4_801
     private const val REQUEST_GALLERY = 4_802
+    private val WEEKDAYS = listOf("sun", "mon", "tue", "wed", "thu", "fri", "sat")
   }
 }

@@ -420,6 +420,20 @@ class DoseRulesTest {
     )
   }
 
+  @Test fun dosesBetween_inclusiveAndSorted() {
+    val a = pill("A", listOf(t(8, 0), t(21, 0)))
+    val on5 = record(8, 0, DoseOutcome.TAKEN, 0L, listOf(a), date = date(5))
+    val on6Evening = record(21, 0, DoseOutcome.MISSED, 0L, listOf(a), date = date(6))
+    val on6Morning = record(8, 0, DoseOutcome.TAKEN, 0L, listOf(a), date = date(6))
+    val on7 = record(8, 0, DoseOutcome.SKIPPED, 0L, listOf(a), date = date(7))
+    val on8 = record(8, 0, DoseOutcome.TAKEN, 0L, listOf(a), date = date(8))
+    assertEquals(
+      listOf(on6Morning, on6Evening, on7),
+      DoseRules.dosesBetween(listOf(on8, on6Evening, on5, on7, on6Morning), date(6), date(7)),
+    )
+    assertEquals(listOf(on8), DoseRules.dosesBetween(listOf(on8, on5), date(8), date(8)))
+  }
+
   @Test fun withRecord_upsertsBySameDateAndTime() {
     val a = pill("A", listOf(t(8, 0), t(21, 0)))
     val missed8 = record(8, 0, DoseOutcome.MISSED, oct(26, 8, 12), listOf(a))

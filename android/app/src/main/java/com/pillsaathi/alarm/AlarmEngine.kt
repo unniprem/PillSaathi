@@ -169,6 +169,17 @@ class AlarmEngine private constructor(context: Context) {
     Today(dateOf(now), cards, RefillRules.warnings(pills, now, zone()))
   }
 
+  /** The doses recorded from [from] through [to], read under the lock, for History. */
+  fun history(from: LocalDate, to: LocalDate): History = store.locked {
+    val doses = store.loadDoses()
+    History(
+      dateOf(System.currentTimeMillis()),
+      doses.minOfOrNull { it.date },
+      DoseRules.dosesBetween(doses, from, to),
+      store.loadPills(),
+    )
+  }
+
   /**
    * Repairs the schedule ([AlarmRules.reconcile]), reschedules every card, records each missed dose
    * and runs housekeeping. Alarms that the `:ringing` process is ringing or has queued, as its fresh

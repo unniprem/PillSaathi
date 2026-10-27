@@ -218,6 +218,12 @@ object DoseRules {
     return records
   }
 
+  /** The records from [from] through [to], by date and then time. */
+  fun dosesBetween(records: List<DoseRecord>, from: LocalDate, to: LocalDate): List<DoseRecord> =
+    records
+      .filter { !it.date.isBefore(from) && !it.date.isAfter(to) }
+      .sortedWith(compareBy({ it.date }, { it.hour }, { it.minute }))
+
   /** The record of the dose at [date] [hour]:[minute], or null. */
   fun recordOf(records: List<DoseRecord>, date: LocalDate, hour: Int, minute: Int): DoseRecord? =
     records.firstOrNull { it.date == date && it.hour == hour && it.minute == minute }
