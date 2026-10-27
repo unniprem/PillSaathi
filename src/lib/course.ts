@@ -22,6 +22,11 @@ export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** The weekday of an ISO date, from 0 for Sunday, as `Date.getDay()` counts. */
+export function weekdayOf(iso: string): number {
+  return parse(iso).getDay();
+}
+
 export function addDays(iso: string, n: number): string {
   const d = parse(iso);
   d.setDate(d.getDate() + n);
