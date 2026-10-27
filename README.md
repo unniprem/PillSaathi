@@ -11,6 +11,12 @@ It is made for elders and the relatives who set it up for them:
 - **Pill names read aloud** while it rings, at breaks in the alarm sound: "Time for your medicines. Telma 40, one tablet." Speech waits for a play of the sound to end, so a relative's short recording is never cut off. It plays at alarm volume through silent mode. Settings can turn it off, and **Try it** plays a sample.
 - **Bigger text**, and every screen works at the phone's largest text size. On the ringing screen, Taken, Snooze and Skip always stay on screen.
 
+Over time, for the elder and for the relatives who ask "did Amma take her tablets this week?":
+
+- **History** (the 📅 on Today): a month calendar where each day is green (every dose taken), amber (some not taken) or red (none taken), with the month's share of doses taken ("92% taken · 46 of 50 doses", rounded down). Today is outlined, and the arrows go back to the oldest kept record. Tapping a day lists its doses with the pills as they were then, even a pill deleted since. A skipped or missed dose can be marked taken there, and then reads "✓ Taken (marked 26 Oct, 10:15 AM)".
+- **Share report**: History's **Share** sends the month on screen, up to today, as plain text through WhatsApp, SMS or email: the doses taken, every dose not taken, and the medicines now with their amounts, times and last days. It is written in the app's language.
+- **Tablets left**, optional, for tablets and capsules: a count on the pill page with **+10**, **+15** and **+30** or a typed number (in halves, up to 999). Each Taken lowers it by that dose's amount. When about 5 days are left, unless the course ends first, Today shows a banner ("Telma 40: 9 tablets left · About 4 days. · Add tablets") that opens the pill at its count, and the phone gets one **Refill reminders** notification, and one more at 0. Adding tablets re-arms both. A pill at 0 still rings.
+
 **Draft languages:** Malayalam and Hindi are drafts until someone who reads each language checks them. A release build lists only checked languages (English for now), and a phone set to a hidden language gets English everywhere, the ringing screen included. Debug builds list all three, with "(draft)" after the unchecked ones. Showing a language once it is checked is a one-line change (`LanguageRules.CHECKED` in `AppSettings.kt`).
 
 Android only for now. The JS bundle still builds for iOS, but the alarm features throw `PillSaathi alarms are Android-only for now`.
@@ -20,13 +26,14 @@ Android only for now. The JS bundle still builds for iOS, but the alarm features
 - The alarm engine is native Kotlin in `android/app/src/main/java/com/pillsaathi/alarm/`. Alarms are scheduled with `AlarmManager.setAlarmClock()`.
 - Everything that rings (`AlarmFireReceiver`, `SystemEventReceiver`, `RingingService`, `RingingActivity`) runs in a separate `:ringing` process, so a React Native or JS crash in the main process can't silence an alarm.
 - Each distinct pill time is a **time card**: one engine alarm that repeats every day and rings only between the earliest start and the latest last day of its pills. Housekeeping (`DoseRules.planCards`) keeps the cards in step with the pills after every pill change, reconcile and ring end, so courses end on their own. At fire time the engine checks again and doesn't ring a card with nothing due.
-- Every dose is recorded natively on the ringing path (`doses.json`, kept 365 days) with a snapshot of its pills, so later edits don't rewrite history. The pure rules (due pills, cards, records, Today statuses, amount text) live in `DoseRules.kt` with JVM tests.
+- Every dose is recorded natively on the ringing path (`doses.json`, kept 365 days) with a snapshot of its pills, so later edits don't rewrite history. When the phone was off or the app stopped, the next reconcile (or a late fire) records a missed dose for every time a card was due in between (`DoseRules.gapRecords`), so History never looks better than what happened. The pure rules (due pills, cards, records, Today statuses, amount text) live in `DoseRules.kt` with JVM tests.
+- Tablet counts live on each pill in the same locked store. A Taken writes the dose first, then lowers the counts in a separate best-effort step, and posts any refill notification after the lock; the rules (days left, the 5-day warning, once per level) are pure Kotlin in `RefillRules.kt`. History reads records through one call, `getHistory(from, to)`; its colours, percentage, month grid and report text are pure TypeScript in `src/lib/history.ts` and `src/lib/report.ts`.
 - Pills, cards, records, sounds, photos, settings and setup state live in a multi-process-safe file store in device-protected storage, so alarms ring before the first unlock after a reboot, with the right photo and language. The ringing path reads the language without taking the store lock.
 - Read aloud (`ReadAloud`, `ReadAloudRules`, `SpeechText`) drives the alarm player and the phone's text-to-speech through small interfaces, so its timing is JVM-tested with fakes. The sound starts exactly as before, and pauses only once the voice has started.
 - Native words use Android string resources (`values-ml`, `values-hi`) through a context in the app's language. JS words are typed tables in `src/i18n/` (`en`, `ml`, `hi`).
-- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the six screens in `src/screens/`: Today, the pill page, Sound, Record, Setup and Settings.
+- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the eight screens in `src/screens/`: Today, the pill page, History, a day in History, Sound, Record, Setup and Settings.
 
-The designs are in [`docs/superpowers/specs/2026-10-26-easy-for-amma-design.md`](docs/superpowers/specs/2026-10-26-easy-for-amma-design.md) (photos, languages, read aloud, bigger text), [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
+The designs are in [`docs/superpowers/specs/2026-10-26-history-and-refills-design.md`](docs/superpowers/specs/2026-10-26-history-and-refills-design.md) (History, the report, tablet counts), [`docs/superpowers/specs/2026-10-26-easy-for-amma-design.md`](docs/superpowers/specs/2026-10-26-easy-for-amma-design.md) (photos, languages, read aloud, bigger text), [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
 
 ## Run it
 
@@ -59,7 +66,7 @@ Setup gotchas:
 ```sh
 npm test                                          # Jest: screens and lib
 npx tsc --noEmit && npm run lint                  # types and lint
-cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm, dose, language, speech, read-aloud and photo rules, pill input, ring commands, JSON, file store
+cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm, dose, refill, language, speech, read-aloud and photo rules, pill input, ring commands, JSON, file store
 ```
 
 ## Debug broadcasts (debug builds only)
@@ -72,9 +79,10 @@ adb shell am broadcast -a <ACTION> -n com.pillsaathi/.alarm.debug.DebugAlarmRece
 
 | Action                                 | Extras                                                                                                                                                                                                                                   | Effect                                                                                                    |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `com.pillsaathi.DEBUG_ADD_PILL`        | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug pill`), `--es form tablet\|capsule\|syrup\|drops` (default `tablet`), `--ef amount A` (default: the form's), `--ei days N` (0 = no end), `--ez start_tomorrow true`, `--es photo <uuid>.jpg` (a photo already in the store) | Saves a pill whose one time is N minutes from now; pills at the same minute share one card                |
+| `com.pillsaathi.DEBUG_ADD_PILL`        | `--ei minutes_from_now N` (default 1), `--es name X` (default `Debug pill`), `--es form tablet\|capsule\|syrup\|drops` (default `tablet`), `--ef amount A` (default: the form's), `--ei days N` (0 = no end), `--ez start_tomorrow true`, `--es photo <uuid>.jpg` (a photo already in the store), `--ef remaining N` (tablets left; not counted when absent) | Saves a pill whose one time is N minutes from now; pills at the same minute share one card                |
+| `com.pillsaathi.DEBUG_ADD_DOSE`        | `--es date YYYY-MM-DD`, `--ei hour H`, `--ei minute M`, `--es outcome taken\|skipped\|missed`                                                                                                                                          | Records the pills due at that date and time with that outcome (a taken dose is never replaced), for filling History |
 | `com.pillsaathi.DEBUG_SETTINGS`        | optional `--es lang en\|ml\|hi\|phone` (`phone` follows the phone's language), optional `--ez read_aloud true\|false`                                                                                                                                  | Changes the app's language and read aloud, and logs the settings and the language the app now speaks      |
-| `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                                                                     | Logs every card with its next trigger, snooze and last-fired times, every pill, and `today()`'s cards     |
+| `com.pillsaathi.DEBUG_LIST`            | none                                                                                                                                                                                                                                     | Logs every card with its next trigger, snooze and last-fired times, every pill (with its count), every dose record, and `today()`'s cards |
 | `com.pillsaathi.DEBUG_TAKEN`           | optional `--es alarm_id ID`                                                                                                                                                                                                              | Ends whatever rings now and records it taken; with an id, only that card's ring, as the Taken button does |
 | `com.pillsaathi.DEBUG_SKIP`            | optional `--es alarm_id ID`                                                                                                                                                                                                              | Ends the ring and records it skipped, like Skip this time                                                 |
 | `com.pillsaathi.DEBUG_SNOOZE`          | optional `--es alarm_id ID`                                                                                                                                                                                                              | Snoozes whatever rings now; with an id, only that card's ring                                             |
@@ -90,6 +98,30 @@ To move the emulator's clock without root (Play Store images): `adb shell cmd al
 Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb shell dumpsys activity services com.pillsaathi`, `adb shell dumpsys audio` (look for the `USAGE_ALARM` player), `adb shell am force-stop com.pillsaathi` (simulates an OEM kill).
 
 ## Device test matrix
+
+### History and refills
+
+Last run: 2026-10-27, emulator API 34 (`Medium_Phone_API_34`, arm64, Google Play image). Rings used the debug receiver; History, the day page, the pill page and Today used the real UI. A month was filled by moving the clock back to 25 Sep, adding two pills, returning, and letting reconcile record the gap, then `DEBUG_ADD_DOSE` for the taken and skipped doses.
+
+- [x] Gap: a dose taken, the app force-stopped and the clock moved 2 days on. The next app open recorded one missed dose for each day in between (`recorded 2 missed doses`), showed one missed alert for the card, and posted no notification.
+- [x] A gap from 25 Sep to today: 33 and 32 missed doses, one per due time, none on days with nothing due.
+- [x] The clock moved 2 days on and back: the missed doses recorded ahead were dropped at the next app open, and today's taken ones kept.
+- [x] Calendar: green, amber and red days as recorded, today outlined, later days grey; "92% taken · 49 of 53 doses" (92.45 rounded down). The arrows stop at the oldest kept month and at this month.
+- [x] At `font_scale 2.0` the cells stay square with their numbers inside, and the weekday names fit.
+- [x] Share into Messages: plain text with its line breaks intact (`PillSaathi · 1–27 Oct 2026`, the four doses not taken, the medicines now). It wasn't sent.
+- [x] A day's page: both doses with their pills. Mark as taken read "✓ Taken (marked 27 Oct, 5:31 PM)", and the day turned amber on Back. A pill deleted since still showed on that day from its snapshot.
+- [x] Tablets left: +10 on the pill page saved `remaining=10.0`. Taken on the ring lowered 6 → 5 and posted one "Telma 40: 5 tablets left · about 5 days" after the ring ended, none while it rang. The next day's Taken lowered it to 4 with no second notification.
+- [x] The same with the app killed (only `:ringing` alive): the count went down and the notification came.
+- [x] A pill at 0 still rang, and Taken left it at 0.
+- [x] Today's banner ("Iron: 10 tablets left / About 5 days. / Add tablets") opened the pill page at the count, above the keyboard. Adding 30 re-armed the warning (`refillNotified=null`) and the banner went.
+- [x] At `font_scale 2.0` the count field and +10, +15, +30 fit, none cut off.
+- [x] A release build: History in English.
+
+**Pending, needs a real phone (the Redmi Note 10 was not connected):**
+
+- [ ] Taken lowers the count with the app swiped away (MIUI).
+- [ ] The share sheet into WhatsApp, in English and in Malayalam.
+- [ ] The calendar at the phone's own text size.
 
 ### Easy for Amma
 
