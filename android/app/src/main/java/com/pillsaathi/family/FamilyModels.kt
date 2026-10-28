@@ -3,6 +3,7 @@ package com.pillsaathi.family
 import com.pillsaathi.alarm.DoseRecord
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.RefillLevel
+import java.time.LocalDate
 
 /**
  * What the elder's phone last uploaded: the [elder] id it uploaded under, each month's hash by
@@ -64,3 +65,26 @@ data class ElderDoc(
   val followers: List<String>,
   val people: Map<String, Person>,
 )
+
+/** One check of an elder's dose at [date] [hour]:[minute], her time, due to run at [checkAt]. */
+data class CheckItem(val elderId: String, val date: LocalDate, val hour: Int, val minute: Int, val checkAt: Long)
+
+/** What a check found ([FamilyRules.decide]). Only [Missed], [NotReported] and [Silent] ping. */
+sealed interface CheckDecision {
+  /** Nothing to say: taken, skipped, already pinged, or a silence already warned about. */
+  data object None : CheckDecision
+
+  /** She no longer has a pill due at that time. */
+  data object NoLongerDue : CheckDecision
+
+  /** Too late to be worth a ping. */
+  data object Expired : CheckDecision
+
+  data class Missed(val names: String) : CheckDecision
+
+  /** No record yet; [heardAt] is when her phone was last heard from, if ever. */
+  data class NotReported(val names: String, val heardAt: Long?) : CheckDecision
+
+  /** Her phone has been silent since [heardAt]. */
+  data class Silent(val heardAt: Long) : CheckDecision
+}
