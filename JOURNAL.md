@@ -4,6 +4,49 @@ Session log, newest first.
 
 ---
 
+## 2026-10-28 18:46 IST — Session: Family online build
+
+### Summary
+
+The user asked to execute the latest plan (`docs/superpowers/plans/2026-10-28-family-online.md`): PillSaathi's first online step, on Firebase's free Spark plan. It ran inline, task by task, with TDD, a ledger and one fresh whole-branch review at the end, as for stages 3 and 4. A relative links once with a 6-digit code and an Allow tap on the elder's phone. His Today then shows her day, and his phone checks each of her doses after his chosen delay and pings him when a dose was missed, wasn't reported, or her phone went quiet, and when a pill runs low. All decisions are pure Kotlin (`FamilyRules`). The Firebase glue is native, and access is enforced by `firestore.rules`, tested on the emulator. The user's Firebase project (Task 0) wasn't created yet, so nothing ran against real Firebase. Every check that needs it, and the Redmi checks, are pending in the README matrix and the PR.
+
+### Changes Made
+
+| Commit    | Type  | Description                                                                          |
+| --------- | ----- | ------------------------------------------------------------------------------------ |
+| `5312ff0` | chore | Firebase, sign-in, scanner and WorkManager libraries; the rules test harness          |
+| `41c4277` | feat  | Family models and their JSON (`family.json`, Firestore maps)                         |
+| `a767363` | feat  | Family rules: codes, months, check times, the ping decision, refill pings            |
+| `5e1cb45` | feat  | An elder's today, tally and card from her uploaded data; "Not reported yet" status  |
+| `e971efd` | feat  | Firestore rules for family sharing                                                   |
+| `4eacc20` | feat  | Uploading the elder's pills and records when someone can see them                    |
+| `4ae4343` | feat  | Family module, elder side of linking (codes, QR, requests, followers)                |
+| `139bd31` | feat  | Family page and the family code screen                                               |
+| `edb87f3` | feat  | Google sign-in, scanning and following in the family module                          |
+| `b8fbdaa` | feat  | Add family and the follow form                                                       |
+| `af0ee5f` | feat  | Reading the elders' days on the relative's phone; shared `JsMaps`                    |
+| `22d4372` | feat  | Family on Today, the elder's page and her read-only History                          |
+| `0f204d9` | feat  | Checks and pings from the relative's phone                                           |
+| `ba05d62` | fix   | Review fixes: requester identity, safe photo names, serialized uploads, background reads, unreported doses in her History |
+| `20dfd51` | docs  | README and device matrix for Family online                                           |
+
+### Key Decisions
+
+- **Family runs native and in the main process only.** The elder's uploads and the relative's checks must run with no JS. The engine's single family call (`FamilyHooks.changed`) reads `family.json` lock-free and sends a broadcast, so `:ringing` never touches Firebase or WorkManager (checked on the emulator: 0 such log lines, alarm on time).
+- **Checks refresh before deciding.** Each check first reads her copy afresh, so a dose time she no longer has never pings. The ping key is saved before posting, so a check that runs twice pings once. The relative's phone also reads every 6 hours, which the review showed the spec needs.
+- **Honest wording over completeness.** A dose with no uploaded record is "Not reported yet" on her today and in her History, never taken. A card that has never heard from her phone says so instead of "Nothing due today".
+- **Rules check identity, not just codes.** The Allow prompt's name and email must match the requester's Google ID token. Otherwise anyone holding a live code could pose as a relative.
+- **Library versions held back for Kotlin 2.2.** Firebase BoM 34.19.0 and googleid 1.1.1, because newer ones ship Kotlin 2.4 metadata.
+
+### Issues Encountered
+
+- `npm run test:rules` needs Java 21+ (firebase-tools 15); the Android build uses Java 17, so the README shows `JAVA_HOME=$(/usr/libexec/java_home -v 21+)`.
+- Jest tests that unmounted and re-rendered inside one test left later tests rendering nothing; each was split in two.
+- The final review (0 Critical, 6 Important, 15 Minor) found a spoofable Allow prompt, server photo names used as file paths, an Allow that times out leaving sharing off, uploads racing Remove, no background refresh, and History days shown green with unreported doses. All six were fixed. Fifteen minors are deferred and listed in the PR.
+- Pending: everything that needs the Firebase project (linking, uploads, pings on two emulators) and the Redmi checks (uploads and checks with the app swiped away on MIUI).
+
+---
+
 ## 2026-10-27 18:08 IST — Session: History and refills build
 
 ### Summary
