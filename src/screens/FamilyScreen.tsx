@@ -11,17 +11,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFollowRequests } from '../hooks/useFollowRequests';
 import { useI18n } from '../i18n';
-import { listFollowers, removeFollower } from '../native/family';
-import type { Person } from '../native/family';
+import { listFollowers, listFollows, removeFollower } from '../native/family';
+import type { Follow, Person } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Family'>;
 
-/** Who can see this phone's pills, each with Remove, and a way to show a code to someone new. */
+/**
+ * Both sides of Family on this phone: who can see its pills (each with Remove, and a code for
+ * someone new), and the people it looks after (with Add family).
+ */
 export default function FamilyScreen({ navigation }: Props) {
   const { t } = useI18n();
   const [followers, setFollowers] = useState<Person[] | null>(null);
+  const [follows, setFollows] = useState<Follow[] | null>(null);
   const [failed, setFailed] = useState(false);
   const mounted = useRef(true);
 
@@ -40,14 +44,26 @@ export default function FamilyScreen({ navigation }: Props) {
     }
   }, []);
 
+  const loadFollows = useCallback(async () => {
+    try {
+      const list = await listFollows();
+      if (mounted.current) {
+        setFollows(list);
+      }
+    } catch (e) {
+      console.warn('Could not list the people I look after', e);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       mounted.current = true;
       load();
+      loadFollows();
       return () => {
         mounted.current = false;
       };
-    }, [load]),
+    }, [load, loadFollows]),
   );
 
   useFollowRequests(() => load());
@@ -100,6 +116,23 @@ export default function FamilyScreen({ navigation }: Props) {
         style={styles.button}
       >
         <Text style={styles.buttonText}>{t.family.showCode}</Text>
+      </Pressable>
+
+      <Text style={styles.heading}>{t.family.lookAfter}</Text>
+      {follows?.length === 0 ? (
+        <Text style={styles.note}>{t.family.noOne}</Text>
+      ) : null}
+      {follows?.map(follow => (
+        <View key={follow.elderId} style={styles.row}>
+          <Text style={styles.name}>{follow.name}</Text>
+        </View>
+      ))}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigation.navigate('AddFamily')}
+        style={styles.button}
+      >
+        <Text style={styles.buttonText}>{t.family.addFamily}</Text>
       </Pressable>
     </ScrollView>
   );

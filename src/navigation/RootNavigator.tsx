@@ -11,6 +11,7 @@ import HistoryScreen from '../screens/HistoryScreen';
 import HistoryDayScreen from '../screens/HistoryDayScreen';
 import FamilyScreen from '../screens/FamilyScreen';
 import ShareCodeScreen from '../screens/ShareCodeScreen';
+import AddFamilyScreen from '../screens/AddFamilyScreen';
 import { formatDay } from '../lib/course';
 
 export type RootStackParamList = {
@@ -26,6 +27,7 @@ export type RootStackParamList = {
   HistoryDay: { date: string }; // YYYY-MM-DD
   Family: undefined;
   ShareCode: undefined;
+  AddFamily: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -103,6 +105,11 @@ function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
         name="ShareCode"
         component={ShareCodeScreen}
         options={{ title: t.family.codeTitle }}
+      />
+      <Stack.Screen
+        name="AddFamily"
+        component={AddFamilyScreen}
+        options={{ title: t.family.addTitle }}
       />
     </Stack.Navigator>
   );

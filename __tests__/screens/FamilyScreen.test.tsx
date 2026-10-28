@@ -40,12 +40,14 @@ test('Family lists who can see my pills, and Remove asks first', async () => {
   jest.mocked(family.listFollowers).mockResolvedValue([]);
   await act(async () => buttons[1].onPress!());
   expect(family.removeFollower).toHaveBeenCalledWith('R');
-  expect(await screen.findByText('No one yet.')).toBeTruthy();
+  await waitFor(() =>
+    expect(screen.getAllByText('No one yet.')).toHaveLength(2),
+  );
 });
 
 test('Family shows "No one yet." with no followers', async () => {
   await renderApp('Family');
-  expect(await screen.findByText('No one yet.')).toBeTruthy();
+  expect((await screen.findAllByText('No one yet.')).length).toBeGreaterThan(0);
   expect(screen.getByText('Show a code to a family member')).toBeTruthy();
 });
 
@@ -82,6 +84,26 @@ test('the Family page stops listening when it is left', async () => {
   );
   // The code screen listens in its turn: one listener stays on.
   expect(jest.mocked(family.watchRequests).mock.calls.at(-1)).toEqual([true]);
+});
+
+test('Family lists the people I look after, with + Add family', async () => {
+  jest
+    .mocked(family.listFollows)
+    .mockResolvedValue([
+      { elderId: 'E', name: 'Amma', phone: null, delayMinutes: 30 },
+    ]);
+  await renderApp('Family');
+  expect(screen.getByText('People I look after')).toBeTruthy();
+  expect(await screen.findByText('Amma')).toBeTruthy();
+  await fireEvent.press(screen.getByText('+ Add family'));
+  await waitFor(() => expect(headerTitles()).toEqual(['Family', 'Add family']));
+});
+
+test('Family says "No one yet." when looking after no one', async () => {
+  await renderApp('Family');
+  await waitFor(() =>
+    expect(screen.getAllByText('No one yet.')).toHaveLength(2),
+  );
 });
 
 test('the Settings row opens Family, in Malayalam too', async () => {
