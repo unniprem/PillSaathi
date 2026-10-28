@@ -101,6 +101,70 @@ test('passes the relative calls and results through to the native module', async
   expect(native.unfollow).toHaveBeenCalledWith('E', true);
 });
 
+test('rejects the elder views when the native module is missing (iOS)', async () => {
+  const family = load(null);
+  await expect(family.getFamily()).rejects.toThrow(
+    'PillSaathi family is Android-only for now',
+  );
+  await expect(family.refreshFamily()).rejects.toThrow(
+    'PillSaathi family is Android-only for now',
+  );
+  await expect(family.getElderToday('E')).rejects.toThrow(
+    'PillSaathi family is Android-only for now',
+  );
+});
+
+test('passes the elder views through to the native module', async () => {
+  const card = {
+    elderId: 'E',
+    name: 'Amma',
+    phone: null,
+    delayMinutes: 30,
+    heardAt: 1_000,
+    silent: false,
+    abandoned: false,
+    otherZone: false,
+    tally: { taken: 1, skipped: 0, missed: 0, notReported: 1, later: 1 },
+    refills: [],
+  };
+  const today = {
+    date: '2026-10-28',
+    cards: [],
+    refills: [],
+    heardAt: 1_000,
+    otherZone: false,
+  };
+  const history = {
+    today: '2026-10-28',
+    oldest: '2026-10-01',
+    firstDayOfWeek: 0,
+    doses: [],
+  };
+  const native = {
+    getFamily: jest.fn().mockResolvedValue([card]),
+    refreshFamily: jest.fn().mockResolvedValue([card]),
+    getElderToday: jest.fn().mockResolvedValue(today),
+    getElderHistory: jest.fn().mockResolvedValue(history),
+    listElderPills: jest.fn().mockResolvedValue([]),
+  };
+  const family = load(native);
+
+  await expect(family.getFamily()).resolves.toEqual([card]);
+  await expect(family.refreshFamily()).resolves.toEqual([card]);
+  await expect(family.getElderToday('E')).resolves.toEqual(today);
+  expect(native.getElderToday).toHaveBeenCalledWith('E');
+  await expect(
+    family.getElderHistory('E', '2026-10-01', '2026-10-31'),
+  ).resolves.toEqual(history);
+  expect(native.getElderHistory).toHaveBeenCalledWith(
+    'E',
+    '2026-10-01',
+    '2026-10-31',
+  );
+  await expect(family.listElderPills('E')).resolves.toEqual([]);
+  expect(native.listElderPills).toHaveBeenCalledWith('E');
+});
+
 test('names the error codes the module rejects with', () => {
   const family = load(null);
   expect(family.FamilyErrors).toEqual({

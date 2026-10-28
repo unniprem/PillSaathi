@@ -291,6 +291,28 @@ class FamilyCloud private constructor(context: Context) {
     await(ref.delete())
   }
 
+  /** Followed elder [elderId]'s doc from the server; PERMISSION once she removed him or her copy went. */
+  fun readFollowedElder(elderId: String): ElderDoc? =
+    elderOf(await(familyDb().collection(ELDERS).document(elderId).get(Source.SERVER)))
+
+  /**
+   * Followed elder [elderId]'s records for month [key], none when there is no such month. [cached]
+   * reads Firestore's copy when offline, for History; checks need the server's.
+   */
+  fun readFollowedMonth(elderId: String, key: String, cached: Boolean = false): List<DoseRecord> {
+    val ref = familyDb().collection(ELDERS).document(elderId).collection(MONTHS).document(key)
+    val snap = await(if (cached) ref.get() else ref.get(Source.SERVER))
+    return snap.data?.let(FamilyJson::recordsFromMap).orEmpty()
+  }
+
+  /** The small copy of pill [pillId]'s photo: its file name and JPEG bytes, or null. */
+  fun readFollowedPhoto(elderId: String, pillId: String): Pair<String, ByteArray>? {
+    val snap = await(familyDb().collection(ELDERS).document(elderId).collection(PHOTOS).document(pillId).get(Source.SERVER))
+    val name = snap.getString("name") ?: return null
+    val jpeg = snap.getBlob("jpeg") ?: return null
+    return name to jpeg.toBytes()
+  }
+
   internal fun familyDb(): FirebaseFirestore = FirebaseFirestore.getInstance(familyApp())
 
   internal fun db(): FirebaseFirestore = FirebaseFirestore.getInstance(defaultApp())

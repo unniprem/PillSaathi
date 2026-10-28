@@ -21,4 +21,20 @@ export const familyDefaults: Record<string, unknown> = {
   saveFollow: undefined,
   listFollows: [],
   unfollow: undefined,
+  getFamily: [],
+  refreshFamily: [],
+  getElderToday: {
+    date: '2026-10-26',
+    cards: [],
+    refills: [],
+    heardAt: null,
+    otherZone: false,
+  },
+  getElderHistory: {
+    today: '2026-10-26',
+    oldest: null,
+    firstDayOfWeek: 0,
+    doses: [],
+  },
+  listElderPills: [],
 };

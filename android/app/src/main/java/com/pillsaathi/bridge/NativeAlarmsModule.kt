@@ -13,7 +13,6 @@ import android.text.format.DateFormat
 import android.util.Log
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
-import androidx.core.text.util.LocalePreferences
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.LifecycleEventListener
@@ -32,12 +31,9 @@ import com.pillsaathi.alarm.Notifications
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.PillForm
 import com.pillsaathi.alarm.ReconcileTrigger
-import com.pillsaathi.alarm.RefillWarning
 import com.pillsaathi.alarm.SetupState
 import com.pillsaathi.alarm.SpokenPill
 import com.pillsaathi.alarm.StorageException
-import com.pillsaathi.alarm.TodayCard
-import com.pillsaathi.alarm.TodayPill
 import com.pillsaathi.alarm.TtsVoice
 import com.pillsaathi.alarm.Voice
 import com.pillsaathi.alarm.VoiceAvailability
@@ -45,7 +41,6 @@ import com.pillsaathi.photo.PillPhotos
 import com.pillsaathi.specs.NativeAlarmsSpec
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
-import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -67,6 +62,8 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     get() = AlarmEngine.get(reactApplicationContext)
 
   private val photos by lazy { PillPhotos(reactApplicationContext, engine.store.photosDir) }
+
+  private val maps by lazy { JsMaps(photos::fileUri) }
 
   private val main = Handler(Looper.getMainLooper())
 
@@ -115,7 +112,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
   override fun listPills(promise: Promise) =
     onWorker(promise) {
       Arguments.createArray().apply {
-        engine.pills().sortedBy { it.createdAt }.forEach { pushMap(pillToJs(it)) }
+        engine.pills().sortedBy { it.createdAt }.forEach { pushMap(maps.pill(it)) }
       }
     }
 
@@ -124,7 +121,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       // Read as plain values so a wrong type is INVALID_PILL, not a cast error.
       val draft = PillInputValidator.validate(input.toHashMap())
       try {
-        pillToJs(engine.savePill(draft))
+        maps.pill(engine.savePill(draft))
       } catch (e: NoSuchElementException) {
         throw AlarmException(NOT_FOUND, "No pill ${draft.id}")
       }
@@ -136,71 +133,10 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       null
     }
 
-  override fun getToday(promise: Promise) =
-    onWorker(promise) {
-      val today = engine.today()
-      Arguments.createMap().apply {
-        putString("date", today.date.toString())
-        putArray("cards", Arguments.createArray().apply { today.cards.forEach { pushMap(cardToJs(it)) } })
-        putArray("refills", Arguments.createArray().apply { today.refills.forEach { pushMap(refillToJs(it)) } })
-      }
-    }
+  override fun getToday(promise: Promise) = onWorker(promise) { maps.today(engine.today()) }
 
   override fun getHistory(from: String, to: String, promise: Promise) =
-    onWorker(promise) {
-      val history = engine.history(LocalDate.parse(from), LocalDate.parse(to))
-      val live = history.pills.associateBy { it.id }
-      Arguments.createMap().apply {
-        putString("today", history.today.toString())
-        putString("oldest", history.oldest?.toString())
-        putInt("firstDayOfWeek", firstDayOfWeek())
-        putArray(
-          "doses",
-          Arguments.createArray().apply {
-            history.doses.forEach { d ->
-              pushMap(
-                Arguments.createMap().apply {
-                  putString("date", d.date.toString())
-                  putInt("hour", d.hour)
-                  putInt("minute", d.minute)
-                  putString("outcome", d.outcome.json)
-                  putDouble("at", d.at.toDouble())
-                  putBoolean("marked", d.marked)
-                  putArray(
-                    "pills",
-                    Arguments.createArray().apply {
-                      d.pills.forEach { p ->
-                        val now = live[p.pillId]
-                        pushMap(
-                          Arguments.createMap().apply {
-                            putString("pillId", p.pillId)
-                            putString("name", p.name)
-                            putString("form", p.form.json)
-                            putDouble("amount", p.amount)
-                            putBoolean("exists", now != null)
-                            putString("photoUri", now?.photo?.let(photos::fileUri))
-                          },
-                        )
-                      }
-                    },
-                  )
-                },
-              )
-            }
-          },
-        )
-      }
-    }
-
-  /** The phone's first day of the week, from 0 for Sunday, as JS's `Date.getDay()` counts. */
-  private fun firstDayOfWeek(): Int =
-    try {
-      WEEKDAYS.indexOf(LocalePreferences.getFirstDayOfWeek()).takeIf { it >= 0 }
-        ?: (Calendar.getInstance().firstDayOfWeek - 1)
-    } catch (e: Exception) {
-      Log.w(LOG_TAG, "Could not read the first day of the week", e)
-      Calendar.getInstance().firstDayOfWeek - 1
-    }
+    onWorker(promise) { maps.history(engine.history(LocalDate.parse(from), LocalDate.parse(to))) }
 
   override fun setCardSound(alarmId: String, soundId: String?, promise: Promise) =
     onWorker(promise) {
@@ -523,66 +459,6 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     if (!posted) promise.reject(IllegalStateException("The alarm module has shut down"))
   }
 
-  private fun pillToJs(pill: Pill): WritableMap =
-    Arguments.createMap().apply {
-      putString("id", pill.id)
-      putString("name", pill.name)
-      putString("form", pill.form.json)
-      putDouble("amount", pill.amount)
-      putArray(
-        "times",
-        Arguments.createArray().apply {
-          pill.times.forEach {
-            pushMap(
-              Arguments.createMap().apply {
-                putInt("hour", it.hour)
-                putInt("minute", it.minute)
-              },
-            )
-          }
-        },
-      )
-      putString("startDate", pill.startDate.toString())
-      pill.days?.let { putInt("days", it) } ?: putNull("days")
-      putString("photo", pill.photo)
-      putString("photoUri", pill.photo?.let(photos::fileUri))
-      pill.remaining?.let { putDouble("remaining", it) } ?: putNull("remaining")
-    }
-
-  private fun cardToJs(card: TodayCard): WritableMap =
-    Arguments.createMap().apply {
-      putString("alarmId", card.alarmId)
-      putInt("hour", card.hour)
-      putInt("minute", card.minute)
-      putString("soundId", card.soundId)
-      putString("status", card.status.json)
-      card.statusAt?.let { putDouble("statusAt", it.toDouble()) } ?: putNull("statusAt")
-      putArray("pills", Arguments.createArray().apply { card.pills.forEach { pushMap(todayPillToJs(it)) } })
-    }
-
-  private fun todayPillToJs(pill: TodayPill): WritableMap =
-    Arguments.createMap().apply {
-      putString("pillId", pill.pillId)
-      putString("name", pill.name)
-      putString("form", pill.form.json)
-      putDouble("amount", pill.amount)
-      putString("startDate", pill.startDate?.toString())
-      pill.days?.let { putInt("days", it) } ?: putNull("days")
-      putBoolean("exists", pill.exists)
-      putBoolean("fromTomorrow", pill.fromTomorrow)
-      putString("photoUri", pill.photo?.let(photos::fileUri))
-    }
-
-  private fun refillToJs(w: RefillWarning): WritableMap =
-    Arguments.createMap().apply {
-      putString("pillId", w.pillId)
-      putString("name", w.name)
-      putString("form", w.form.json)
-      putDouble("remaining", w.remaining)
-      putInt("daysLeft", w.daysLeft)
-      putString("level", w.level.json)
-    }
-
   private fun missedToJs(missed: MissedAlarm): WritableMap =
     Arguments.createMap().apply {
       putString("id", missed.id)
@@ -604,6 +480,5 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
     private const val SAMPLE_PILL = "Telma 40"
     private const val REQUEST_CAMERA = 4_801
     private const val REQUEST_GALLERY = 4_802
-    private val WEEKDAYS = listOf("sun", "mon", "tue", "wed", "thu", "fri", "sat")
   }
 }

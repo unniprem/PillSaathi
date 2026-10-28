@@ -289,4 +289,25 @@ class FamilyRulesTest {
     assertEquals(200 to 100, FamilyRules.thumbSize(200, 100))
     assertEquals(256 to 256, FamilyRules.thumbSize(256, 256))
   }
+
+  @Test fun withoutFollow_dropsItsKeys() {
+    val appa = Follow("F", "Appa", null, 15)
+    val local = FamilyLocal(
+      follows = listOf(amma, appa),
+      pinged = setOf("E|2026-10-28|14:0", "F|2026-10-28|8:0"),
+      refillPinged = mapOf("E|p1" to RefillLevel.LOW, "F|p2" to RefillLevel.OUT),
+      silentWarned = mapOf("E" to 1L, "F" to 2L),
+      checkedThrough = 9L,
+    )
+    assertEquals(
+      FamilyLocal(
+        follows = listOf(appa),
+        pinged = setOf("F|2026-10-28|8:0"),
+        refillPinged = mapOf("F|p2" to RefillLevel.OUT),
+        silentWarned = mapOf("F" to 2L),
+        checkedThrough = 9L,
+      ),
+      FamilyRules.withoutFollow(local, "E"),
+    )
+  }
 }

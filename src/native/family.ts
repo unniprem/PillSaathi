@@ -2,12 +2,22 @@ import NativeFamily from '../../specs/NativeFamily';
 import type {
   Follow,
   LinkCode,
+  NativeFamilyCard,
   Person,
   Relative,
   Spec,
 } from '../../specs/NativeFamily';
+import type { History, Pill, Refill, Today } from './alarms';
 
 export type { Follow, LinkCode, Person, Relative };
+
+/** An elder's card in Today's Family section. */
+export type FamilyCard = Omit<NativeFamilyCard, 'refills'> & {
+  refills: Refill[];
+};
+
+/** Her today, read-only, with when her phone was last heard from. */
+export type ElderToday = Today & { heardAt: number | null; otherZone: boolean };
 
 /** Where a request to follow an elder stands. */
 export type FollowState = 'pending' | 'allowed' | 'denied' | 'expired';
@@ -112,4 +122,33 @@ export async function unfollow(
   deleteCopy: boolean,
 ): Promise<void> {
   return native().unfollow(elderId, deleteCopy);
+}
+
+/** The Family section's cards, from what this phone last read. */
+export async function getFamily(): Promise<FamilyCard[]> {
+  return (await native().getFamily()) as FamilyCard[];
+}
+
+/** Reads each elder's latest copy, then gives the cards; offline, the cards from the last read. */
+export async function refreshFamily(): Promise<FamilyCard[]> {
+  return (await native().refreshFamily()) as FamilyCard[];
+}
+
+/** Her today, from the last read; times are hers. Rejects `NOT_FOUND`. */
+export async function getElderToday(elderId: string): Promise<ElderToday> {
+  return (await native().getElderToday(elderId)) as ElderToday;
+}
+
+/** Her doses from `from` through `to` (YYYY-MM-DD), as getHistory gives this phone's. */
+export async function getElderHistory(
+  elderId: string,
+  from: string,
+  to: string,
+): Promise<History> {
+  return (await native().getElderHistory(elderId, from, to)) as History;
+}
+
+/** Her pills, from the last read. Rejects `NOT_FOUND`. */
+export async function listElderPills(elderId: string): Promise<Pill[]> {
+  return (await native().listElderPills(elderId)) as Pill[];
 }

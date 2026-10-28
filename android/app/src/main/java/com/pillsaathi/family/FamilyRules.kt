@@ -235,6 +235,17 @@ object FamilyRules {
     return Math.round(width * max.toDouble() / longest).toInt() to Math.round(height * max.toDouble() / longest).toInt()
   }
 
+  /** [local] without the follow of [elderId], and without what its pings remembered. */
+  fun withoutFollow(local: FamilyLocal, elderId: String): FamilyLocal {
+    val prefix = "$elderId|"
+    return local.copy(
+      follows = local.follows.filterNot { it.elderId == elderId },
+      pinged = local.pinged.filterNot { it.startsWith(prefix) }.toSet(),
+      refillPinged = local.refillPinged.filterKeys { !it.startsWith(prefix) },
+      silentWarned = local.silentWarned - elderId,
+    )
+  }
+
   /** Whether this phone uploads its pills: only once someone can see them. */
   fun uploads(local: FamilyLocal): Boolean = local.sharing
 

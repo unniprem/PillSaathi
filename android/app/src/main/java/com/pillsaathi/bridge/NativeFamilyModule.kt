@@ -16,11 +16,14 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.firebase.firestore.ListenerRegistration
 import com.pillsaathi.alarm.AlarmStore
+import com.pillsaathi.alarm.DoseRules
+import com.pillsaathi.alarm.History
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.family.CodeImage
 import com.pillsaathi.family.ElderSync
 import com.pillsaathi.family.FamilyCloud
 import com.pillsaathi.family.FamilyException
+import com.pillsaathi.family.FamilyRefresh
 import com.pillsaathi.family.FamilyRules
 import com.pillsaathi.family.FamilyWork
 import com.pillsaathi.family.Follow
@@ -30,6 +33,9 @@ import com.pillsaathi.family.Person
 import com.pillsaathi.family.Relative
 import com.pillsaathi.specs.NativeFamilySpec
 import java.io.File
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
 import java.util.concurrent.Executor
 
 /**
@@ -245,20 +251,51 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
         // Signed out (or never set up): there is nothing online to leave.
         if (e.code != FamilyCloud.NOT_SIGNED_IN && e.code != FamilyCloud.NOT_SET_UP) throw e
       }
-      store.locked {
-        val local = store.loadFamily()
-        val prefix = "$elderId|"
-        store.saveFamily(
-          local.copy(
-            follows = local.follows.filterNot { it.elderId == elderId },
-            pinged = local.pinged.filterNot { it.startsWith(prefix) }.toSet(),
-            refillPinged = local.refillPinged.filterKeys { !it.startsWith(prefix) },
-            silentWarned = local.silentWarned - elderId,
-          ),
-        )
-      }
-      File(reactApplicationContext.cacheDir, "family/$elderId").deleteRecursively()
+      store.locked { store.saveFamily(FamilyRules.withoutFollow(store.loadFamily(), elderId)) }
+      FamilyRefresh.photoDir(reactApplicationContext, elderId).deleteRecursively()
       null
+    }
+
+  override fun getFamily(promise: Promise) = onWorker(promise) { cards() }
+
+  override fun refreshFamily(promise: Promise) =
+    onWorker(promise) {
+      if (FamilyRefresh.run(reactApplicationContext)) afterRefresh()
+      cards()
+    }
+
+  override fun getElderToday(elderId: String, promise: Promise) =
+    onWorker(promise) {
+      val follow = follow(elderId)
+      val zone = zoneOf(follow)
+      val local = ZoneId.systemDefault()
+      val now = System.currentTimeMillis()
+      elderMaps(follow, zone).today(FamilyRules.elderToday(follow.pills, follow.recent, now, zone)).apply {
+        follow.heardAt?.let { putDouble("heardAt", FamilyRules.wallClock(it, zone, local).toDouble()) } ?: putNull("heardAt")
+        putBoolean("otherZone", FamilyRules.card(follow, now, local).otherZone)
+      }
+    }
+
+  override fun getElderHistory(elderId: String, from: String, to: String, promise: Promise) =
+    onWorker(promise) {
+      val follow = follow(elderId)
+      val zone = zoneOf(follow)
+      val (first, last) = LocalDate.parse(from) to LocalDate.parse(to)
+      val months = generateSequence(YearMonth.from(first)) { it.plusMonths(1) }
+        .takeWhile { !it.isAfter(YearMonth.from(last)) }
+        .map { FamilyRules.monthKey(it.atDay(1)) }
+      val records = months.flatMap { cloud.readFollowedMonth(elderId, it, cached = true) }.toList()
+      val history = History(
+        LocalDate.now(zone), follow.oldest?.let(LocalDate::parse), DoseRules.dosesBetween(records, first, last), follow.pills,
+      )
+      elderMaps(follow, zone).history(history)
+    }
+
+  override fun listElderPills(elderId: String, promise: Promise) =
+    onWorker(promise) {
+      val follow = follow(elderId)
+      val maps = elderMaps(follow, zoneOf(follow))
+      Arguments.createArray().apply { follow.pills.sortedBy { it.createdAt }.forEach { pushMap(maps.pill(it)) } }
     }
 
   override fun invalidate() {
@@ -270,6 +307,57 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       thread.quitSafely()
     }
     super.invalidate()
+  }
+
+  /** The Family section's cards, from `family.json`, every instant on her wall clock. */
+  private fun cards(): WritableArray {
+    val now = System.currentTimeMillis()
+    val local = ZoneId.systemDefault()
+    return Arguments.createArray().apply {
+      store.locked { store.loadFamily() }.follows.forEach { follow ->
+        val card = FamilyRules.card(follow, now, local)
+        val maps = elderMaps(follow, zoneOf(follow))
+        pushMap(
+          followToJs(follow).apply {
+            follow.heardAt?.let { putDouble("heardAt", FamilyRules.wallClock(it, zoneOf(follow), local).toDouble()) }
+              ?: putNull("heardAt")
+            putBoolean("silent", card.silent)
+            putBoolean("abandoned", card.abandoned)
+            putBoolean("otherZone", card.otherZone)
+            putMap(
+              "tally",
+              Arguments.createMap().apply {
+                putInt("taken", card.tally.taken)
+                putInt("skipped", card.tally.skipped)
+                putInt("missed", card.tally.missed)
+                putInt("notReported", card.tally.notReported)
+                putInt("later", card.tally.later)
+              },
+            )
+            putArray("refills", Arguments.createArray().apply { card.refills.forEach { pushMap(maps.refill(it)) } })
+          },
+        )
+      }
+    }
+  }
+
+  /** What runs after every completed refresh. Checks and refill pings come in later. */
+  private fun afterRefresh() {}
+
+  private fun follow(elderId: String): Follow =
+    store.locked { store.loadFamily() }.follows.firstOrNull { it.elderId == elderId }
+      ?: throw FamilyException(FamilyCloud.NOT_FOUND, "Not following $elderId")
+
+  private fun zoneOf(follow: Follow): ZoneId = FamilyRules.zoneOf(follow.zone) ?: ZoneId.systemDefault()
+
+  /** Maps for [follow]'s views: her cached photos, and instants moved onto her wall clock. */
+  private fun elderMaps(follow: Follow, zone: ZoneId): JsMaps {
+    val dir = FamilyRefresh.photoDir(reactApplicationContext, follow.elderId)
+    val local = ZoneId.systemDefault()
+    return JsMaps(
+      photoUri = { name -> File(dir, name).takeIf { it.exists() }?.let { Uri.fromFile(it).toString() } },
+      shift = { FamilyRules.wallClock(it, zone, local) },
+    )
   }
 
   /** A request to follow an elder, waiting for her answer: its last [status], from a listener. */
