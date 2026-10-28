@@ -150,6 +150,13 @@ export default function SettingsScreen({ navigation }: Props) {
       <Text style={styles.heading}>{t.settings.textSize}</Text>
       <Text style={styles.note}>{t.settings.textSizeNote}</Text>
 
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigation.navigate('Family')}
+        style={[styles.row, styles.familyRow]}
+      >
+        <Text style={styles.link}>{t.family.title}</Text>
+      </Pressable>
       <Text style={styles.heading}>{t.settings.reliability}</Text>
       <Pressable
         accessibilityRole="button"
@@ -208,4 +215,5 @@ const styles = StyleSheet.create({
   buttonText: { fontSize: 18, color: colors.primary, fontWeight: '600' },
   note: { fontSize: 18, color: colors.text },
   link: { flex: 1, fontSize: 20, color: colors.primary },
+  familyRow: { marginTop: spacing.lg },
 });

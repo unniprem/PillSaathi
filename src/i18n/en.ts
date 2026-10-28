@@ -290,6 +290,31 @@ export const en = {
     noEnd: 'no end',
     lastDay: (day: string) => `last day ${day}`,
   },
+  family: {
+    title: 'Family',
+    canSee: 'People who can see my pills',
+    noOne: 'No one yet.',
+    showCode: 'Show a code to a family member',
+    remove: 'Remove',
+    removeLabel: (name: string) => `Remove ${name}`,
+    removeConfirm: (name: string) => `Stop ${name} seeing your pills?`,
+    codeTitle: 'Family code',
+    codeBody:
+      'Show this to a family member, or send it. It works for 15 minutes.',
+    sendCode: 'Send code',
+    shareMessage: (code: string) =>
+      `Open PillSaathi, tap Add family, and type ${code}. It works for 15 minutes.`,
+    scanCode: 'Scan code',
+    expired: 'This code has expired.',
+    newCode: 'New code',
+    allowTitle: (name: string) => `Let ${name} see your pills?`,
+    allowBody: (email: string) =>
+      `${email} will see your pills and whether you took them.`,
+    no: 'No',
+    allow: 'Allow',
+    offline: 'No internet. Please try again.',
+    notSetUp: "Family isn't set up in this build.",
+  },
 };
 
 export type Strings = typeof en;

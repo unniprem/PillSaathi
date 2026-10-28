@@ -296,4 +296,28 @@ export const hi: Strings = {
     noEnd: 'कोई अंतिम तिथि नहीं',
     lastDay: (day: string) => `अंतिम दिन ${day}`,
   },
+  family: {
+    title: 'परिवार',
+    canSee: 'जो मेरी दवाइयाँ देख सकते हैं',
+    noOne: 'अभी कोई नहीं।',
+    showCode: 'परिवार के सदस्य को कोड दिखाएँ',
+    remove: 'हटाएँ',
+    removeLabel: (name: string) => `${name} को हटाएँ`,
+    removeConfirm: (name: string) => `${name} को आपकी दवाइयाँ देखने से रोकें?`,
+    codeTitle: 'परिवार कोड',
+    codeBody: 'इसे परिवार के सदस्य को दिखाएँ, या भेजें। यह 15 मिनट तक चलेगा।',
+    sendCode: 'कोड भेजें',
+    shareMessage: (code: string) =>
+      `PillSaathi खोलें, Add family पर टैप करें, और ${code} टाइप करें। यह 15 मिनट तक चलेगा।`,
+    scanCode: 'स्कैन कोड',
+    expired: 'इस कोड का समय खत्म हो गया।',
+    newCode: 'नया कोड',
+    allowTitle: (name: string) => `${name} को आपकी दवाइयाँ देखने दें?`,
+    allowBody: (email: string) =>
+      `${email} आपकी दवाइयाँ और आपने उन्हें लिया या नहीं, देख पाएँगे।`,
+    no: 'नहीं',
+    allow: 'अनुमति दें',
+    offline: 'इंटरनेट नहीं है। फिर से कोशिश करें।',
+    notSetUp: 'इस बिल्ड में परिवार सेट नहीं है।',
+  },
 };
