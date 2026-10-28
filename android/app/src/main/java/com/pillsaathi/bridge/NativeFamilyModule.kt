@@ -21,6 +21,7 @@ import com.pillsaathi.alarm.History
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.family.CodeImage
 import com.pillsaathi.family.ElderSync
+import com.pillsaathi.family.FamilyChecks
 import com.pillsaathi.family.FamilyCloud
 import com.pillsaathi.family.FamilyException
 import com.pillsaathi.family.FamilyRefresh
@@ -225,6 +226,7 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
         store.saveFamily(local.copy(follows = follows, checkedThrough = local.checkedThrough ?: now))
       }
       asks.remove(elderId)?.listener?.remove()
+      FamilyChecks.scheduleNext(reactApplicationContext)
       null
     }
 
@@ -253,6 +255,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       store.locked { store.saveFamily(FamilyRules.withoutFollow(store.loadFamily(), elderId)) }
       FamilyRefresh.photoDir(reactApplicationContext, elderId).deleteRecursively()
+      // The last follow gone cancels the wake-up.
+      FamilyChecks.scheduleNext(reactApplicationContext)
       null
     }
 
@@ -341,8 +345,11 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     }
   }
 
-  /** What runs after every completed refresh. Checks and refill pings come in later. */
-  private fun afterRefresh() {}
+  /** After a fresh read: her times may have changed, and her counts may have run low. */
+  private fun afterRefresh() {
+    FamilyChecks.scheduleNext(reactApplicationContext)
+    FamilyChecks.pingRefills(reactApplicationContext, System.currentTimeMillis())
+  }
 
   private fun follow(elderId: String): Follow =
     store.locked { store.loadFamily() }.follows.firstOrNull { it.elderId == elderId }

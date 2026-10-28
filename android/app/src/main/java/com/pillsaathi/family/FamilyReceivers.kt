@@ -15,3 +15,38 @@ class FamilyChangeReceiver : BroadcastReceiver() {
     }
   }
 }
+
+/** A check is due ([FamilyChecks.scheduleNext]): run it as background work. Main process. */
+class CheckAlarmReceiver : BroadcastReceiver() {
+  override fun onReceive(context: Context, intent: Intent) {
+    try {
+      FamilyWork.requestCheck(context)
+    } catch (e: Exception) {
+      Log.w(FAMILY_TAG, "Could not queue a family check", e)
+    }
+  }
+}
+
+/**
+ * After a reboot, a clock or time-zone change or an app update, sets the next check again, and on
+ * a phone that shares its pills, uploads and keeps the heartbeat going. Main process.
+ */
+class FamilySystemReceiver : BroadcastReceiver() {
+  override fun onReceive(context: Context, intent: Intent) {
+    val pending = goAsync()
+    Thread {
+      try {
+        FamilyChecks.scheduleNext(context)
+        val store = com.pillsaathi.alarm.AlarmStore(context)
+        if (FamilyRules.uploads(store.locked { store.loadFamily() })) {
+          FamilyWork.requestUpload(context)
+          FamilyWork.ensureHeartbeat(context)
+        }
+      } catch (e: Exception) {
+        Log.w(FAMILY_TAG, "Could not set up Family after ${intent.action}", e)
+      } finally {
+        pending.finish()
+      }
+    }.start()
+  }
+}

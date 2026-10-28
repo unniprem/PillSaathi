@@ -70,20 +70,22 @@ object FamilyRules {
   /**
    * The checks of [follow]'s doses whose check time is after [after] and no later than [through],
    * by check time: each time a pill is due on a date in her zone, plus his delay. A dose keeps its
-   * own date even when the check falls after midnight. None when his pings are Off.
+   * own date even when the check falls after midnight. None when his pings are Off, and none
+   * from before the link was saved ([Follow.since]).
    */
   fun checksBetween(follow: Follow, after: Long, through: Long): List<CheckItem> {
     val delay = follow.delayMinutes ?: return emptyList()
+    val from = maxOf(after, follow.since ?: after)
     val zone = zoneOf(follow.zone) ?: return emptyList()
     val times = follow.pills.flatMap { it.times }.toSortedSet()
-    var date = dateOf(after, zone).minusDays(1)
+    var date = dateOf(from, zone).minusDays(1)
     val last = dateOf(through, zone)
     val items = mutableListOf<CheckItem>()
     while (!date.isAfter(last)) {
       for (t in times) {
         if (DoseRules.pillsDue(follow.pills, t.hour, t.minute, date).isEmpty()) continue
         val checkAt = at(date, t, zone) + delay * 60_000L
-        if (checkAt in (after + 1)..through) items.add(CheckItem(follow.elderId, date, t.hour, t.minute, checkAt))
+        if (checkAt in (from + 1)..through) items.add(CheckItem(follow.elderId, date, t.hour, t.minute, checkAt))
       }
       date = date.plusDays(1)
     }
@@ -227,6 +229,16 @@ object FamilyRules {
 
   /** Whether her phone has been silent long enough that a follower may delete her copy. */
   fun isAbandoned(heardAt: Long?, now: Long): Boolean = heardAt != null && now - heardAt >= ABANDONED_AFTER_MS
+
+  /**
+   * When [at] was, on her clock in [zone]: its time, and its date unless that is her today, so a
+   * ping reads "1:12 PM" or "Tue 27 Oct, 8:05 AM".
+   */
+  fun heardLabel(at: Long, now: Long, zone: ZoneId): Pair<LocalDate?, LocalTime> {
+    val wall = Instant.ofEpochMilli(at).atZone(zone)
+    val date = wall.toLocalDate().takeIf { it != dateOf(now, zone) }
+    return date to wall.toLocalTime().withSecond(0).withNano(0)
+  }
 
   /** A photo's small copy: [width] × [height] scaled so the longest side is at most [max]. */
   fun thumbSize(width: Int, height: Int, max: Int = 256): Pair<Int, Int> {

@@ -310,4 +310,32 @@ class FamilyRulesTest {
       FamilyRules.withoutFollow(local, "E"),
     )
   }
+
+  @Test fun checksBetween_fromCheckedThrough() {
+    val twice = amma.copy(pills = listOf(azee.copy(times = listOf(DoseTime(14, 0), DoseTime(16, 0)))))
+    assertEquals(listOf(item), FamilyRules.checksBetween(twice, ist(10, 28, 14, 20), now))
+  }
+
+  @Test fun checksBetween_newFollowNoBackfill() {
+    assertEquals(emptyList<CheckItem>(), FamilyRules.checksBetween(amma, now, now))
+  }
+
+  @Test fun checksBetween_neverBeforeTheLink() {
+    // A second elder linked at 14:40, after an older follow's checks last ran at 14:00.
+    val linked = amma.copy(since = ist(10, 28, 14, 40))
+    assertEquals(emptyList<CheckItem>(), FamilyRules.checksBetween(linked, ist(10, 28, 14, 0), now))
+    val later = linked.copy(pills = listOf(azee.copy(times = listOf(DoseTime(14, 15)))))
+    assertEquals(
+      listOf(ist(10, 28, 14, 45)),
+      FamilyRules.checksBetween(later, ist(10, 28, 14, 0), now).map { it.checkAt },
+    )
+  }
+
+  @Test fun heardLabel_dayOnlyWhenNotHerToday() {
+    assertEquals(null to java.time.LocalTime.of(13, 12), FamilyRules.heardLabel(ist(10, 28, 13, 12), now, kolkata))
+    assertEquals(
+      LocalDate.of(2026, 10, 27) to java.time.LocalTime.of(8, 5),
+      FamilyRules.heardLabel(ist(10, 27, 8, 5), now, kolkata),
+    )
+  }
 }

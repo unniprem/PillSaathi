@@ -37,6 +37,7 @@ import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.alarm.TtsVoice
 import com.pillsaathi.alarm.Voice
 import com.pillsaathi.alarm.VoiceAvailability
+import com.pillsaathi.family.FamilyNotifications
 import com.pillsaathi.photo.PillPhotos
 import com.pillsaathi.specs.NativeAlarmsSpec
 import java.time.LocalDate
@@ -214,6 +215,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       // Renames the notification channels; best effort, the language is saved.
       try {
         Notifications.ensureChannels(reactApplicationContext)
+        FamilyNotifications.ensureChannels(reactApplicationContext)
       } catch (e: Exception) {
         Log.w(LOG_TAG, "Could not rename the notification channels", e)
       }

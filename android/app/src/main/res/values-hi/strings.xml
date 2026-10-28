@@ -19,4 +19,16 @@
         <item quantity="other">लगभग %d दिन</item>
     </plurals>
     <string name="refill_less_than_day">एक दिन से कम</string>
+    <string name="channel_family_missed">परिवार: छूटी खुराकें</string>
+    <string name="channel_family_refill">परिवार: दवा खत्म होने वाली</string>
+    <string name="family_missed">%1$s ने %2$s नहीं ली (%3$s)।</string>
+    <string name="family_not_reported">%1$s के फ़ोन ने %2$s की खुराक (%3$s) की खबर नहीं दी। आखिरी खबर %4$s पर।</string>
+    <string name="family_not_reported_never">%1$s के फ़ोन ने %2$s की खुराक (%3$s) की खबर नहीं दी।</string>
+    <string name="family_silent">%2$s से %1$s के फ़ोन की कोई खबर नहीं। उस पर अलार्म शायद नहीं बज रहे। कृपया %1$s का हाल पूछें।</string>
+    <string name="family_refill_low">%1$s की %2$s: %3$s बाकी</string>
+    <string name="family_refill_out">%1$s की %2$s: कुछ नहीं बचा</string>
+    <string name="family_day_time">%1$s, %2$s</string>
+    <string name="family_call">कॉल करें</string>
+    <string name="family_open">खोलें</string>
+    <string name="family_checking">परिवार की खबर ले रहे हैं…</string>
 </resources>

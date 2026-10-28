@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import com.pillsaathi.alarm.AlarmStore
 import com.pillsaathi.family.ElderSync
+import com.pillsaathi.family.FamilyChecks
 import com.pillsaathi.family.FamilyJson
 import kotlin.concurrent.thread
 
@@ -26,6 +27,19 @@ class DebugFamilyReceiver : BroadcastReceiver() {
             Log.i(TAG, "DEBUG_FAMILY_UPLOAD done")
           } catch (e: Exception) {
             Log.e(TAG, "DEBUG_FAMILY_UPLOAD failed", e)
+          } finally {
+            pending.finish()
+          }
+        }
+      }
+      // Runs the due checks now, on a thread, as the wake-up would.
+      "com.pillsaathi.DEBUG_FAMILY_CHECK" -> {
+        val pending = goAsync()
+        thread(name = "debug-family-check") {
+          try {
+            Log.i(TAG, "DEBUG_FAMILY_CHECK done: ${FamilyChecks.run(app, System.currentTimeMillis())}")
+          } catch (e: Exception) {
+            Log.e(TAG, "DEBUG_FAMILY_CHECK failed", e)
           } finally {
             pending.finish()
           }
