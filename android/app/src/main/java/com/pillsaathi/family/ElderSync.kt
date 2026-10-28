@@ -13,7 +13,15 @@ import java.time.ZoneId
  * and stops sharing. Main process, worker thread; throws [FamilyException].
  */
 object ElderSync {
-  fun run(context: Context) {
+  /**
+   * Held by every upload, by turning sharing on (Allow) and by deleting the copy (Remove), so one
+   * never runs halfway through another and leaves records online with no one to see them.
+   */
+  val lock = Any()
+
+  fun run(context: Context) = synchronized(lock) { upload(context) }
+
+  private fun upload(context: Context) {
     val store = AlarmStore(context)
     if (!FamilyRules.uploads(store.locked { store.loadFamily() })) return
     val cloud = FamilyCloud.get(context)
@@ -59,7 +67,7 @@ object ElderSync {
   }
 
   /** Deletes this phone's online copy and stops uploading, as when its last follower goes. */
-  fun stopSharing(context: Context, uid: String) {
+  fun stopSharing(context: Context, uid: String) = synchronized(lock) {
     FamilyCloud.get(context).deleteElderCopy(uid)
     val store = AlarmStore(context)
     store.locked { store.saveFamily(store.loadFamily().copy(sharing = false, uploaded = Uploaded())) }

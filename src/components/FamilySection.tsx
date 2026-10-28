@@ -32,7 +32,12 @@ export default function FamilySection({ cards, is24h, onOpen, onAdd }: Props) {
           style={styles.card}
         >
           <Text style={styles.name}>{card.name}</Text>
-          <Text style={styles.tally}>{tallyText(card.tally, t)}</Text>
+          {/* Before her first upload there is nothing to count: say so, not "Nothing due today". */}
+          <Text style={styles.tally}>
+            {card.heardAt === null
+              ? t.family.notHeardYet(card.name)
+              : tallyText(card.tally, t)}
+          </Text>
           {card.silent && card.heardAt !== null ? (
             <Text style={styles.silent}>
               {t.family.silentSince(heardText(card.heardAt, today, is24h, t))}

@@ -283,6 +283,7 @@ export const en = {
       `• ${day}, ${time}: ${outcome} (${pills})`,
     missed: 'missed',
     skipped: 'skipped',
+    notReported: 'not reported',
     medicines: 'Medicines now:',
     medicinesNone: 'Medicines now: none',
     pillLine: (name: string, amount: string, times: string, end: string) =>
@@ -341,6 +342,7 @@ export const en = {
     nothingDue: 'Nothing due today',
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `Not heard from since ${time}`,
+    notHeardYet: (name: string) => `Not heard from ${name}'s phone yet`,
     lastHeard: (time: string) => `Last heard from at ${time}`,
     herTime: (name: string) => `Times are ${name}'s time.`,
     call: 'Call',

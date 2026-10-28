@@ -293,6 +293,7 @@ export const ml: Strings = {
       `• ${day}, ${time}: ${outcome} (${pills})`,
     missed: 'നഷ്ടമായി',
     skipped: 'ഒഴിവാക്കി',
+    notReported: 'അറിയിച്ചിട്ടില്ല',
     medicines: 'ഇപ്പോഴത്തെ മരുന്നുകൾ:',
     medicinesNone: 'ഇപ്പോഴത്തെ മരുന്നുകൾ: ഇല്ല',
     pillLine: (name: string, amount: string, times: string, end: string) =>
@@ -352,6 +353,8 @@ export const ml: Strings = {
     nothingDue: 'ഇന്ന് ഒന്നുമില്ല',
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `${time} മുതൽ വിവരമില്ല`,
+    notHeardYet: (name: string) =>
+      `${name}-യുടെ ഫോണിൽ നിന്ന് ഇതുവരെ വിവരമില്ല`,
     lastHeard: (time: string) => `അവസാനം വിവരം കിട്ടിയത് ${time}`,
     herTime: (name: string) => `സമയങ്ങൾ ${name}-യുടെ സമയമാണ്.`,
     call: 'വിളിക്കുക',

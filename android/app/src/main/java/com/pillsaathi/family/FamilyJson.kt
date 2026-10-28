@@ -87,12 +87,18 @@ object FamilyJson {
         startDate = LocalDate.parse(m["startDate"] as String),
         days = (m["days"] as Number?)?.toInt(),
         createdAt = (m["createdAt"] as Number).toLong(),
-        photo = m["photo"] as String?,
+        // Her photo's name becomes a file name on a relative's phone: never a path.
+        photo = (m["photo"] as String?)?.takeIf(::isSafeFileName),
         remaining = (m["remaining"] as Number?)?.toDouble(),
       )
     } catch (e: RuntimeException) {
       null
     }
+
+  /** A plain file name: letters, digits, dot, dash and underscore, no "..", at most 100 long. */
+  fun isSafeFileName(name: String): Boolean = SAFE_NAME.matches(name) && ".." !in name
+
+  private val SAFE_NAME = Regex("[A-Za-z0-9._-]{1,100}")
 
   /** A month document: `{records: [...]}`, in date and time order. */
   fun recordsToMap(r: List<DoseRecord>): Map<String, Any?> =

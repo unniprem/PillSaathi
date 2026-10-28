@@ -25,11 +25,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'HistoryDay'>;
 
 /**
  * "✓ Taken 8:03 AM", "✓ Taken (marked 26 Oct, 10:15 AM)" for a dose marked taken later,
- * "Skipped" or "Missed".
+ * "Skipped", "Missed", or on an elder's day "Not reported yet".
  */
 function statusOf(dose: HistoryDose, is24h: boolean, t: Strings): string {
-  if (dose.outcome !== 'taken') {
-    return dose.outcome === 'skipped' ? t.status.skipped : t.status.missed;
+  switch (dose.outcome) {
+    case 'skipped':
+      return t.status.skipped;
+    case 'missed':
+      return t.status.missed;
+    case 'notReported':
+      return t.status.notReported;
   }
   const at = new Date(dose.at);
   const time = formatTime(at.getHours(), at.getMinutes(), is24h);

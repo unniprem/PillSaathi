@@ -53,30 +53,44 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.elderId == request.auth.uid;
     }
 
+    // Her copy hangs off her doc, so it is made with its follower list, and months and photos
+    // are written only while it exists: an upload still running when her copy is deleted can't
+    // leave records behind.
+    function elderExists(e) {
+      return exists(/databases/$(database)/documents/elders/$(e));
+    }
+
     match /elders/{e} {
       allow get: if isUser(e) || follows(resource.data);
-      allow create: if isUser(e);
+      allow create: if isUser(e) && request.resource.data.keys().hasAll(['followers', 'people']);
       allow update: if isUser(e) || removesOnlyHimself();
       allow delete: if isUser(e) || (follows(resource.data) && abandoned(resource.data));
 
       match /months/{month} {
         allow read: if isUser(e) || follows(elderDoc(e));
-        allow create, update: if isUser(e);
+        allow create, update: if isUser(e) && elderExists(e);
         allow delete: if isUser(e) || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
       }
 
       match /photos/{pill} {
         allow read: if isUser(e) || follows(elderDoc(e));
-        allow create, update: if isUser(e);
+        allow create, update: if isUser(e) && elderExists(e);
         allow delete: if isUser(e) || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
       }
 
-      // A relative asking to follow her, with a live code of hers. Her phone answers it.
+      // A relative asking to follow her, with a live code of hers. Her phone answers it. The
+      // name and email her phone shows on the Allow prompt are his Google account's own, so
+      // nobody holding a code can pass as someone else.
       match /requests/{uid} {
         function asks() {
           let data = request.resource.data;
           let code = /databases/$(database)/documents/codes/$(data.code);
+          let token = request.auth.token;
           return isUser(uid)
+            && token.firebase.sign_in_provider == 'google.com'
+            && token.get('email_verified', false) == true
+            && data.email == token.get('email', '')
+            && data.name == token.get('name', '')
             && data.keys().hasOnly(['code', 'name', 'email', 'at', 'status'])
             && data.status == 'pending'
             && data.code is string

@@ -195,6 +195,37 @@ object FamilyRules {
     )
   }
 
+  /**
+   * The doses in [from]..[to] that were due by [now] but have no uploaded record, from the day her
+   * phone was last heard from on, so her History never shows a day better than what came in. Her
+   * phone records every dose, gaps included, before it uploads, so days before that are complete.
+   * None when she has never been heard from.
+   */
+  fun unreported(
+    pills: List<Pill>,
+    records: List<DoseRecord>,
+    heardAt: Long?,
+    from: LocalDate,
+    to: LocalDate,
+    now: Long,
+    zone: ZoneId,
+  ): List<UnreportedDose> {
+    if (heardAt == null) return emptyList()
+    val times = pills.flatMap { it.times }.toSortedSet()
+    var date = maxOf(from, dateOf(heardAt, zone))
+    val last = minOf(to, dateOf(now, zone))
+    val doses = mutableListOf<UnreportedDose>()
+    while (!date.isAfter(last)) {
+      for (t in times) {
+        val due = DoseRules.pillsDue(pills, t.hour, t.minute, date)
+        if (due.isEmpty() || at(date, t, zone) > now) continue
+        if (DoseRules.recordOf(records, date, t.hour, t.minute) == null) doses.add(UnreportedDose(date, t.hour, t.minute, due))
+      }
+      date = date.plusDays(1)
+    }
+    return doses
+  }
+
   /** [follow]'s card from its last read copy. [localZone] is the relative's, to tell him her times differ. */
   fun card(follow: Follow, now: Long, localZone: ZoneId): FamilyCardData {
     val zone = zoneOf(follow.zone) ?: localZone

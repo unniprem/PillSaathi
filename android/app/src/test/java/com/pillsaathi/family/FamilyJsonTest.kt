@@ -72,6 +72,15 @@ class FamilyJsonTest {
     assertEquals(azee, FamilyJson.pillFromMap(m))
   }
 
+  @Test fun pill_unsafePhotoName_dropped() {
+    // Her photo's name becomes a file name on his phone; a path must never get through.
+    for (bad in listOf("../../files/store/alarms.json", "a/b.jpg", "..", "", "x".repeat(101))) {
+      assertEquals(null, FamilyJson.pillFromMap(FamilyJson.pillToMap(azee.copy(photo = bad)))?.photo)
+    }
+    val ok = "3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg"
+    assertEquals(ok, FamilyJson.pillFromMap(FamilyJson.pillToMap(azee.copy(photo = ok)))?.photo)
+  }
+
   @Test fun records_roundTrip() {
     val m = FamilyJson.recordsToMap(listOf(taken, missed))
     assertEquals(listOf(taken, missed), FamilyJson.recordsFromMap(firestoreNumbers(m)))

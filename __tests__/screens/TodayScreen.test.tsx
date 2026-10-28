@@ -568,4 +568,20 @@ describe('family on Today', () => {
     await act(async () => jest.advanceTimersByTime(1_000));
     expect(family.refreshFamily).toHaveBeenCalledTimes(2);
   });
+
+  test('before her phone has ever uploaded, the card says so instead of a tally', async () => {
+    const waiting = {
+      ...amma,
+      heardAt: null,
+      refills: [],
+      tally: { taken: 0, skipped: 0, missed: 0, notReported: 0, later: 0 },
+    };
+    jest.mocked(family.getFamily).mockResolvedValue([waiting]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([waiting]);
+    await renderApp('Today');
+    expect(
+      await screen.findByText("Not heard from Amma's phone yet"),
+    ).toBeTruthy();
+    expect(screen.queryByText('Nothing due today')).toBeNull();
+  });
 });

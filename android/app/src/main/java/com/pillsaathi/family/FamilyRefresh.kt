@@ -15,13 +15,16 @@ import java.time.ZoneOffset
 object FamilyRefresh {
   /** Reads every elder. Returns false when offline: what was read by then is still saved. */
   fun run(context: Context): Boolean {
+    val store = AlarmStore(context)
+    // A phone that follows no one never starts Firebase here (Today asks on every focus).
+    val follows = store.locked { store.loadFamily() }.follows
+    if (follows.isEmpty()) return true
     val cloud = FamilyCloud.get(context)
     // Signed out, every read would be refused; that says nothing about her.
     if (cloud.relative() == null) return true
-    val store = AlarmStore(context)
     val read = mutableMapOf<String, Follow?>()
     try {
-      for (follow in store.locked { store.loadFamily() }.follows) {
+      for (follow in follows) {
         read[follow.elderId] = try {
           readOne(context, cloud, follow)
         } catch (e: FamilyException) {

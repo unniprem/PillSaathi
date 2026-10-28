@@ -6,8 +6,9 @@ import type {
   HistoryDose,
   HistoryPill,
 } from '../../src/native/alarms';
+import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
-import { mockAlarmsDefaults } from '../helpers/nativeMocks';
+import { mockAlarmsDefaults, mockFamilyDefaults } from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
@@ -169,4 +170,15 @@ it('reloads the day when the app comes back', async () => {
     .mockResolvedValue(history([dose(8, 'taken'), dose(21, 'missed')]));
   await act(async () => listeners.forEach(l => l('active')));
   expect(await screen.findByText('Missed')).toBeTruthy();
+});
+
+it("an elder's dose her phone never reported reads Not reported yet", async () => {
+  mockFamilyDefaults();
+  jest
+    .mocked(family.getElderHistory)
+    .mockResolvedValue(history([dose(8, 'taken'), dose(21, 'notReported')]));
+  await renderApp('HistoryDay', { date: '2026-10-06', elderId: 'E' });
+  expect(await screen.findByText('Not reported yet')).toBeTruthy();
+  expect(screen.queryByText('Missed')).toBeNull();
+  expect(screen.queryByText('Mark as taken')).toBeNull();
 });

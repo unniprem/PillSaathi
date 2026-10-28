@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.core.text.util.LocalePreferences
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.pillsaathi.alarm.DosePill
 import com.pillsaathi.alarm.History
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.Pill
@@ -11,6 +12,8 @@ import com.pillsaathi.alarm.RefillWarning
 import com.pillsaathi.alarm.Today
 import com.pillsaathi.alarm.TodayCard
 import com.pillsaathi.alarm.TodayPill
+import com.pillsaathi.family.UnreportedDose
+import java.time.LocalDate
 import java.util.Calendar
 
 /**
@@ -73,9 +76,16 @@ internal class JsMaps(private val photoUri: (String) -> String?, private val shi
       putString("level", w.level.json)
     }
 
-  /** [history] with each recorded pill's photo as it is now, and this phone's first day of the week. */
-  fun history(history: History): WritableMap {
+  /**
+   * [history] with each recorded pill's photo as it is now, and this phone's first day of the week.
+   * An elder's [unreported] doses join it as "notReported", in date and time order.
+   */
+  fun history(history: History, unreported: List<UnreportedDose> = emptyList()): WritableMap {
     val live = history.pills.associateBy { it.id }
+    val rows = history.doses.map { Row(it.date, it.hour, it.minute, it.outcome.json, shift(it.at), it.marked, it.pills) } +
+      unreported.map { u ->
+        Row(u.date, u.hour, u.minute, NOT_REPORTED, 0L, false, u.pills.map { DosePill(it.id, it.name, it.form, it.amount) })
+      }
     return Arguments.createMap().apply {
       putString("today", history.today.toString())
       putString("oldest", history.oldest?.toString())
@@ -83,14 +93,14 @@ internal class JsMaps(private val photoUri: (String) -> String?, private val shi
       putArray(
         "doses",
         Arguments.createArray().apply {
-          history.doses.forEach { d ->
+          rows.sortedWith(compareBy({ it.date }, { it.hour }, { it.minute })).forEach { d ->
             pushMap(
               Arguments.createMap().apply {
                 putString("date", d.date.toString())
                 putInt("hour", d.hour)
                 putInt("minute", d.minute)
-                putString("outcome", d.outcome.json)
-                putDouble("at", shift(d.at).toDouble())
+                putString("outcome", d.outcome)
+                putDouble("at", d.at.toDouble())
                 putBoolean("marked", d.marked)
                 putArray(
                   "pills",
@@ -118,6 +128,17 @@ internal class JsMaps(private val photoUri: (String) -> String?, private val shi
     }
   }
 
+  /** A History row: a recorded dose, or an elder's unreported one. */
+  private data class Row(
+    val date: LocalDate,
+    val hour: Int,
+    val minute: Int,
+    val outcome: String,
+    val at: Long,
+    val marked: Boolean,
+    val pills: List<DosePill>,
+  )
+
   private fun todayPill(pill: TodayPill): WritableMap =
     Arguments.createMap().apply {
       putString("pillId", pill.pillId)
@@ -132,6 +153,7 @@ internal class JsMaps(private val photoUri: (String) -> String?, private val shi
     }
 
   companion object {
+    private const val NOT_REPORTED = "notReported"
     private val WEEKDAYS = listOf("sun", "mon", "tue", "wed", "thu", "fri", "sat")
 
     /** The phone's first day of the week, from 0 for Sunday, as JS's `Date.getDay()` counts. */

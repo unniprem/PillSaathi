@@ -74,20 +74,81 @@ function elderE(heardAgo = MINUTE) {
   });
 }
 
+/** A relative signed in with Google, as Firebase Auth's ID token describes him. */
+const google = (uid: string, email = 'ravi@gmail.com', name = 'Ravi') =>
+  env
+    .authenticatedContext(uid, {
+      email,
+      email_verified: true,
+      name,
+      firebase: { sign_in_provider: 'google.com' },
+    })
+    .firestore();
+
 function request(
   db: ReturnType<typeof as>,
   code: string,
   elder = 'E',
   uid = 'R',
+  who = { name: 'Ravi', email: 'ravi@gmail.com' },
 ) {
   return setDoc(doc(db, `elders/${elder}/requests/${uid}`), {
     code,
-    name: 'Ravi',
-    email: 'ravi@gmail.com',
+    name: who.name,
+    email: who.email,
     at: serverTimestamp(),
     status: 'pending',
   });
 }
+
+test('a follow request names the Google account that asks', async () => {
+  await seed({ 'codes/111111': { elderId: 'E', expiresAt: at(10 * MINUTE) } });
+  // Not signed in with Google: an anonymous account could claim any name.
+  await assertFails(request(as('R'), '111111'));
+  const anonymous = env
+    .authenticatedContext('R', { firebase: { sign_in_provider: 'anonymous' } })
+    .firestore();
+  await assertFails(request(anonymous, '111111'));
+  const unverified = env
+    .authenticatedContext('R', {
+      email: 'ravi@gmail.com',
+      email_verified: false,
+      name: 'Ravi',
+      firebase: { sign_in_provider: 'google.com' },
+    })
+    .firestore();
+  await assertFails(request(unverified, '111111'));
+  // Someone else's name or email on the Allow prompt.
+  const mallory = google('R', 'mallory@gmail.com', 'Mallory');
+  await assertFails(request(mallory, '111111'));
+  await assertFails(
+    request(mallory, '111111', 'E', 'R', {
+      name: 'Ravi',
+      email: 'mallory@gmail.com',
+    }),
+  );
+  await assertSucceeds(
+    request(mallory, '111111', 'E', 'R', {
+      name: 'Mallory',
+      email: 'mallory@gmail.com',
+    }),
+  );
+});
+
+test('an elder doc starts with its followers, and months and photos need it', async () => {
+  const e = as('E');
+  await assertFails(
+    setDoc(doc(e, 'elders/E'), { zone: 'Asia/Kolkata', pills: [] }),
+  );
+  await assertFails(setDoc(doc(e, 'elders/E/months/2026-10'), { records: [] }));
+  await assertFails(setDoc(doc(e, 'elders/E/photos/p1'), { name: 'a.jpg' }));
+  await assertSucceeds(
+    setDoc(doc(e, 'elders/E'), { followers: [], people: {} }),
+  );
+  await assertSucceeds(
+    setDoc(doc(e, 'elders/E/months/2026-10'), { records: [] }),
+  );
+});
 
 test('a stranger reads nothing', async () => {
   await elderE();
@@ -164,7 +225,7 @@ test('a follow request needs a live code for that elder', async () => {
     'codes/222222': { elderId: 'E', expiresAt: at(-MINUTE) },
     'codes/333333': { elderId: 'F', expiresAt: at(10 * MINUTE) },
   });
-  const r = as('R');
+  const r = google('R');
   await assertFails(request(r, '222222'));
   await assertFails(request(r, '333333'));
   await assertFails(request(r, '999999'));

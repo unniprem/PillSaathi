@@ -114,15 +114,22 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       val request = pending.firstOrNull { it.uid == uid }
         ?: cloud.readRequest(elder, uid)
         ?: throw FamilyException(FamilyCloud.NOT_FOUND, "No request from $uid")
-      cloud.answerRequest(elder, request, allow)
+      if (allow) {
+        // Sharing is on before the Allow is sent, under the upload lock: a write that times out
+        // is still queued and lands later, and the upload must not stay off when it does. If it
+        // is refused instead, the next upload finds no follower and turns sharing off again.
+        synchronized(ElderSync.lock) {
+          store.locked { store.saveFamily(store.loadFamily().copy(sharing = true)) }
+          FamilyWork.requestUpload(reactApplicationContext)
+          FamilyWork.ensureHeartbeat(reactApplicationContext)
+          cloud.answerRequest(elder, request, true)
+        }
+        if (request.code == currentCode) currentCode = null
+      } else {
+        cloud.answerRequest(elder, request, false)
+      }
       answered.add(key(request))
       pending = pending.filterNot { it.uid == uid }
-      if (allow) {
-        if (request.code == currentCode) currentCode = null
-        store.locked { store.saveFamily(store.loadFamily().copy(sharing = true)) }
-        FamilyWork.requestUpload(reactApplicationContext)
-        FamilyWork.ensureHeartbeat(reactApplicationContext)
-      }
       null
     }
 
@@ -136,7 +143,10 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
   override fun removeFollower(uid: String, promise: Promise) =
     onWorker(promise) {
       val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
-      if (cloud.removeFollower(elder, uid).isEmpty()) ElderSync.stopSharing(reactApplicationContext, elder)
+      // After any upload still running, so nothing it writes outlives the copy.
+      synchronized(ElderSync.lock) {
+        if (cloud.removeFollower(elder, uid).isEmpty()) ElderSync.stopSharing(reactApplicationContext, elder)
+      }
       null
     }
 
@@ -227,6 +237,9 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       asks.remove(elderId)?.listener?.remove()
       FamilyChecks.scheduleNext(reactApplicationContext)
+      // Read her copy now, then every few hours, so her new times are checked without app opens.
+      FamilyWork.ensureRefresh(reactApplicationContext)
+      FamilyWork.requestRefresh(reactApplicationContext)
       null
     }
 
@@ -255,8 +268,9 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       store.locked { store.saveFamily(FamilyRules.withoutFollow(store.loadFamily(), elderId)) }
       FamilyRefresh.photoDir(reactApplicationContext, elderId).deleteRecursively()
-      // The last follow gone cancels the wake-up.
+      // The last follow gone cancels the wake-up and the background reads.
       FamilyChecks.scheduleNext(reactApplicationContext)
+      FamilyWork.stopRefreshIfUnused(reactApplicationContext)
       null
     }
 
@@ -292,7 +306,9 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       val history = History(
         LocalDate.now(zone), follow.oldest?.let(LocalDate::parse), DoseRules.dosesBetween(records, first, last), follow.pills,
       )
-      elderMaps(follow, zone).history(history)
+      val unreported =
+        FamilyRules.unreported(follow.pills, records, follow.heardAt, first, last, System.currentTimeMillis(), zone)
+      elderMaps(follow, zone).history(history, unreported)
     }
 
   override fun listElderPills(elderId: String, promise: Promise) =

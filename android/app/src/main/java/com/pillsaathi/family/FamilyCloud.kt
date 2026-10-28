@@ -242,13 +242,18 @@ class FamilyCloud private constructor(context: Context) {
     return elderId to expiresAt
   }
 
-  /** Asks elder [elderId] to let this relative follow her, with her live [code]. */
+  /**
+   * Asks elder [elderId] to let this relative follow her, with her live [code]. The name and email
+   * are read from his Google ID token, the same claims the rules check them against.
+   */
   fun askToFollow(elderId: String, code: String) {
-    val me = relative() ?: throw FamilyException(NOT_SIGNED_IN, "Not signed in")
+    val user = FirebaseAuth.getInstance(familyApp()).currentUser
+      ?: throw FamilyException(NOT_SIGNED_IN, "Not signed in")
+    val claims = await(user.getIdToken(false)).claims
     val request = mapOf(
       "code" to code,
-      "name" to me.name,
-      "email" to me.email,
+      "name" to (claims["name"] as? String ?: ""),
+      "email" to (claims["email"] as? String ?: ""),
       "at" to FieldValue.serverTimestamp(),
       "status" to PENDING,
     )

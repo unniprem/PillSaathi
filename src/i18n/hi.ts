@@ -289,6 +289,7 @@ export const hi: Strings = {
       `• ${day}, ${time}: ${outcome} (${pills})`,
     missed: 'छूट गई',
     skipped: 'छोड़ दी',
+    notReported: 'खबर नहीं',
     medicines: 'अभी की दवाएँ:',
     medicinesNone: 'अभी की दवाएँ: कोई नहीं',
     pillLine: (name: string, amount: string, times: string, end: string) =>
@@ -345,6 +346,7 @@ export const hi: Strings = {
     nothingDue: 'आज कुछ नहीं',
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `${time} से कोई खबर नहीं`,
+    notHeardYet: (name: string) => `${name} के फ़ोन से अभी कोई खबर नहीं`,
     lastHeard: (time: string) => `आखिरी खबर ${time} पर`,
     herTime: (name: string) => `समय ${name} के हैं।`,
     call: 'कॉल करें',

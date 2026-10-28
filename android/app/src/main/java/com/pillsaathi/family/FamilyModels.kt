@@ -105,3 +105,6 @@ data class FamilyCardData(
 
 /** The Google account a relative's phone signed in with. */
 data class Relative(val name: String, val email: String)
+
+/** A dose of hers that was due, with the pills due then, but has no uploaded record. */
+data class UnreportedDose(val date: LocalDate, val hour: Int, val minute: Int, val pills: List<Pill>)

@@ -38,10 +38,12 @@ class FamilySystemReceiver : BroadcastReceiver() {
       try {
         FamilyChecks.scheduleNext(context)
         val store = com.pillsaathi.alarm.AlarmStore(context)
-        if (FamilyRules.uploads(store.locked { store.loadFamily() })) {
+        val local = store.locked { store.loadFamily() }
+        if (FamilyRules.uploads(local)) {
           FamilyWork.requestUpload(context)
           FamilyWork.ensureHeartbeat(context)
         }
+        if (local.follows.isNotEmpty()) FamilyWork.ensureRefresh(context)
       } catch (e: Exception) {
         Log.w(FAMILY_TAG, "Could not set up Family after ${intent.action}", e)
       } finally {
