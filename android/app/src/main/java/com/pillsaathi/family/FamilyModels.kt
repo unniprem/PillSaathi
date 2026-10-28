@@ -3,6 +3,7 @@ package com.pillsaathi.family
 import com.pillsaathi.alarm.DoseRecord
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.RefillLevel
+import com.pillsaathi.alarm.RefillWarning
 import java.time.LocalDate
 
 /**
@@ -88,3 +89,16 @@ sealed interface CheckDecision {
   /** Her phone has been silent since [heardAt]. */
   data class Silent(val heardAt: Long) : CheckDecision
 }
+
+/** An elder's day in numbers; [later] counts doses still to come today. */
+data class Tally(val taken: Int, val skipped: Int, val missed: Int, val notReported: Int, val later: Int)
+
+/** One elder's card in Today's Family section. */
+data class FamilyCardData(
+  val follow: Follow,
+  val tally: Tally,
+  val silent: Boolean,
+  val abandoned: Boolean,
+  val otherZone: Boolean,
+  val refills: List<RefillWarning>,
+)

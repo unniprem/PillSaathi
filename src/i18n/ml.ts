@@ -65,6 +65,7 @@ export const ml: Strings = {
     snoozed: 'സ്നൂസ് ചെയ്തു',
     snoozedUntil: (time: string) => `${time} വരെ സ്നൂസ്`,
     upcoming: 'വരാനിരിക്കുന്നു',
+    notReported: 'ഇതുവരെ അറിയിച്ചിട്ടില്ല',
     nextTomorrow: 'അടുത്തത്: നാളെ',
     nextOn: (day: string) => `അടുത്തത്: ${day}`,
   },

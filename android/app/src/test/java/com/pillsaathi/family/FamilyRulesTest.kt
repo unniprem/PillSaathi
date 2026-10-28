@@ -3,10 +3,13 @@ package com.pillsaathi.family
 import com.pillsaathi.alarm.DoseOutcome
 import com.pillsaathi.alarm.DosePill
 import com.pillsaathi.alarm.DoseRecord
+import com.pillsaathi.alarm.DoseStatus
 import com.pillsaathi.alarm.DoseTime
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.PillForm
 import com.pillsaathi.alarm.RefillLevel
+import com.pillsaathi.alarm.Today
+import com.pillsaathi.alarm.TodayCard
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -188,5 +191,92 @@ class FamilyRulesTest {
   @Test fun uploads_onlyWhenSharing() {
     assertFalse(FamilyRules.uploads(FamilyLocal()))
     assertTrue(FamilyRules.uploads(FamilyLocal(sharing = true)))
+  }
+
+  @Test fun elderToday_recordWins() {
+    val morning = azee.copy(times = listOf(DoseTime(8, 0), DoseTime(14, 0)))
+    val taken = DoseRecord(oct28, 8, 0, DoseOutcome.TAKEN, ist(10, 28, 8, 3), emptyList())
+    val card = FamilyRules.elderToday(listOf(morning), listOf(taken), now, kolkata).cards.first()
+    assertEquals(DoseStatus.TAKEN, card.status)
+    assertEquals(ist(10, 28, 8, 3), card.statusAt)
+  }
+
+  @Test fun elderToday_pastNoRecord_notReported() {
+    val card = FamilyRules.elderToday(listOf(azee), emptyList(), now, kolkata).cards.single()
+    assertEquals(DoseStatus.NOT_REPORTED, card.status)
+    assertEquals(14, card.hour)
+    assertEquals("Azee 500", card.pills.single().name)
+  }
+
+  @Test fun elderToday_future_upcoming() {
+    val night = azee.copy(times = listOf(DoseTime(21, 0)))
+    assertEquals(DoseStatus.UPCOMING, FamilyRules.elderToday(listOf(night), emptyList(), now, kolkata).cards.single().status)
+  }
+
+  @Test fun elderToday_notStarted_neverNotReported() {
+    val tomorrow = azee.copy(startDate = LocalDate.of(2026, 10, 29))
+    val card = FamilyRules.elderToday(listOf(tomorrow), emptyList(), now, kolkata).cards.single()
+    assertEquals(DoseStatus.LATER, card.status)
+    assertEquals(ist(10, 29, 14, 0), card.statusAt)
+  }
+
+  @Test fun elderToday_herDate() {
+    val late = Instant.parse("2026-10-28T23:30:00Z").toEpochMilli()
+    assertEquals(LocalDate.of(2026, 10, 29), FamilyRules.elderToday(listOf(azee), emptyList(), late, kolkata).date)
+  }
+
+  @Test fun elderToday_refills() {
+    val refills = FamilyRules.elderToday(listOf(azee.copy(remaining = 4.0)), emptyList(), now, kolkata).refills
+    assertEquals(listOf(RefillLevel.LOW), refills.map { it.level })
+  }
+
+  @Test fun tally_counts() {
+    fun c(status: DoseStatus) = TodayCard(null, 8, 0, null, emptyList(), status, null)
+    val today = Today(
+      oct28,
+      listOf(DoseStatus.TAKEN, DoseStatus.TAKEN, DoseStatus.MISSED, DoseStatus.NOT_REPORTED, DoseStatus.UPCOMING).map(::c),
+      emptyList(),
+    )
+    assertEquals(Tally(2, 0, 1, 1, 1), FamilyRules.tally(today))
+    assertEquals(Tally(0, 0, 0, 0, 0), FamilyRules.tally(today.copy(cards = listOf(c(DoseStatus.LATER)))))
+  }
+
+  @Test fun card_silentAndAbandoned() {
+    val quiet = FamilyRules.card(amma.copy(heardAt = now - 13 * 3_600_000L), now, kolkata)
+    assertTrue(quiet.silent)
+    assertFalse(quiet.abandoned)
+    val gone = FamilyRules.card(amma.copy(heardAt = now - 31 * 86_400_000L), now, kolkata)
+    assertTrue(gone.silent)
+    assertTrue(gone.abandoned)
+    val fresh = FamilyRules.card(amma.copy(heardAt = now - 60_000L), now, kolkata)
+    assertFalse(fresh.silent)
+    assertEquals(Tally(0, 0, 0, 1, 0), fresh.tally)
+  }
+
+  @Test fun card_otherZone() {
+    assertTrue(FamilyRules.card(amma, now, ZoneId.of("Europe/London")).otherZone)
+    assertFalse(FamilyRules.card(amma, now, kolkata).otherZone)
+  }
+
+  @Test fun afterRefresh_refused_dropsFollow() {
+    assertNull(FamilyRules.afterRefresh(amma, null, emptyList()))
+  }
+
+  @Test fun afterRefresh_keepsSettings() {
+    val mine = amma.copy(phone = "+919800000000", delayMinutes = 15, photos = mapOf("p1" to "a.jpg"), since = 1L)
+    val rec = record(DoseOutcome.TAKEN)
+    val doc = ElderDoc("Europe/London", 9L, "2026-02-01", listOf(azee.copy(name = "Azee 250")), listOf("R"), emptyMap())
+    assertEquals(
+      mine.copy(zone = "Europe/London", heardAt = 9L, oldest = "2026-02-01", pills = doc.pills, recent = listOf(rec)),
+      FamilyRules.afterRefresh(mine, doc, listOf(rec)),
+    )
+  }
+
+  @Test fun wallClock_showsElderTime() {
+    val london = ZoneId.of("Europe/London")
+    val shifted = FamilyRules.wallClock(Instant.parse("2026-11-10T08:30:00Z").toEpochMilli(), kolkata, london)
+    val wall = Instant.ofEpochMilli(shifted).atZone(london)
+    assertEquals(14, wall.hour)
+    assertEquals(0, wall.minute)
   }
 }

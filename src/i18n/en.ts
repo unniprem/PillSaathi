@@ -61,6 +61,7 @@ export const en = {
     snoozed: 'Snoozed',
     snoozedUntil: (time: string) => `Snoozed until ${time}`,
     upcoming: 'Coming up',
+    notReported: 'Not reported yet',
     nextTomorrow: 'Next: tomorrow',
     nextOn: (day: string) => `Next: ${day}`,
   },

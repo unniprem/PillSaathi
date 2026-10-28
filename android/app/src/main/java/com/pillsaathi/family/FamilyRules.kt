@@ -1,15 +1,19 @@
 package com.pillsaathi.family
 
+import com.pillsaathi.alarm.Alarm
 import com.pillsaathi.alarm.DoseOutcome
 import com.pillsaathi.alarm.DoseRecord
 import com.pillsaathi.alarm.DoseRules
+import com.pillsaathi.alarm.DoseStatus
 import com.pillsaathi.alarm.DoseTime
 import com.pillsaathi.alarm.Pill
 import com.pillsaathi.alarm.RefillLevel
 import com.pillsaathi.alarm.RefillRules
 import com.pillsaathi.alarm.RefillWarning
+import com.pillsaathi.alarm.Today
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -153,8 +157,90 @@ object FamilyRules {
     }
   }
 
+  /**
+   * Her today on the relative's phone, from her uploaded [pills] and [records], in her [zone], with
+   * the same card rules her phone uses. Each time gets a stand-in card: coming up when a pill is due
+   * later today, next on the day a pill is next due, else done. A time due today that has passed
+   * with no record is "not reported": her phone may still be ringing, snoozed or offline, so it is
+   * never shown as taken.
+   */
+  fun elderToday(pills: List<Pill>, records: List<DoseRecord>, now: Long, zone: ZoneId): Today {
+    val today = dateOf(now, zone)
+    val times = pills.filter { DoseRules.isActive(it, today) }.flatMap { it.times }.toSortedSet()
+    val cards = times.map { t ->
+      Alarm(
+        "t${t.hour}${t.minute}", t.hour, t.minute, DoseRules.EVERY_DAY, "", null, true,
+        nextDue(pills, t, today, now, zone), null, null, 0L,
+      )
+    }
+    val todayCards = DoseRules.todayCards(cards, pills, records, emptySet(), now, zone).map { card ->
+      val passed = at(today, DoseTime(card.hour, card.minute), zone) <= now
+      val dueToday = DoseRules.pillsDue(pills, card.hour, card.minute, today).isNotEmpty()
+      if (card.status == DoseStatus.DONE && passed && dueToday) card.copy(status = DoseStatus.NOT_REPORTED) else card
+    }
+    return Today(today, todayCards, RefillRules.warnings(pills, now, zone))
+  }
+
+  /**
+   * Her day in numbers. Later counts only what is still to come today, so a pill that starts
+   * tomorrow never makes the day look unfinished.
+   */
+  fun tally(today: Today): Tally {
+    fun count(s: DoseStatus) = today.cards.count { it.status == s }
+    return Tally(
+      count(DoseStatus.TAKEN), count(DoseStatus.SKIPPED), count(DoseStatus.MISSED), count(DoseStatus.NOT_REPORTED),
+      count(DoseStatus.UPCOMING),
+    )
+  }
+
+  /** [follow]'s card from its last read copy. [localZone] is the relative's, to tell him her times differ. */
+  fun card(follow: Follow, now: Long, localZone: ZoneId): FamilyCardData {
+    val zone = zoneOf(follow.zone) ?: localZone
+    val today = elderToday(follow.pills, follow.recent, now, zone)
+    val heardAt = follow.heardAt
+    val instant = Instant.ofEpochMilli(now)
+    return FamilyCardData(
+      follow = follow,
+      tally = tally(today),
+      silent = heardAt != null && now - heardAt >= SILENT_AFTER_MS,
+      abandoned = isAbandoned(heardAt, now),
+      otherZone = zone.rules.getOffset(instant) != localZone.rules.getOffset(instant),
+      refills = today.refills,
+    )
+  }
+
+  /**
+   * [follow] after reading her doc and [recent] records: his own name, number and delay stay, the
+   * copy of hers is replaced. Null when the read was refused or the doc is gone, so the follow goes.
+   */
+  fun afterRefresh(follow: Follow, elder: ElderDoc?, recent: List<DoseRecord>): Follow? =
+    elder?.let {
+      follow.copy(zone = it.zone, heardAt = it.heardAt, oldest = it.oldest, pills = it.pills, recent = recent)
+    }
+
+  /**
+   * The instant whose wall clock in [localZone] reads what [millis] reads in [elderZone], so a
+   * screen that formats times in the phone's zone shows her times.
+   */
+  fun wallClock(millis: Long, elderZone: ZoneId, localZone: ZoneId): Long =
+    LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), elderZone).atZone(localZone).toInstant().toEpochMilli()
+
+  /** Whether her phone has been silent long enough that a follower may delete her copy. */
+  fun isAbandoned(heardAt: Long?, now: Long): Boolean = heardAt != null && now - heardAt >= ABANDONED_AFTER_MS
+
   /** Whether this phone uploads its pills: only once someone can see them. */
   fun uploads(local: FamilyLocal): Boolean = local.sharing
+
+  /** When a pill is next due at [t]: today's time if still to come, else the next day one is due, else null. */
+  private fun nextDue(pills: List<Pill>, t: DoseTime, today: LocalDate, now: Long, zone: ZoneId): Long? {
+    val todayAt = at(today, t, zone)
+    if (DoseRules.pillsDue(pills, t.hour, t.minute, today).isNotEmpty()) return todayAt.takeIf { it > now }
+    val next = pills.filter { t in it.times }.mapNotNull { p ->
+      val from = maxOf(p.startDate, today.plusDays(1))
+      from.takeIf { DoseRules.isDueOn(p, it) }
+    }.minOrNull()
+    return next?.let { at(it, t, zone) }
+  }
 
   internal fun zoneOf(id: String?): ZoneId? = id?.let { runCatching { ZoneId.of(it) }.getOrNull() }
 

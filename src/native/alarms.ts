@@ -41,7 +41,8 @@ export type DoseStatus =
   | 'snoozed'
   | 'upcoming'
   | 'later'
-  | 'done';
+  | 'done'
+  | 'notReported';
 
 export type Pill = Omit<NativePill, 'form'> & { form: PillForm };
 export type PillInput = Omit<NativePillInput, 'form'> & { form: PillForm };

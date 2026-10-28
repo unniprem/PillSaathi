@@ -63,6 +63,7 @@ export const hi: Strings = {
     snoozed: 'स्नूज़ किया',
     snoozedUntil: (time: string) => `${time} तक स्नूज़`,
     upcoming: 'आने वाली',
+    notReported: 'अभी तक खबर नहीं',
     nextTomorrow: 'अगली: कल',
     nextOn: (day: string) => `अगली: ${day}`,
   },

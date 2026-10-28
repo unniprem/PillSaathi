@@ -51,6 +51,8 @@ export function statusText(
       return t.status.upcoming;
     case 'later':
       return at === null ? '' : nextLabel(at, date, t);
+    case 'notReported':
+      return t.status.notReported;
     default:
       return '';
   }
