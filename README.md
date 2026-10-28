@@ -17,6 +17,15 @@ Over time, for the elder and for the relatives who ask "did Amma take her tablet
 - **Share report**: History's **Share** sends the month on screen, up to today, as plain text through WhatsApp, SMS or email: the doses taken, every dose not taken, and the medicines now with their amounts, times and last days. It is written in the app's language.
 - **Tablets left**, optional, for tablets and capsules: a count on the pill page with **+10**, **+15** and **+30** or a typed number (in halves, up to 999). Each Taken lowers it by that dose's amount. When about 5 days are left, unless the course ends first, Today shows a banner ("Telma 40: 9 tablets left · About 4 days. · Add tablets") that opens the pill at its count, and the phone gets one **Refill reminders** notification, and one more at 0. Adding tablets re-arms both. A pill at 0 still rings.
 
+And for the relative who lives elsewhere, **Family** (Settings → Family, or **+ Add family** on Today):
+
+- **Linking, once.** On the elder's phone, **Show a code to a family member** shows a scan code and the same code as 6 digits, with **Send code** to share it ("Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes."). The relative signs in with Google, scans or types the code, and the elder's phone asks "Let Ravi see your pills?" with **Allow** and **No**. Nothing is shared before Allow. The relative then says what he calls her, optionally her number for **Call**, and when to ping him (15, 30 or 60 minutes after a dose, or Off).
+- **Her day on his phone.** Today gets a **Family** section above his own pills, one card per elder: "2 taken · 1 missed · 1 later", any pill running low, and "Not heard from since …" when her phone has gone quiet for 12 hours. Her page shows her cards read-only (a dose her phone hasn't uploaded reads "Not reported yet", never taken), when her phone was last heard from, her History and Call.
+- **Pings.** After each of her dose times plus his delay, his phone checks her record and notifies him: "Amma hasn't taken Azee 500 (2:00 PM).", or "Amma's phone hasn't reported the 2:00 PM dose (Azee 500). Last heard from at 1:12 PM." when nothing came in, one "We haven't heard from Amma's phone since …" when it has been silent 12 hours, and once per level "Amma's Telma 40: 4 tablets left". Each dose pings once at most.
+- **Who can see.** Her Family page lists everyone who can see her pills, each with **Remove**; he can **Stop following** from his side. When the last one goes, her online copy is deleted.
+
+It runs on Firebase's free Spark plan with no billing account, and needs a Firebase project of your own (see [Firebase setup](#firebase-setup)). A build without one works as before, and Family says "Family isn't set up in this build."
+
 **Draft languages:** Malayalam and Hindi are drafts until someone who reads each language checks them. A release build lists only checked languages (English for now), and a phone set to a hidden language gets English everywhere, the ringing screen included. Debug builds list all three, with "(draft)" after the unchecked ones. Showing a language once it is checked is a one-line change (`LanguageRules.CHECKED` in `AppSettings.kt`).
 
 Android only for now. The JS bundle still builds for iOS, but the alarm features throw `PillSaathi alarms are Android-only for now`.
@@ -31,9 +40,11 @@ Android only for now. The JS bundle still builds for iOS, but the alarm features
 - Pills, cards, records, sounds, photos, settings and setup state live in a multi-process-safe file store in device-protected storage, so alarms ring before the first unlock after a reboot, with the right photo and language. The ringing path reads the language without taking the store lock.
 - Read aloud (`ReadAloud`, `ReadAloudRules`, `SpeechText`) drives the alarm player and the phone's text-to-speech through small interfaces, so its timing is JVM-tested with fakes. The sound starts exactly as before, and pauses only once the voice has started.
 - Native words use Android string resources (`values-ml`, `values-hi`) through a context in the app's language. JS words are typed tables in `src/i18n/` (`en`, `ml`, `hi`).
-- Two app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the eight screens in `src/screens/`: Today, the pill page, History, a day in History, Sound, Record, Setup and Settings.
+- Three app-local TurboModules (`specs/NativeAlarms.ts`, `specs/NativeSounds.ts`, `specs/NativeFamily.ts`, native side in `android/app/src/main/java/com/pillsaathi/bridge/`) serve the screens in `src/screens/`: Today, the pill page, History, a day in History, Sound, Record, Setup, Settings, Family, the family code, Add family, an elder's page and its settings.
+- **Family online** is native too, in `android/app/src/main/java/com/pillsaathi/family/`, with the Firebase Android SDK (Firestore and Auth) and no server code. The elder's phone stays the source: its JSON files are the truth, and the online copy is uploaded by WorkManager in the main process (`ElderSync`), only what changed, with a 6-hourly heartbeat for "last heard from". The engine's only family call is `FamilyHooks.changed`, which reads `family.json` without the lock and, when this phone shares, sends one broadcast; `:ringing` never touches Firebase or WorkManager. Records go up one document per month (`elders/{id}/months/YYYY-MM`) to keep the shared free quota.
+- Each phone has two Firebase identities: the default app signs in anonymously and is "my pills", a second app named `family` signs in with Google and is "people I look after". Access is enforced only by `firestore.rules`, tested on the Firestore emulator. The relative's checks are a silent `setExactAndAllowWhileIdle` wake-up (`FamilyChecks`) that reads her copy afresh and decides with the pure rules in `FamilyRules.kt` (check times in her zone, the ping decision, refill pings, her today, the doses her History shows as not reported), which have JVM tests. Uploads, Allow and Remove run one at a time (`ElderSync.lock`), and the relative's phone also reads its elders every 6 hours (`RefreshWorker`), so a new dose time of hers is checked without anyone opening the app. The Allow prompt shows the name and email of the Google account that asked, checked by the rules against its ID token.
 
-The designs are in [`docs/superpowers/specs/2026-10-26-history-and-refills-design.md`](docs/superpowers/specs/2026-10-26-history-and-refills-design.md) (History, the report, tablet counts), [`docs/superpowers/specs/2026-10-26-easy-for-amma-design.md`](docs/superpowers/specs/2026-10-26-easy-for-amma-design.md) (photos, languages, read aloud, bigger text), [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
+The designs are in [`docs/superpowers/specs/2026-10-27-family-online-design.md`](docs/superpowers/specs/2026-10-27-family-online-design.md) (Family online), [`docs/superpowers/specs/2026-10-26-history-and-refills-design.md`](docs/superpowers/specs/2026-10-26-history-and-refills-design.md) (History, the report, tablet counts), [`docs/superpowers/specs/2026-10-26-easy-for-amma-design.md`](docs/superpowers/specs/2026-10-26-easy-for-amma-design.md) (photos, languages, read aloud, bigger text), [`docs/superpowers/specs/2026-10-26-pills-and-doses-design.md`](docs/superpowers/specs/2026-10-26-pills-and-doses-design.md) (pills) and [`docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md`](docs/superpowers/specs/2026-10-24-custom-sound-alarm-design.md) (the alarm engine).
 
 ## Run it
 
@@ -51,7 +62,7 @@ To build an APK to install on a phone without Metro:
 cd android && ./gradlew assembleRelease
 ```
 
-It writes one APK per CPU type to `android/app/build/outputs/apk/release/`. Share `app-arm64-v8a-release.apk` (about 25 MB), which fits almost every phone from the last several years, or `app-armeabi-v7a-release.apk` for an old 32-bit phone. The x86 ones are for emulators. It is signed with the debug key, so it is for testing only.
+It writes one APK per CPU type to `android/app/build/outputs/apk/release/`. Share `app-arm64-v8a-release.apk` (about 31 MB with Family's Firebase libraries), which fits almost every phone from the last several years, or `app-armeabi-v7a-release.apk` for an old 32-bit phone. The x86 ones are for emulators. It is signed with the debug key, so it is for testing only.
 
 Setup gotchas:
 
@@ -61,13 +72,27 @@ Setup gotchas:
 - After a reinstall you can skip the permission dialogs with
   `adb shell pm grant com.pillsaathi android.permission.POST_NOTIFICATIONS` and the same for `android.permission.RECORD_AUDIO`.
 
+## Firebase setup
+
+Family needs a Firebase project of your own, on the free **Spark** plan. Its config file, `android/app/google-services.json`, is **not in git** (`.gitignore`); without it the app builds and runs, and Family says it isn't set up. The Google Services Gradle plugin is applied only when the file exists.
+
+1. If you used the old `pillsathi-dev` project (before the fresh start), remove its Android app `com.pillsaathi` (Project settings → Your apps) or delete the project, and unlink any billing account. Google lets only one project hold Google sign-in for a package and signing key.
+2. Create a project in the [Firebase console](https://console.firebase.google.com/), with Google Analytics off. Stay on Spark and never add billing: then nothing can ever be charged, and going over the free quota only pauses Family until the daily reset.
+3. **Firestore:** Build → Firestore Database → Create database, **Standard** edition, location **asia-south1 (Mumbai)** (it can't be changed later), production mode.
+4. **Authentication:** Build → Authentication → Get started, then turn on **Anonymous** and **Google** (with a support email).
+5. **Android app** `com.pillsaathi`, with the SHA-1 and SHA-256 of `android/app/debug.keystore` (`cd android && ./gradlew signingReport`, variant `debug`). Download `google-services.json` into `android/app/`. Add the app after turning Google sign-in on, so the file has the web client id that sign-in needs.
+6. **Rules:** `npx firebase login`, then `npx firebase deploy --only firestore:rules --project <project-id>`. Do it again whenever `firestore.rules` changes.
+
 ## Tests
 
 ```sh
 npm test                                          # Jest: screens and lib
 npx tsc --noEmit && npm run lint                  # types and lint
-cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm, dose, refill, language, speech, read-aloud and photo rules, pill input, ring commands, JSON, file store
+cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm, dose, refill, language, speech, read-aloud, photo and family rules, pill input, ring commands, JSON, file store
+JAVA_HOME=$(/usr/libexec/java_home -v 21+) npm run test:rules   # Firestore rules on the local emulator
 ```
+
+The rules tests start the Firestore emulator (`firebase-tools`, project `demo-pillsaathi`, nothing online), which needs Java 21 or newer; the Android build itself uses Java 17, so point `JAVA_HOME` at a newer JDK for this one command.
 
 ## Debug broadcasts (debug builds only)
 
@@ -89,6 +114,18 @@ adb shell am broadcast -a <ACTION> -n com.pillsaathi/.alarm.debug.DebugAlarmRece
 | `com.pillsaathi.DEBUG_AUTO_SILENCE_MS` | `--el ms N`                                                                                                                                                                                                                              | Overrides the 10-minute auto-silence for testing; `0` resets it                                           |
 | `com.pillsaathi.DEBUG_STOP_SERVICE`    | none                                                                                                                                                                                                                                     | Destroys `RingingService` mid-ring, simulating a system kill                                              |
 
+Family has its own receiver, `DebugFamilyReceiver`, in the **main** process (where Firebase runs). Watch it with `adb logcat -s PillSaathiFamily`:
+
+```sh
+adb shell am broadcast -a <ACTION> -n com.pillsaathi/.family.debug.DebugFamilyReceiver
+```
+
+| Action                              | Effect                                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `com.pillsaathi.DEBUG_FAMILY_UPLOAD` | Runs the elder's upload now and logs how it went                                        |
+| `com.pillsaathi.DEBUG_FAMILY_CHECK`  | Runs the relative's due checks now, as the wake-up would, and logs each decision        |
+| `com.pillsaathi.DEBUG_FAMILY_LIST`   | Logs `family.json`, with each follow's pills reduced to their names                     |
+
 Example: `adb shell am broadcast -a com.pillsaathi.DEBUG_ADD_PILL -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver --ei minutes_from_now 2 --es name Telma --ef amount 0.5`
 
 A name with spaces has to survive two shells: quote it for the device shell too, e.g. `adb shell "am broadcast ... --es name 'Telma 40'"`.
@@ -98,6 +135,30 @@ To move the emulator's clock without root (Play Store images): `adb shell cmd al
 Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb shell dumpsys activity services com.pillsaathi`, `adb shell dumpsys audio` (look for the `USAGE_ALARM` player), `adb shell am force-stop com.pillsaathi` (simulates an OEM kill).
 
 ## Device test matrix
+
+### Family online
+
+Last run: 2026-10-28, emulator API 34 (`Medium_Phone_API_34`, arm64), **without a Firebase project** (no `google-services.json`).
+
+- [x] The alarm is untouched with Family code in place and `family.json` set to sharing: a pill 2 minutes away rang on time, Taken recorded the dose, and `:ringing` logged no Firebase or WorkManager line. The main process got the broadcast and ran the upload, which stopped at "not set up" as it should without a config.
+
+**Pending, needs the Firebase project (setup steps above):**
+
+- [ ] Show a code: `codes/<code>` and `elders/<uid>` with `followers: []` appear in the console; Send code opens the share sheet with the text.
+- [ ] Two emulators linked by typing and by scanning; Allow and No; the elder's doc lists the relative; `DEBUG_FAMILY_UPLOAD` writes the pills and months.
+- [ ] A ring left to auto-silence: the relative gets "Amma hasn't taken …" at +15 min, with Call and Open.
+- [ ] A dose taken with the elder's app swiped away: the relative sees Taken within the refresh, and no ping.
+- [ ] The elder in airplane mode through a dose: "hasn't reported … Last heard from at …"; her records arrive when she is back.
+- [ ] 4 tablets at 1 a day: one refill ping, none on the next check.
+- [ ] The elder removes the relative: his next refresh drops her card, and `dumpsys alarm` shows no family check left.
+- [ ] The relative force-stopped: the next check still fires and pings.
+- [ ] The alarm checklist with the elder linked and offline, and with Firestore unreachable: every ring on time.
+
+**Pending, needs a real phone (the Redmi Note 10 was not connected):**
+
+- [ ] The upload after a ring with the app swiped away (MIUI).
+- [ ] The missed ping at +30 min, with the elder on the Redmi.
+- [ ] The relative's checks with his app swiped away (Xiaomi).
 
 ### History and refills
 
