@@ -13,4 +13,12 @@ export const familyDefaults: Record<string, unknown> = {
   answerRequest: undefined,
   listFollowers: [],
   removeFollower: undefined,
+  signedInRelative: null,
+  signInWithGoogle: null,
+  scanCode: null,
+  requestFollow: 'E',
+  followState: 'pending',
+  saveFollow: undefined,
+  listFollows: [],
+  unfollow: undefined,
 };

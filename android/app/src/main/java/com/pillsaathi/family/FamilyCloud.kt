@@ -8,6 +8,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -202,6 +203,96 @@ class FamilyCloud private constructor(context: Context) {
   /** The uid this phone's default app is signed in as, or null when it never has been. */
   fun signedInElder(): String? = if (isSetUp()) FirebaseAuth.getInstance(defaultApp()).currentUser?.uid else null
 
+  /**
+   * The second app, "people I look after", signed in with Google. Made once, from the default
+   * app's options. The default app is never signed in with Google, so a phone can have its own
+   * pills followed and follow others at once.
+   */
+  fun familyApp(): FirebaseApp {
+    val options = defaultApp().options
+    synchronized(this) {
+      return FirebaseApp.getApps(context).firstOrNull { it.name == FAMILY_APP }
+        ?: FirebaseApp.initializeApp(context, options, FAMILY_APP)
+    }
+  }
+
+  /** The relative's Google account, or null when this phone hasn't signed in (or has no config). */
+  fun relative(): Relative? {
+    if (!isSetUp()) return null
+    val user = FirebaseAuth.getInstance(familyApp()).currentUser ?: return null
+    return Relative(user.displayName ?: "", user.email ?: "")
+  }
+
+  /** Signs the family app in with a Google [idToken]. */
+  fun signInRelative(idToken: String): Relative {
+    val auth = FirebaseAuth.getInstance(familyApp())
+    val user = await(auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))).user
+      ?: throw FamilyException(OFFLINE, "Google sign-in gave no user")
+    return Relative(user.displayName ?: "", user.email ?: "")
+  }
+
+  fun relativeUid(): String =
+    FirebaseAuth.getInstance(familyApp()).currentUser?.uid ?: throw FamilyException(NOT_SIGNED_IN, "Not signed in")
+
+  /** The elder and expiry of link code [code], or null when there is no such code. */
+  fun readCode(code: String): Pair<String, Long>? {
+    val snap = await(familyDb().collection(CODES).document(code).get(Source.SERVER))
+    val elderId = snap.getString("elderId") ?: return null
+    val expiresAt = snap.getTimestamp("expiresAt")?.toDate()?.time ?: return null
+    return elderId to expiresAt
+  }
+
+  /** Asks elder [elderId] to let this relative follow her, with her live [code]. */
+  fun askToFollow(elderId: String, code: String) {
+    val me = relative() ?: throw FamilyException(NOT_SIGNED_IN, "Not signed in")
+    val request = mapOf(
+      "code" to code,
+      "name" to me.name,
+      "email" to me.email,
+      "at" to FieldValue.serverTimestamp(),
+      "status" to PENDING,
+    )
+    await(familyDb().collection(ELDERS).document(elderId).collection(REQUESTS).document(relativeUid()).set(request))
+  }
+
+  /** Calls [onChange] on [executor] with this relative's request to [elderId]: its status, or null when gone. */
+  fun listenRequest(elderId: String, executor: Executor, onChange: (String?) -> Unit): ListenerRegistration =
+    familyDb().collection(ELDERS).document(elderId).collection(REQUESTS).document(relativeUid())
+      .addSnapshotListener(executor) { snap, e ->
+        if (e != null) {
+          Log.w(FAMILY_TAG, "Listening for an answer failed", e)
+          return@addSnapshotListener
+        }
+        onChange(snap?.getString("status"))
+      }
+
+  /** Takes this relative off [elderId]'s followers. Already off, or her copy gone, is fine. */
+  fun leave(elderId: String) {
+    val uid = relativeUid()
+    try {
+      await(
+        familyDb().collection(ELDERS).document(elderId)
+          .update(mapOf("followers" to FieldValue.arrayRemove(uid), "people.$uid" to FieldValue.delete())),
+      )
+    } catch (e: FamilyException) {
+      if (e.code != PERMISSION && e.code != NOT_FOUND) throw e
+    }
+  }
+
+  /**
+   * Deletes [elderId]'s online copy as one of her followers, which the rules allow once her phone
+   * has been silent for 30 days: months and photos, then the doc, whose followers grant the rest.
+   */
+  fun deleteCopyAsFollower(elderId: String) {
+    val ref = familyDb().collection(ELDERS).document(elderId)
+    for (sub in listOf(MONTHS, PHOTOS)) {
+      await(ref.collection(sub).get(Source.SERVER)).documents.forEach { await(it.reference.delete()) }
+    }
+    await(ref.delete())
+  }
+
+  internal fun familyDb(): FirebaseFirestore = FirebaseFirestore.getInstance(familyApp())
+
   internal fun db(): FirebaseFirestore = FirebaseFirestore.getInstance(defaultApp())
 
   internal fun elder(uid: String): DocumentReference = db().collection(ELDERS).document(uid)
@@ -221,6 +312,7 @@ class FamilyCloud private constructor(context: Context) {
     const val PERMISSION = "PERMISSION"
 
     const val TIMEOUT_S = 20L
+    const val FAMILY_APP = "family"
     private const val CLOCK_MARGIN_MS = 30_000L
     const val PENDING = "pending"
     const val ALLOWED = "allowed"

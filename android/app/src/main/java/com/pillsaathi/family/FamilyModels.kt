@@ -102,3 +102,6 @@ data class FamilyCardData(
   val otherZone: Boolean,
   val refills: List<RefillWarning>,
 )
+
+/** The Google account a relative's phone signed in with. */
+data class Relative(val name: String, val email: String)
