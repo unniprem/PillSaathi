@@ -228,6 +228,13 @@ object FamilyRules {
   /** Whether her phone has been silent long enough that a follower may delete her copy. */
   fun isAbandoned(heardAt: Long?, now: Long): Boolean = heardAt != null && now - heardAt >= ABANDONED_AFTER_MS
 
+  /** A photo's small copy: [width] × [height] scaled so the longest side is at most [max]. */
+  fun thumbSize(width: Int, height: Int, max: Int = 256): Pair<Int, Int> {
+    val longest = maxOf(width, height)
+    if (longest <= max) return width to height
+    return Math.round(width * max.toDouble() / longest).toInt() to Math.round(height * max.toDouble() / longest).toInt()
+  }
+
   /** Whether this phone uploads its pills: only once someone can see them. */
   fun uploads(local: FamilyLocal): Boolean = local.sharing
 

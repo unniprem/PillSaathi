@@ -279,4 +279,14 @@ class FamilyRulesTest {
     assertEquals(14, wall.hour)
     assertEquals(0, wall.minute)
   }
+
+  @Test fun thumbSize_scalesLongestSide() {
+    assertEquals(256 to 192, FamilyRules.thumbSize(1024, 768))
+    assertEquals(77 to 256, FamilyRules.thumbSize(300, 1000))
+  }
+
+  @Test fun thumbSize_keepsSmall() {
+    assertEquals(200 to 100, FamilyRules.thumbSize(200, 100))
+    assertEquals(256 to 256, FamilyRules.thumbSize(256, 256))
+  }
 }

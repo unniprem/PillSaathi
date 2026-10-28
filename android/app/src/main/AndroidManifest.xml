@@ -84,6 +84,11 @@
             android:resource="@xml/photo_paths" />
       </provider>
 
+      <!-- Family online runs in the main process only; :ringing never touches Firebase. -->
+      <receiver
+        android:name=".family.FamilyChangeReceiver"
+        android:exported="false" />
+
       <service
         android:name=".alarm.RingingService"
         android:process=":ringing"
