@@ -2,7 +2,7 @@
 
 Date: 2026-10-27
 Branch: `feature/family-online`
-Status: for the user's review (builder check done 2026-10-28)
+Status: accepted (2026-10-28)
 
 ## Intent
 
