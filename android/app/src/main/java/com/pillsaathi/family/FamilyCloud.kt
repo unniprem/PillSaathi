@@ -1,10 +1,12 @@
 package com.pillsaathi.family
 
 import android.content.Context
+import android.util.Log
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.DocumentReference
@@ -12,13 +14,20 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Source
 import com.pillsaathi.alarm.DoseRecord
 import com.pillsaathi.alarm.Pill
+import java.security.SecureRandom
+import java.util.Date
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+
+/** A relative asking to follow this phone, with the [code] they used (null if unreadable). */
+data class FollowRequest(val uid: String, val name: String, val email: String, val code: String?)
 
 /** A Family call failed; [code] is one of the error codes the screens know (OFFLINE, PERMISSION…). */
 class FamilyException(val code: String, message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -108,6 +117,91 @@ class FamilyCloud private constructor(context: Context) {
     madeCodes.remove(code)
   }
 
+  /**
+   * A new link code for elder [uid], live for [FamilyRules.CODE_TTL_MS]: tries up to 5 random codes,
+   * skipping any already in use. Returns the code and when it expires.
+   */
+  fun createCode(uid: String): Pair<String, Long> {
+    val random = SecureRandom()
+    var last: FamilyException? = null
+    repeat(5) {
+      val code = FamilyRules.newCode(random)
+      val ref = db().collection(CODES).document(code)
+      if (await(ref.get(Source.SERVER)).exists()) return@repeat
+      // A little short of the full life, so a phone clock a few seconds fast still passes the rules.
+      val expiresAt = System.currentTimeMillis() + FamilyRules.CODE_TTL_MS - CLOCK_MARGIN_MS
+      try {
+        await(ref.set(mapOf("elderId" to uid, "expiresAt" to Timestamp(Date(expiresAt)))))
+        madeCodes.add(code)
+        return code to expiresAt
+      } catch (e: FamilyException) {
+        // Taken a moment ago by another phone (a create can't overwrite), or refused.
+        if (e.code != PERMISSION) throw e
+        last = e
+      }
+    }
+    throw last ?: FamilyException(PERMISSION, "No free link code after 5 tries")
+  }
+
+  /** Calls [onChange] on [executor] with elder [uid]'s pending follow requests, until removed. */
+  fun listenRequests(uid: String, executor: Executor, onChange: (List<FollowRequest>) -> Unit): ListenerRegistration =
+    elder(uid).collection(REQUESTS).whereEqualTo("status", PENDING).addSnapshotListener(executor) { snap, e ->
+      if (e != null) {
+        Log.w(FAMILY_TAG, "Listening for follow requests failed", e)
+        return@addSnapshotListener
+      }
+      onChange(
+        snap?.documents.orEmpty().map {
+          FollowRequest(it.id, it.getString("name") ?: "", it.getString("email") ?: "", it.getString("code"))
+        },
+      )
+    }
+
+  /**
+   * Answers [request] to elder [uid]. Allow adds the relative to her followers and uses up the
+   * code, in one batch; No marks the request denied.
+   */
+  fun answerRequest(uid: String, request: FollowRequest, allow: Boolean) {
+    val requestRef = elder(uid).collection(REQUESTS).document(request.uid)
+    if (!allow) {
+      await(requestRef.update("status", DENIED))
+      return
+    }
+    val batch = db().batch()
+    batch.update(
+      elder(uid),
+      mapOf(
+        "followers" to FieldValue.arrayUnion(request.uid),
+        "people.${request.uid}" to mapOf("name" to request.name, "email" to request.email),
+      ),
+    )
+    batch.update(requestRef, "status", ALLOWED)
+    // A code already gone (expired and deleted, or used) can't be deleted again.
+    val code = request.code?.let { db().collection(CODES).document(it) }
+    if (code != null && await(code.get(Source.SERVER)).getString("elderId") == uid) batch.delete(code)
+    await(batch.commit())
+    request.code?.let { madeCodes.remove(it) }
+  }
+
+  /** The request [requester] made to elder [uid], or null. */
+  fun readRequest(uid: String, requester: String): FollowRequest? {
+    val snap = await(elder(uid).collection(REQUESTS).document(requester).get(Source.SERVER))
+    if (!snap.exists()) return null
+    return FollowRequest(snap.id, snap.getString("name") ?: "", snap.getString("email") ?: "", snap.getString("code"))
+  }
+
+  /** Elder [uid]'s doc from the server, or from the cache when offline; null when there is none. */
+  fun readElderCached(uid: String): ElderDoc? = elderOf(await(elder(uid).get()))
+
+  /** Takes [follower] off elder [uid]'s list. Returns who is left. */
+  fun removeFollower(uid: String, follower: String): List<String> {
+    await(elder(uid).update(mapOf("followers" to FieldValue.arrayRemove(follower), "people.$follower" to FieldValue.delete())))
+    return readElder(uid)?.followers.orEmpty()
+  }
+
+  /** The uid this phone's default app is signed in as, or null when it never has been. */
+  fun signedInElder(): String? = if (isSetUp()) FirebaseAuth.getInstance(defaultApp()).currentUser?.uid else null
+
   internal fun db(): FirebaseFirestore = FirebaseFirestore.getInstance(defaultApp())
 
   internal fun elder(uid: String): DocumentReference = db().collection(ELDERS).document(uid)
@@ -127,6 +221,10 @@ class FamilyCloud private constructor(context: Context) {
     const val PERMISSION = "PERMISSION"
 
     const val TIMEOUT_S = 20L
+    private const val CLOCK_MARGIN_MS = 30_000L
+    const val PENDING = "pending"
+    const val ALLOWED = "allowed"
+    const val DENIED = "denied"
     const val ELDERS = "elders"
     const val CODES = "codes"
     const val MONTHS = "months"

@@ -1,4 +1,6 @@
 import * as alarms from '../../src/native/alarms';
+import * as family from '../../src/native/family';
+import { familyDefaults } from './familyDefaults';
 import type { Health, Today } from '../../src/native/alarms';
 
 /** A phone with nothing in the way of alarms ringing. */
@@ -46,4 +48,13 @@ export function mockAlarmsDefaults() {
   jest.mocked(alarms.setLanguage).mockResolvedValue();
   jest.mocked(alarms.setReadAloud).mockResolvedValue();
   jest.mocked(alarms.tryReadAloud).mockResolvedValue('spoken');
+}
+
+/** Puts the mocked `src/native/family` back to a phone that has never used Family. */
+export function mockFamilyDefaults() {
+  for (const [name, value] of Object.entries(familyDefaults)) {
+    const fn = (family as unknown as Record<string, jest.Mock>)[name];
+    fn.mockReset();
+    fn.mockImplementation(() => Promise.resolve(value));
+  }
 }

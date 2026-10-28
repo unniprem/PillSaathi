@@ -12,6 +12,7 @@ class PillSaathiPackage : BaseReactPackage() {
     when (name) {
       NativeAlarmsModule.NAME -> NativeAlarmsModule(reactContext)
       NativeSoundsModule.NAME -> NativeSoundsModule(reactContext)
+      NativeFamilyModule.NAME -> NativeFamilyModule(reactContext)
       else -> null
     }
 
@@ -21,6 +22,8 @@ class PillSaathiPackage : BaseReactPackage() {
         turboModule(NativeAlarmsModule.NAME, NativeAlarmsModule::class.java),
       NativeSoundsModule.NAME to
         turboModule(NativeSoundsModule.NAME, NativeSoundsModule::class.java),
+      NativeFamilyModule.NAME to
+        turboModule(NativeFamilyModule.NAME, NativeFamilyModule::class.java),
     )
   }
 
