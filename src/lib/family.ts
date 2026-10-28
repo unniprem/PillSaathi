@@ -1,4 +1,7 @@
 import type { Strings } from '../i18n';
+import type { FamilyTally } from '../../specs/NativeFamily';
+import { formatDay, toISODate } from './course';
+import { formatTime } from './time';
 
 /** "482 913": a link code in two groups of three, easier to read out over the phone. */
 export function formatCode(code: string): string {
@@ -13,4 +16,32 @@ export function shareMessage(code: string, t: Strings): string {
 /** The error code a native family call rejected with, if any. */
 export function errorCode(e: unknown): string | undefined {
   return (e as { code?: string } | null)?.code;
+}
+
+/**
+ * "2 taken · 1 missed · 1 not reported · 1 later": an elder's day, nonzero parts only, or
+ * "Nothing due today".
+ */
+export function tallyText(tally: FamilyTally, t: Strings): string {
+  const parts = [
+    tally.taken && t.family.taken(tally.taken),
+    tally.missed && t.family.missed(tally.missed),
+    tally.skipped && t.family.skipped(tally.skipped),
+    tally.notReported && t.family.notReported(tally.notReported),
+    tally.later && t.family.later(tally.later),
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : t.family.nothingDue;
+}
+
+/** When her phone was heard from: "1:12 PM" today ([today], YYYY-MM-DD), else "Tue 27 Oct, 8:05 AM". */
+export function heardText(
+  at: number,
+  today: string,
+  is24h: boolean,
+  t: Strings,
+): string {
+  const d = new Date(at);
+  const time = formatTime(d.getHours(), d.getMinutes(), is24h);
+  const day = toISODate(d);
+  return day === today ? time : t.family.dayAndTime(formatDay(day, t), time);
 }

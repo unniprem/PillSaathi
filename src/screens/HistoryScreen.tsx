@@ -30,6 +30,7 @@ import {
 import type { DayState } from '../lib/history';
 import { reportText } from '../lib/report';
 import { getHistory, is24HourFormat, listPills } from '../native/alarms';
+import { getElderHistory, listElderPills, listFollows } from '../native/family';
 import type { History } from '../native/alarms';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
@@ -61,12 +62,13 @@ function stateWord(state: DayState, t: Strings): string | null {
   }
 }
 
-/** All of [month]'s doses up to [History.today]. */
-async function loadMonth(month: string): Promise<History> {
-  const history = await getHistory(
-    `${month}-01`,
-    addDays(`${addMonths(month, 1)}-01`, -1),
-  );
+/** All of [month]'s doses up to [History.today]: this phone's, or with [elderId] hers. */
+async function loadMonth(month: string, elderId?: string): Promise<History> {
+  const from = `${month}-01`;
+  const to = addDays(`${addMonths(month, 1)}-01`, -1);
+  const history = elderId
+    ? await getElderHistory(elderId, from, to)
+    : await getHistory(from, to);
   return {
     ...history,
     doses: history.doses.filter(d => d.date <= history.today),
@@ -77,7 +79,8 @@ async function loadMonth(month: string): Promise<History> {
  * A month of doses as a calendar, coloured by how each day went, with the month's share taken.
  * Share sends the month on screen as plain text.
  */
-export default function HistoryScreen({ navigation }: Props) {
+export default function HistoryScreen({ navigation, route }: Props) {
+  const elderId = route.params?.elderId;
   const { t, lang } = useI18n();
   const [shown, setShown] = useState<Shown | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -93,27 +96,30 @@ export default function HistoryScreen({ navigation }: Props) {
   }, []);
 
   /** Loads [target], or with null the current month as the native side dates it. */
-  const load = useCallback(async (target: string | null) => {
-    const request = ++latest.current;
-    try {
-      let next = target ?? monthOf(toISODate(new Date()));
-      let history = await loadMonth(next);
-      if (target === null && monthOf(history.today) !== next) {
-        next = monthOf(history.today);
-        history = await loadMonth(next);
+  const load = useCallback(
+    async (target: string | null) => {
+      const request = ++latest.current;
+      try {
+        let next = target ?? monthOf(toISODate(new Date()));
+        let history = await loadMonth(next, elderId);
+        if (target === null && monthOf(history.today) !== next) {
+          next = monthOf(history.today);
+          history = await loadMonth(next, elderId);
+        }
+        if (mounted.current && request === latest.current) {
+          month.current = next;
+          setShown({ month: next, history });
+          setLoadFailed(false);
+        }
+      } catch (e) {
+        console.warn('Could not load the history', e);
+        if (mounted.current && request === latest.current) {
+          setLoadFailed(true);
+        }
       }
-      if (mounted.current && request === latest.current) {
-        month.current = next;
-        setShown({ month: next, history });
-        setLoadFailed(false);
-      }
-    } catch (e) {
-      console.warn('Could not load the history', e);
-      if (mounted.current && request === latest.current) {
-        setLoadFailed(true);
-      }
-    }
-  }, []);
+    },
+    [elderId],
+  );
 
   // Coming back from a day's page reloads the month, so a dose marked taken there shows.
   useFocusEffect(
@@ -140,8 +146,8 @@ export default function HistoryScreen({ navigation }: Props) {
     const request = ++latest.current;
     try {
       const [history, pills] = await Promise.all([
-        loadMonth(shown.month),
-        listPills(),
+        loadMonth(shown.month, elderId),
+        elderId ? listElderPills(elderId) : listPills(),
       ]);
       if (mounted.current && request === latest.current) {
         setShown({ month: shown.month, history });
@@ -162,7 +168,7 @@ export default function HistoryScreen({ navigation }: Props) {
         Alert.alert(t.history.shareFailed, t.common.tryAgain);
       }
     }
-  }, [shown, lang, t]);
+  }, [shown, lang, t, elderId]);
 
   const renderShare = useCallback(
     () => (
@@ -181,6 +187,21 @@ export default function HistoryScreen({ navigation }: Props) {
   useLayoutEffect(() => {
     navigation.setOptions({ headerRight: renderShare });
   }, [navigation, renderShare]);
+
+  // An elder's History is titled with what he calls her.
+  useEffect(() => {
+    if (!elderId) {
+      return;
+    }
+    listFollows()
+      .then(follows => {
+        const follow = follows.find(f => f.elderId === elderId);
+        if (follow && mounted.current) {
+          navigation.setOptions({ title: t.family.historyOf(follow.name) });
+        }
+      })
+      .catch(e => console.warn('Could not read the follow', e));
+  }, [elderId, navigation, t]);
 
   if (!shown) {
     return (
@@ -214,7 +235,7 @@ export default function HistoryScreen({ navigation }: Props) {
             : formatDay(date, t)
         }
         disabled={future}
-        onPress={() => navigation.navigate('HistoryDay', { date })}
+        onPress={() => navigation.navigate('HistoryDay', { date, elderId })}
         style={[
           styles.cell,
           fill !== undefined && { backgroundColor: fill },

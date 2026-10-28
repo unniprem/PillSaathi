@@ -8,7 +8,8 @@ import { colors, spacing } from '../theme';
 
 type Props = {
   refills: Refill[];
-  onOpen: (pillId: string) => void;
+  /** Opens the pill at its count; without it (an elder's pills) the rows don't open. */
+  onOpen?: (pillId: string) => void;
 };
 
 /** "About 4 days.", "About 1 day." or "Less than a day." */
@@ -27,8 +28,9 @@ export default function RefillBanner({ refills, onOpen }: Props) {
       {refills.map(r => (
         <Pressable
           key={r.pillId}
-          accessibilityRole="button"
-          onPress={() => onOpen(r.pillId)}
+          accessibilityRole={onOpen ? 'button' : 'text'}
+          disabled={!onOpen}
+          onPress={() => onOpen?.(r.pillId)}
           style={styles.banner}
         >
           <View style={styles.text}>
@@ -44,9 +46,13 @@ export default function RefillBanner({ refills, onOpen }: Props) {
               <Text style={styles.days}>{daysText(r.daysLeft, t)}</Text>
             ) : null}
           </View>
-          <Text style={styles.action}>
-            {r.form === 'capsule' ? t.refill.addCapsules : t.refill.addTablets}
-          </Text>
+          {onOpen ? (
+            <Text style={styles.action}>
+              {r.form === 'capsule'
+                ? t.refill.addCapsules
+                : t.refill.addTablets}
+            </Text>
+          ) : null}
         </Pressable>
       ))}
     </>

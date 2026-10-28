@@ -15,10 +15,12 @@ type Props = {
   date: string;
   is24h: boolean;
   soundName: string | null;
-  onOpenPill: (pillId: string) => void;
-  onOpenSound: () => void;
+  onOpenPill?: (pillId: string) => void;
+  onOpenSound?: () => void;
   /** Offered for a missed or skipped dose. */
-  onMarkTaken: () => void;
+  onMarkTaken?: () => void;
+  /** An elder's card on a relative's phone: no sound, no Mark as taken, and pills don't open. */
+  readOnly?: boolean;
 };
 
 function clock(millis: number, is24h: boolean) {
@@ -76,10 +78,12 @@ export default function DoseCard({
   onOpenPill,
   onOpenSound,
   onMarkTaken,
+  readOnly = false,
 }: Props) {
   const { lang, t } = useI18n();
   const status = statusText(card, date, is24h, t);
-  const canMark = card.status === 'missed' || card.status === 'skipped';
+  const canMark =
+    !readOnly && (card.status === 'missed' || card.status === 'skipped');
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -107,12 +111,13 @@ export default function DoseCard({
       </View>
       {card.pills.map(pill => {
         const detail = pillDetail(pill, date, t);
+        const opens = pill.exists && !readOnly;
         return (
           <Pressable
             key={pill.pillId}
-            accessibilityRole={pill.exists ? 'button' : 'text'}
-            disabled={!pill.exists}
-            onPress={() => onOpenPill(pill.pillId)}
+            accessibilityRole={opens ? 'button' : 'text'}
+            disabled={!opens}
+            onPress={() => onOpenPill?.(pill.pillId)}
             style={styles.pillRow}
           >
             <PillPicture key={pill.photoUri ?? ''} pill={pill} />
@@ -126,7 +131,7 @@ export default function DoseCard({
           </Pressable>
         );
       })}
-      {card.alarmId ? (
+      {card.alarmId && !readOnly ? (
         <Pressable
           accessibilityRole="button"
           onPress={onOpenSound}

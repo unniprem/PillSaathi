@@ -14,6 +14,7 @@ import PillPicture from '../components/PillPicture';
 import { formatAmount } from '../lib/amount';
 import { formatTime } from '../lib/time';
 import { getHistory, is24HourFormat, markDoseTaken } from '../native/alarms';
+import { getElderHistory } from '../native/family';
 import type { HistoryDose } from '../native/alarms';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
@@ -39,7 +40,7 @@ function statusOf(dose: HistoryDose, is24h: boolean, t: Strings): string {
 
 /** One day's doses by time, each with its pills as they were then. */
 export default function HistoryDayScreen({ route }: Props) {
-  const { date } = route.params;
+  const { date, elderId } = route.params;
   const { lang, t } = useI18n();
   const [doses, setDoses] = useState<HistoryDose[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -56,7 +57,9 @@ export default function HistoryDayScreen({ route }: Props) {
   const load = useCallback(async () => {
     const request = ++latest.current;
     try {
-      const history = await getHistory(date, date);
+      const history = elderId
+        ? await getElderHistory(elderId, date, date)
+        : await getHistory(date, date);
       if (mounted.current && request === latest.current) {
         setDoses(history.doses);
         setLoadFailed(false);
@@ -67,7 +70,7 @@ export default function HistoryDayScreen({ route }: Props) {
         setLoadFailed(true);
       }
     }
-  }, [date]);
+  }, [date, elderId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -119,7 +122,8 @@ export default function HistoryDayScreen({ route }: Props) {
         <Text style={styles.message}>{t.history.dayEmpty}</Text>
       ) : null}
       {(doses ?? []).map(dose => {
-        const canMark = dose.outcome !== 'taken';
+        // An elder's dose is hers to mark, on her phone.
+        const canMark = !elderId && dose.outcome !== 'taken';
         return (
           <View key={`${dose.hour}:${dose.minute}`} style={styles.card}>
             <View style={styles.header}>

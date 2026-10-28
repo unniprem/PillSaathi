@@ -106,7 +106,7 @@ test('Family says "No one yet." when looking after no one', async () => {
   );
 });
 
-test('the Settings row opens Family, in Malayalam too', async () => {
+test('the Settings row opens Family', async () => {
   jest.mocked(alarms.getSettings).mockResolvedValue({
     language: 'en',
     readAloud: true,
@@ -115,9 +115,10 @@ test('the Settings row opens Family, in Malayalam too', async () => {
   await renderApp('Settings');
   await fireEvent.press(await screen.findByText('Family'));
   await waitFor(() => expect(headerTitles()).toEqual(['Settings', 'Family']));
+});
 
+test('the Settings row reads Family in Malayalam', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
-  screen.unmount();
   await renderApp('Settings');
   expect(await screen.findByText('കുടുംബം')).toBeTruthy();
 });

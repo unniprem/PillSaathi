@@ -2,9 +2,16 @@ import { Alert } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type { Today, TodayPill } from '../../src/native/alarms';
+import * as family from '../../src/native/family';
+import type { FamilyCard } from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { hi } from '../../src/i18n/hi';
-import { mockAlarmsDefaults } from '../helpers/nativeMocks';
+import {
+  emptyToday,
+  healthy,
+  mockAlarmsDefaults,
+  mockFamilyDefaults,
+} from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
@@ -150,9 +157,7 @@ test('shows a pill photo when it has one', async () => {
 
 test('shows the type icon without a photo', async () => {
   await renderApp();
-  expect((await screen.findByTestId('pill-icon-p1')).props.children).toBe(
-    '⚪',
-  );
+  expect((await screen.findByTestId('pill-icon-p1')).props.children).toBe('⚪');
   expect(screen.getByTestId('pill-icon-p3').props.children).toBe('💊');
   expect(screen.queryByTestId('pill-photo-p1')).toBeNull();
 });
@@ -452,5 +457,115 @@ describe('running low', () => {
     expect(screen.getByText('Vitamin D3: 1 capsule left')).toBeTruthy();
     expect(screen.getByText('Less than a day.')).toBeTruthy();
     expect(screen.getByText('Add capsules')).toBeTruthy();
+  });
+});
+
+const amma: FamilyCard = {
+  elderId: 'E',
+  name: 'Amma',
+  phone: null,
+  delayMinutes: 30,
+  heardAt: at(26, 13, 12),
+  silent: false,
+  abandoned: false,
+  otherZone: false,
+  tally: { taken: 2, skipped: 0, missed: 1, notReported: 0, later: 1 },
+  refills: [
+    {
+      pillId: 'p9',
+      name: 'Telma 40',
+      form: 'tablet',
+      remaining: 4,
+      daysLeft: 4,
+      level: 'low',
+    },
+  ],
+};
+
+describe('family on Today', () => {
+  beforeEach(() => {
+    mockFamilyDefaults();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('Today shows Family above my pills, with tally and low line', async () => {
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    await renderApp('Today');
+    expect(await screen.findByText('Amma')).toBeTruthy();
+    expect(screen.getByText('Family')).toBeTruthy();
+    expect(screen.getByText('2 taken · 1 missed · 1 later')).toBeTruthy();
+    expect(screen.getByText('Telma 40: 4 tablets left')).toBeTruthy();
+    expect(screen.getByText('+ Add family')).toBeTruthy();
+    // Above my own pills.
+    const texts = screen
+      .getAllByText(/Amma|Azithromycin 500/)
+      .map(n => n.props.children);
+    expect(texts.indexOf('Amma')).toBeLessThan(
+      texts.indexOf('Azithromycin 500'),
+    );
+    await fireEvent.press(screen.getByText('Amma'));
+    await waitFor(() =>
+      expect(headerTitles()).toEqual([expect.any(String), 'Amma']),
+    );
+  });
+
+  test('Today with no pills and no family offers + Add family too', async () => {
+    jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
+    await renderApp('Today');
+    expect(
+      await screen.findByText('No pills yet. Tap + Add pill to add one.'),
+    ).toBeTruthy();
+    expect(screen.getByText('+ Add pill')).toBeTruthy();
+    await fireEvent.press(screen.getByText('+ Add family'));
+    await waitFor(() =>
+      expect(headerTitles()).toEqual([expect.any(String), 'Add family']),
+    );
+  });
+
+  test('a silent elder shows "Not heard from since …"', async () => {
+    const silent = { ...amma, silent: true, refills: [] };
+    jest.mocked(family.getFamily).mockResolvedValue([silent]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([silent]);
+    jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
+    await renderApp('Today');
+    expect(
+      // Silent means 12 hours or more, so it is rarely today: the day is named.
+      await screen.findByText('Not heard from since Mon 26 Oct, 1:12 PM'),
+    ).toBeTruthy();
+  });
+
+  test('with family and no pills of its own, Today still shows the health banner', async () => {
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
+    jest
+      .mocked(alarms.getHealth)
+      .mockResolvedValue({ ...healthy, exactAlarmAllowed: false });
+    await renderApp('Today');
+    expect(await screen.findByText('Amma')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "PillSaathi isn't allowed to set alarms. Tap to allow it.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('No pills yet. Tap + Add pill to add one.'),
+    ).toBeNull();
+  });
+
+  test('Today refreshes family every 2 minutes while focused', async () => {
+    jest.useFakeTimers();
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    await renderApp('Today');
+    await waitFor(() => expect(family.refreshFamily).toHaveBeenCalledTimes(1));
+    await act(async () => jest.advanceTimersByTime(119_000));
+    expect(family.refreshFamily).toHaveBeenCalledTimes(1);
+    await act(async () => jest.advanceTimersByTime(1_000));
+    expect(family.refreshFamily).toHaveBeenCalledTimes(2);
   });
 });
