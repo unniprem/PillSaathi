@@ -33,6 +33,21 @@ export const en = {
     tryAgain: 'Please try again.',
     openSettings: 'Open settings',
     defaultTone: 'Default alarm tone',
+    back: 'Back',
+    close: 'Close',
+    next: 'Next',
+    continue: 'Continue',
+  },
+  /** A page that is one of several steps. */
+  steps: {
+    of: (n: number, total: number) => `${n} of ${total}`,
+  },
+  /** The bottom tabs, by route name. */
+  tabs: {
+    Today: 'Today',
+    History: 'History',
+    Family: 'Family',
+    Settings: 'Settings',
   },
   today: {
     title: 'Today',
@@ -145,8 +160,7 @@ export const en = {
     stop: (name: string) => `Stop ${name}`,
     changeFailed: 'Could not change the sound',
     playFailed: 'Could not play the sound',
-    unsupported:
-      "That file can't be played. Try an mp3, m4a, wav or ogg file.",
+    unsupported: "That file can't be played. Try an mp3, m4a, wav or ogg file.",
     importFailed: 'Could not import the file',
     deleteTitle: (name: string) => `Delete “${name}”?`,
     usedBy: (names: string) =>

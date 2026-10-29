@@ -1,0 +1,161 @@
+import React from 'react';
+import type { ReactNode } from 'react';
+import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n } from '../i18n';
+import { colors, font, radius, skyColors, spacing } from '../theme';
+import Icon from './Icon';
+import type { IconName } from './icons';
+import { SKY_GRADIENT, skyFor, skyImage, skyInk } from './sky';
+
+type Props = {
+  title: string;
+  sub?: string;
+  onBack?: () => void;
+  onClose?: () => void;
+  /** Round buttons on the right, such as Share. */
+  right?: ReactNode;
+  progress?: { step: number; total: number };
+  /** The hour whose sky to draw; now when left out. */
+  hour?: number;
+};
+
+/**
+ * An inner page's header: a short band of the sky at this hour, with a round back or close
+ * button, the title, and a step bar on a page that is one of several steps. With no title the
+ * step bar takes the title's place. The app draws edge to edge, so the band runs up under the
+ * status bar.
+ */
+export default function SkyBand({
+  title,
+  sub,
+  onBack,
+  onClose,
+  right,
+  progress,
+  hour,
+}: Props) {
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+  const sky = skyFor(hour ?? new Date().getHours());
+  const ink = skyInk(sky);
+  const bar = progress ? (
+    <View style={styles.steps}>
+      <View
+        style={[
+          styles.track,
+          {
+            backgroundColor:
+              sky === 'night' ? skyColors.nightTrack : skyColors.track,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.done,
+            {
+              width: `${(100 * progress.step) / progress.total}%`,
+              backgroundColor: ink,
+            },
+          ]}
+        />
+      </View>
+      <Text style={[styles.stepText, { color: ink }]}>
+        {t.steps.of(progress.step, progress.total)}
+      </Text>
+    </View>
+  ) : null;
+  return (
+    <View
+      testID="sky-band"
+      style={[
+        styles.band,
+        {
+          paddingTop: insets.top + spacing.sm,
+          backgroundColor: SKY_GRADIENT[sky][1],
+          backgroundImage: skyImage(sky, 70),
+        },
+      ]}
+    >
+      <StatusBar
+        barStyle={sky === 'night' ? 'light-content' : 'dark-content'}
+      />
+      <View style={styles.row}>
+        {onBack ? (
+          <RoundButton
+            icon="arrow_back"
+            label={t.common.back}
+            onPress={onBack}
+          />
+        ) : null}
+        {onClose ? (
+          <RoundButton icon="close" label={t.common.close} onPress={onClose} />
+        ) : null}
+        {title ? (
+          <View style={styles.titles}>
+            <Text
+              testID="sky-title"
+              accessibilityRole="header"
+              style={[styles.title, { color: ink }]}
+            >
+              {title}
+            </Text>
+            {sub ? (
+              <Text style={[styles.sub, { color: ink }]}>{sub}</Text>
+            ) : null}
+          </View>
+        ) : (
+          bar
+        )}
+        {right}
+      </View>
+      {title && bar ? <View style={styles.row}>{bar}</View> : null}
+    </View>
+  );
+}
+
+type RoundProps = { icon: IconName; label: string; onPress: () => void };
+
+/** A 48 dp round button on the sky. Its icon has no word beside it, so it is labelled. */
+export function RoundButton({ icon, label, onPress }: RoundProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.round, pressed && styles.pressed]}
+    >
+      <Icon name={icon} color={colors.navy} />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  band: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  round: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: skyColors.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: { opacity: 0.7 },
+  titles: { flex: 1 },
+  title: { ...font(900), fontSize: 23, letterSpacing: -0.3 },
+  sub: { ...font(700), fontSize: 14, marginTop: 2 },
+  steps: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  track: {
+    flex: 1,
+    height: 8,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+  },
+  done: { height: '100%', borderRadius: radius.pill },
+  stepText: { ...font(800), fontSize: 14 },
+});

@@ -34,6 +34,19 @@ export const hi: Strings = {
     tryAgain: 'फिर से कोशिश करें।',
     openSettings: 'सेटिंग्स खोलें',
     defaultTone: 'डिफ़ॉल्ट अलार्म टोन',
+    back: 'वापस',
+    close: 'बंद करें',
+    next: 'आगे',
+    continue: 'जारी रखें',
+  },
+  steps: {
+    of: (n: number, total: number) => `${total} में से ${n}`,
+  },
+  tabs: {
+    Today: 'आज',
+    History: 'इतिहास',
+    Family: 'परिवार',
+    Settings: 'सेटिंग्स',
   },
   today: {
     title: 'आज',
@@ -316,8 +329,7 @@ export const hi: Strings = {
       'स्कैनर अभी तैयार नहीं है। एक मिनट बाद फिर कोशिश करें, या 6 अंक टाइप करें।',
     expired: 'इस कोड का समय खत्म हो गया।',
     newCode: 'नया कोड',
-    allowTitle: (name: string) =>
-      `${name} को आपकी दवाइयाँ देखने और बदलने दें?`,
+    allowTitle: (name: string) => `${name} को आपकी दवाइयाँ देखने और बदलने दें?`,
     allowBody: (email: string) =>
       `${email} आपकी दवाइयाँ और आपने उन्हें लिया या नहीं, देख पाएँगे, और दवाइयाँ व अलार्म की आवाज़ जोड़ या बदल सकेंगे। हर बार आपको सूचना मिलेगी।`,
     canChange: 'मेरी दवाइयाँ बदल सकते हैं',
@@ -361,8 +373,7 @@ export const hi: Strings = {
     historyOf: (name: string) => `${name} · इतिहास`,
     stopFollowing: 'देखना बंद करें',
     stopConfirm: (name: string) => `${name} की दवाइयाँ देखना बंद करें?`,
-    deleteCopyConfirm: (name: string) =>
-      `${name} की ऑनलाइन कॉपी भी मिटा दें?`,
+    deleteCopyConfirm: (name: string) => `${name} की ऑनलाइन कॉपी भी मिटा दें?`,
     keep: 'रहने दें',
   },
   remote: {

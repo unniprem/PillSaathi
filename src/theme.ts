@@ -20,8 +20,11 @@ const sky = {
   coralText: '#C2412D',
   amberTint: '#FFF3D6',
   amberText: '#8A5A00',
+  blueText: '#1C5D8C', // blue words on the blue tint, which plain blue misses at 4.5:1
   onFill: '#FFFFFF',
   shade: 'rgba(0,0,0,0.18)', // a tablet's score line, a pill symbol's edge
+  edge: '#DCE5EC', // a white button's border, a sheet's grab handle
+  dim: 'rgba(21,50,74,0.45)', // the page behind a sheet
 };
 
 export const colors = {
@@ -53,11 +56,31 @@ export function font(weight: Weight): {
   return { fontFamily: 'Nunito', fontWeight: `${weight}` };
 }
 
-/** For the `boxShadow` style. */
+/** For the `boxShadow` style, which drops a length without `px` unless it is 0. */
 export const shadow = {
-  card: '0 4 14 0 rgba(21,50,74,0.06)',
-  float: '0 14 34 0 rgba(21,50,74,0.16)',
-  pill: '0 1 3 0 rgba(0,0,0,0.2)',
+  card: '0px 4px 14px 0px rgba(21,50,74,0.06)',
+  float: '0px 14px 34px 0px rgba(21,50,74,0.16)',
+  pill: '0px 1px 3px 0px rgba(0,0,0,0.2)',
+  // Under the filled buttons, in their own colour.
+  blue: '0px 6px 16px 0px rgba(42,123,184,0.3)',
+  green: '0px 6px 16px 0px rgba(46,158,91,0.3)',
+  coral: '0px 6px 16px 0px rgba(224,83,61,0.3)',
+};
+
+/** What is drawn on the sky, over the gradients in `ui/sky.ts`. */
+export const skyColors = {
+  glass: 'rgba(255,255,255,0.75)', // round buttons, and the dose bars still to come
+  track: 'rgba(255,255,255,0.55)', // the step bar's empty part
+  nightTrack: 'rgba(255,255,255,0.25)',
+  sun: '#FFC93C',
+  sunCore: '#FFF2B0',
+  sunGlow: 'rgba(255,214,102,0.3)',
+  sunHalo: 'rgba(255,214,102,0.14)',
+  cloud: '#FFFFFF', // faded as a whole by the cloud
+  moon: '#FFF4C7',
+  moonGlow: 'rgba(255,244,199,0.55)',
+  moonShade: '#13224C', // the night sky's colour behind the moon, which cuts it to a crescent
+  star: '#FFFFFF',
 };
 
 /**

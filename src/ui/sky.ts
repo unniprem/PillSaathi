@@ -1,3 +1,5 @@
+import { colors } from '../theme';
+
 /** The sky by the hour. The native ringing screen (SkyTime.kt) uses the same hours. */
 export type Sky = 'dawn' | 'day' | 'evening' | 'night';
 
@@ -28,3 +30,14 @@ export const SKY_GRADIENT: Record<Sky, [string, string, string]> = {
   evening: ['#F2A27A', '#F7C59F', '#FBE2C4'],
   night: ['#0E1A3C', '#1F3368', '#3B5797'],
 };
+
+/** The sky as a `backgroundImage`, its middle colour [middle]% of the way down. */
+export function skyImage(sky: Sky, middle: number): string {
+  const [top, mid, bottom] = SKY_GRADIENT[sky];
+  return `linear-gradient(180deg, ${top}, ${mid} ${middle}%, ${bottom})`;
+}
+
+/** Words on the sky: navy, or white on the night sky. */
+export function skyInk(sky: Sky): string {
+  return sky === 'night' ? colors.onFill : colors.navy;
+}
