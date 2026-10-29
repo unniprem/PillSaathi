@@ -312,14 +312,17 @@ export const ml: Strings = {
   settings: {
     title: 'ക്രമീകരണങ്ങൾ',
     language: 'ഭാഷ',
-    draft: ' (കരട്)',
-    whenItRings: 'മുഴങ്ങുമ്പോൾ',
+    draft: 'കരട്',
     readAloud: 'മരുന്നുകളുടെ പേര് ഉറക്കെ വായിക്കുക',
+    readAloudNote: 'അലാറം മുഴങ്ങുമ്പോൾ',
+    hear: 'എങ്ങനെയുണ്ടെന്ന് കേൾക്കുക',
     tryIt: 'കേട്ടുനോക്കുക',
     textSize: 'അക്ഷര വലുപ്പം',
-    textSizeNote: 'PillSaathi നിങ്ങളുടെ ഫോണിലെ അക്ഷര വലുപ്പം പിന്തുടരുന്നു.',
-    reliability: 'വിശ്വാസ്യത',
-    makeReliable: 'അലാറങ്ങൾ മുടങ്ങാതിരിക്കാൻ',
+    textSizeNote: 'ഫോണിലെ അക്ഷര വലുപ്പം പിന്തുടരുന്നു',
+    alarmSetup: 'അലാറം സജ്ജീകരണം',
+    stepsLeft: (steps: number) =>
+      steps === 1 ? '1 ഘട്ടം ബാക്കി' : `${steps} ഘട്ടങ്ങൾ ബാക്കി`,
+    allSet: 'എല്ലാം ശരിയായി',
     saveFailed: 'സേവ് ചെയ്യാനായില്ല',
     noVoice: (language: string) =>
       `നിങ്ങളുടെ ഫോണിൽ ${language} ശബ്ദമില്ല, അതിനാൽ ഇംഗ്ലീഷിൽ വായിച്ചു.`,

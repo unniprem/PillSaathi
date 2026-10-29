@@ -88,6 +88,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Decisions: `doseCounts` leaves out `later` and `done` so the day can reach "3 of 3 done"; with a dose missed and nothing left to ring the card says "Nothing more today"; done/later lines are one line with names joined (a pill added after the dose shows "(from tomorrow)"); Today ticks its clock every minute while focused; "+ Add family" is gone from empty Today (the Family tab has it). Strings: `today.title`/`titleOn` removed, `addPill` "Add a pill", `empty` "No pills yet", new `today.*`, `health.title/fix`.
 - For Tasks 9–10: Today is one ScrollView (`today-scroll`): SkyTop, then a body lifted −44: WarningCard, RefillCards, the family block (old `FamilySection` in a Card, where Task 9's PersonCards go), NextDoseCard / EmptyToday, MissedCards, "Later today" DoseLines, done DoseLines, the dashed "Add a pill" row. Pill taps go through `openPill` (`PillEdit`); both add buttons call one `addPill` line. Reusable: `today/PillRow.tsx`, `WHEN_ICONS`. Tests: `clockAt(h, m)` helper; always `await fireEvent.press` in RNTL 14 (unawaited presses broke act for later tests in a full run).
 
+### Task 14: Settings
+**Status**: ✓ Done (parallel, branch `ui/task-14`)
+**Notes**:
+- Steps left = `total - done` from `setupProgress(stepsFor(currentManufacturer()), doneSteps, autoChecked(health))`, re-read whenever the tab gains focus (tabs stay mounted); a failed read counts as nothing done; nothing shows until both reads settle.
+- Strings: removed `settings.whenItRings/reliability/makeReliable`; added `readAloudNote`, `hear`, `alarmSetup`, `stepsLeft(n)`, `allSet`; `draft` is now the bare tag word. Language tiles are radios named by the language (draft as `accessibilityHint`); rows that open something have the title as label and the note as hint. In a row, the switch or Try it chip drops under the words when they need the room (large text, Malayalam).
+- Phone check (Task 18) at font scale 2.0: the language tiles wrap; Try it moves under "Hear how it sounds" in Malayalam; amber "steps left" reads clearly.
+
 ---
 
 ## Blockers / Deferred Items

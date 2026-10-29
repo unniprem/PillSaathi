@@ -1,10 +1,16 @@
-import { Alert } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Alert, Platform } from 'react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type { AppSettings } from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
 import { ml } from '../../src/i18n/ml';
-import { mockAlarmsDefaults } from '../helpers/nativeMocks';
+import { healthy, mockAlarmsDefaults } from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
@@ -19,6 +25,26 @@ const debugLanguages: AppSettings = {
     { code: 'ml', label: 'മലയാളം', draft: true },
   ],
 };
+
+/** A Xiaomi phone, whose setup has four steps: three she ticks, then battery, which health ticks. */
+function xiaomi(doneSteps: string[], ignoringBattery: boolean) {
+  jest
+    .spyOn(Platform, 'constants', 'get')
+    .mockReturnValue({ Manufacturer: 'Xiaomi' } as never);
+  setupDone(doneSteps, ignoringBattery);
+}
+
+function setupDone(doneSteps: string[], ignoringBattery: boolean) {
+  jest
+    .mocked(alarms.getSetupState)
+    .mockResolvedValue({ seen: true, doneSteps });
+  jest.mocked(alarms.getHealth).mockResolvedValue({
+    ...healthy,
+    ignoringBatteryOptimizations: ignoringBattery,
+  });
+}
+
+const tile = (name: string) => screen.getByRole('radio', { name });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -36,31 +62,34 @@ afterEach(() => {
 test('lists the languages from native, marking drafts', async () => {
   await renderApp('Settings');
   expect(await screen.findByText('English')).toBeTruthy();
-  expect(screen.getByText('മലയാളം (draft)')).toBeTruthy();
-  expect(
-    screen.getByRole('radio', { name: 'English' }).props.accessibilityState,
-  ).toEqual(expect.objectContaining({ checked: true }));
-  expect(screen.getByText('Read the pill names aloud')).toBeTruthy();
-  expect(
-    screen.getByText("PillSaathi follows your phone's text size."),
-  ).toBeTruthy();
+  expect(within(tile('മലയാളം')).getByText('draft')).toBeTruthy();
+  expect(within(tile('English')).queryByText('draft')).toBeNull();
+  expect(tile('English').props.accessibilityState).toEqual(
+    expect.objectContaining({ checked: true }),
+  );
+  expect(screen.getByText('Read pill names aloud')).toBeTruthy();
+  expect(screen.getByText('When an alarm rings')).toBeTruthy();
+  expect(screen.getByText("Follows the phone's text size")).toBeTruthy();
   expect(headerTitles()).toEqual(['Settings']);
 });
 
 test('switches to Malayalam and redraws', async () => {
   await renderApp('Settings');
-  await fireEvent.press(await screen.findByText('മലയാളം (draft)'));
+  await fireEvent.press(await screen.findByText('മലയാളം'));
   expect(alarms.setLanguage).toHaveBeenCalledWith('ml');
   await waitFor(() => expect(headerTitles()).toEqual(['ക്രമീകരണങ്ങൾ']));
   expect(screen.getByText(ml.settings.readAloud)).toBeTruthy();
-  expect(screen.getByText(`മലയാളം${ml.settings.draft}`)).toBeTruthy();
+  expect(within(tile('മലയാളം')).getByText(ml.settings.draft)).toBeTruthy();
+  expect(tile('മലയാളം').props.accessibilityState).toEqual(
+    expect.objectContaining({ checked: true }),
+  );
 });
 
 test('keeps the language when saving it fails', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.mocked(alarms.setLanguage).mockRejectedValue(new Error('disk'));
   await renderApp('Settings');
-  await fireEvent.press(await screen.findByText('മലയാളം (draft)'));
+  await fireEvent.press(await screen.findByText('മലയാളം'));
   await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not save'));
   expect(headerTitles()).toEqual(['Settings']);
 });
@@ -119,15 +148,53 @@ test('says when the phone cannot read aloud at all', async () => {
 test('Try it says nothing when the voice spoke', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await renderApp('Settings');
-  await fireEvent.press(await screen.findByText('Try it'));
+  expect(await screen.findByText('Hear how it sounds')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Try it' }));
   expect(alarms.tryReadAloud).toHaveBeenCalled();
   expect(alert).not.toHaveBeenCalled();
 });
 
-test('opens Setup from Make alarms reliable', async () => {
+test('opens Setup from Alarm setup', async () => {
   await renderApp('Settings');
-  await fireEvent.press(await screen.findByText('Make alarms reliable'));
+  await fireEvent.press(await screen.findByText('Alarm setup'));
   await waitFor(() =>
     expect(headerTitles()).toEqual(['Settings', 'Make alarms ring every time']),
   );
+});
+
+test("text size opens the phone's display settings", async () => {
+  await renderApp('Settings');
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Text size' }),
+  );
+  expect(alarms.openSetting).toHaveBeenCalledWith('display');
+});
+
+test('alarm setup says how many steps are left', async () => {
+  xiaomi(['autostart', 'lockRecents'], false);
+  await renderApp('Settings');
+  expect(await screen.findByText('2 steps left')).toBeTruthy();
+  expect(screen.queryByText('All set')).toBeNull();
+  expect(
+    screen.getByRole('button', { name: 'Alarm setup' }).props.accessibilityHint,
+  ).toBe('2 steps left');
+});
+
+test('alarm setup says All set when nothing is left', async () => {
+  xiaomi(['autostart', 'oemBattery', 'lockRecents'], true);
+  await renderApp('Settings');
+  expect(await screen.findByText('All set')).toBeTruthy();
+  expect(screen.queryByText(/left$/)).toBeNull();
+});
+
+test('alarm setup counts again on coming back from Setup', async () => {
+  xiaomi(['autostart'], false);
+  await renderApp('Settings');
+  expect(await screen.findByText('3 steps left')).toBeTruthy();
+  await act(async () => fireEvent.press(screen.getByText('Alarm setup')));
+  // She ticked one more there, and the phone now allows the battery use.
+  setupDone(['autostart', 'oemBattery'], true);
+  await act(async () => fireEvent.press(screen.getByText('Finish')));
+  await waitFor(() => expect(headerTitles()).toEqual(['Settings']));
+  expect(await screen.findByText('1 step left')).toBeTruthy();
 });

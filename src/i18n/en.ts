@@ -310,14 +310,18 @@ export const en = {
   settings: {
     title: 'Settings',
     language: 'Language',
-    draft: ' (draft)',
-    whenItRings: 'When it rings',
-    readAloud: 'Read the pill names aloud',
+    /** The tag on a language whose words are still a draft. */
+    draft: 'draft',
+    readAloud: 'Read pill names aloud',
+    readAloudNote: 'When an alarm rings',
+    hear: 'Hear how it sounds',
     tryIt: 'Try it',
     textSize: 'Text size',
-    textSizeNote: "PillSaathi follows your phone's text size.",
-    reliability: 'Reliability',
-    makeReliable: 'Make alarms reliable',
+    textSizeNote: "Follows the phone's text size",
+    alarmSetup: 'Alarm setup',
+    stepsLeft: (steps: number) =>
+      steps === 1 ? '1 step left' : `${steps} steps left`,
+    allSet: 'All set',
     saveFailed: 'Could not save',
     noVoice: (language: string) =>
       `Your phone has no ${language} voice, so this was read in English.`,

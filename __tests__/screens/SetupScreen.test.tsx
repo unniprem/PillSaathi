@@ -177,7 +177,7 @@ test('while battery use is not allowed, its step has only Open settings', async 
 test('Finish goes back to where setup was opened from', async () => {
   await renderApp('Settings');
   await act(async () =>
-    fireEvent.press(await screen.findByText('Make alarms reliable')),
+    fireEvent.press(await screen.findByText('Alarm setup')),
   );
   expect(headerTitles()).toEqual(['Settings', 'Make alarms ring every time']);
   await act(async () => fireEvent.press(screen.getByText('Finish')));
