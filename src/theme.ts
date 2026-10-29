@@ -21,6 +21,7 @@ const sky = {
   amberTint: '#FFF3D6',
   amberText: '#8A5A00',
   onFill: '#FFFFFF',
+  shade: 'rgba(0,0,0,0.18)', // a tablet's score line, a pill symbol's edge
 };
 
 export const colors = {
@@ -56,4 +57,18 @@ export function font(weight: Weight): {
 export const shadow = {
   card: '0 4 14 0 rgba(21,50,74,0.06)',
   float: '0 14 34 0 rgba(21,50,74,0.16)',
+  pill: '0 1 3 0 rgba(0,0,0,0.2)',
 };
+
+/**
+ * Letter avatars, picked by `nameIndex(name, 6)`, as gradients from top left to bottom
+ * right. In this order "Amma" gets the mockups' peach and "Ravi" their mint.
+ */
+export const AVATAR_COLORS: [string, string][] = [
+  ['#7FB3E0', '#4A86C5'],
+  ['#C6A4EC', '#8E6CC9'],
+  ['#7ED3B2', '#3A9E7A'],
+  ['#F5C26B', '#D9952B'],
+  ['#F6A57C', '#E07A5F'],
+  ['#F29BB5', '#D2678A'],
+];

@@ -75,7 +75,7 @@ it('lists the day’s doses with their pills as they were', async () => {
   expect(screen.getByText('Missed')).toBeTruthy();
   expect(screen.getAllByText('Telma 40')).toHaveLength(2);
   expect(screen.getAllByText('1 tablet')).toHaveLength(2);
-  expect(screen.getAllByTestId('pill-photo-p1')).toHaveLength(2);
+  expect(screen.getAllByTestId('pill-photo')).toHaveLength(2);
   // Only the missed dose can be marked, and the pill rows open nothing.
   expect(screen.getAllByRole('button', { name: 'Mark as taken' })).toHaveLength(
     1,
@@ -99,8 +99,8 @@ it('shows a pill deleted since from its snapshot', async () => {
   expect(await screen.findByText('Old syrup')).toBeTruthy();
   expect(screen.getByText('5 ml')).toBeTruthy();
   expect(screen.getByText('Skipped')).toBeTruthy();
-  expect(screen.getByTestId('pill-icon-gone').props.children).toBe('🧴');
-  expect(screen.queryByTestId('pill-photo-gone')).toBeNull();
+  expect(screen.getByTestId('pill-shape-syrup')).toBeTruthy();
+  expect(screen.queryByTestId('pill-photo')).toBeNull();
 });
 
 it('marks an earlier day’s dose taken', async () => {

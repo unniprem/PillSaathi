@@ -6,6 +6,7 @@ import * as family from '../../src/native/family';
 import type { FamilyCard } from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { hi } from '../../src/i18n/hi';
+import { pillColor } from '../../src/ui/pillLook';
 import {
   emptyToday,
   healthy,
@@ -147,19 +148,22 @@ test('shows a pill photo when it has one', async () => {
     cards: [{ ...today.cards[1], pills: [withPhoto] }],
   });
   await renderApp();
-  const photo = await screen.findByTestId('pill-photo-p1');
+  const photo = await screen.findByTestId('pill-photo');
   expect(photo.props.source).toEqual({ uri: 'file:///p/a.jpg' });
-  expect(screen.queryByTestId('pill-icon-p1')).toBeNull();
-  // A photo that can't be read shows the type icon instead.
+  expect(screen.queryByTestId('pill-shape-tablet')).toBeNull();
+  // A photo that can't be read shows the pill's shape instead.
   await fireEvent(photo, 'error');
-  expect(screen.getByTestId('pill-icon-p1').props.children).toBe('⚪');
+  expect(screen.getByTestId('pill-shape-tablet')).toBeTruthy();
 });
 
-test('shows the type icon without a photo', async () => {
+test("shows the pill's shape without a photo", async () => {
   await renderApp();
-  expect((await screen.findByTestId('pill-icon-p1')).props.children).toBe('⚪');
-  expect(screen.getByTestId('pill-icon-p3').props.children).toBe('💊');
-  expect(screen.queryByTestId('pill-photo-p1')).toBeNull();
+  // Old syrup, Azithromycin, Iron and Telma (twice) are tablets; Vitamin D3 is a capsule.
+  expect(await screen.findAllByTestId('pill-shape-tablet')).toHaveLength(5);
+  expect(screen.getByTestId('pill-shape-capsule')).toHaveStyle({
+    backgroundColor: pillColor('Vitamin D3'),
+  });
+  expect(screen.queryByTestId('pill-photo')).toBeNull();
 });
 
 test('shows Today in Hindi', async () => {

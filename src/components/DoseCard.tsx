@@ -7,7 +7,7 @@ import { courseLabel, nextLabel } from '../lib/course';
 import { formatTime } from '../lib/time';
 import type { TodayCard, TodayPill } from '../native/alarms';
 import { colors, spacing } from '../theme';
-import PillPicture from './PillPicture';
+import PillPicture from '../ui/PillPicture';
 
 type Props = {
   card: TodayCard;
@@ -175,6 +175,7 @@ const styles = StyleSheet.create({
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
     paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   pillText: { flex: 1 },
   pillName: { fontSize: 20, color: colors.text },
   detail: { fontSize: 16, color: colors.textMuted },
-  amount: { fontSize: 18, color: colors.textMuted, marginLeft: spacing.md },
+  amount: { fontSize: 18, color: colors.textMuted },
   soundRow: { paddingTop: spacing.sm },
   sound: { fontSize: 16, color: colors.primary },
 });

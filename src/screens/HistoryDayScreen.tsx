@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import PillPicture from '../components/PillPicture';
 import { formatAmount } from '../lib/amount';
 import { formatTime } from '../lib/time';
 import { getHistory, is24HourFormat, markDoseTaken } from '../native/alarms';
@@ -20,6 +19,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import { colors, spacing } from '../theme';
+import PillPicture from '../ui/PillPicture';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HistoryDay'>;
 
@@ -199,13 +199,14 @@ const styles = StyleSheet.create({
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
     paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     marginTop: spacing.sm,
   },
   pillName: { flex: 1, fontSize: 20, color: colors.text },
-  amount: { fontSize: 18, color: colors.textMuted, marginLeft: spacing.md },
+  amount: { fontSize: 18, color: colors.textMuted },
   mark: {
     marginTop: spacing.sm,
     padding: spacing.sm,
