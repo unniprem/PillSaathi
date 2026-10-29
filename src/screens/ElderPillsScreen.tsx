@@ -233,41 +233,6 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
               <Text style={styles.addText}>{t.addPill.titleFor(name)}</Text>
             </Pressable>
 
-            {setup.times.length > 0 ? (
-              <>
-                <Text style={styles.label}>{t.remote.soundsHeading}</Text>
-                <Card style={styles.list}>
-                  {setup.times.map((time, i) => (
-                    <Pressable
-                      key={`${time.hour}:${time.minute}`}
-                      accessibilityRole="button"
-                      onPress={() =>
-                        navigation.navigate('SoundPicker', {
-                          elderId,
-                          hour: time.hour,
-                          minute: time.minute,
-                          selectedSoundId: time.soundId,
-                        })
-                      }
-                      style={({ pressed }) => [
-                        styles.row,
-                        i > 0 && styles.rowAfter,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Icon name="music_note" size={22} color={colors.blue} />
-                      <Text style={[styles.name, styles.words]}>
-                        {`${formatTime(time.hour, time.minute, is24h)} · ${
-                          time.soundName ?? t.remote.defaultTone
-                        }`}
-                      </Text>
-                      <Icon name="chevron_right" color={colors.muted} />
-                    </Pressable>
-                  ))}
-                </Card>
-              </>
-            ) : null}
-
             {recent.length > 0 ? (
               <>
                 <Text style={styles.label}>{t.remote.recentHeading}</Text>

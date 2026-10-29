@@ -105,7 +105,8 @@ test('lists her pills and times, waiting first, and Cancel cancels', async () =>
     screen.getAllByText("Waiting for Amma's phone").length,
   ).toBeGreaterThan(0);
   expect(screen.getByText('Azee 500')).toBeTruthy();
-  expect(screen.getByText("8:00 AM · Ravi's sound")).toBeTruthy();
+  // Each time's sound is on the pill's own page now (PillScreen's sound row).
+  expect(screen.queryByText('Alarm sounds')).toBeNull();
   expect(screen.getByText('Delete Dolo')).toBeTruthy();
   expect(screen.getByText('Recent changes')).toBeTruthy();
   expect(screen.getByText('✓ Done at 3:05 PM')).toBeTruthy();
@@ -181,12 +182,6 @@ test('Add a pill for Amma opens the five steps for her', async () => {
   await waitFor(() =>
     expect(headerTitles()).toEqual(["Amma's pills", 'Add a pill for Amma']),
   );
-});
-
-test('a time opens the sound picker', async () => {
-  await renderApp('ElderPills', { elderId: 'E' });
-  await fireEvent.press(await screen.findByText("8:00 AM · Ravi's sound"));
-  await waitFor(() => expect(headerTitles()).toHaveLength(2));
 });
 
 test('says when her phone was last heard from', async () => {

@@ -498,7 +498,6 @@ export const hi: Strings = {
     herPills: 'उनकी दवाइयाँ',
     pillsTitle: (name: string) => `${name} की दवाइयाँ`,
     pillTitle: (name: string) => `${name} की दवाई`,
-    soundsHeading: 'अलार्म की आवाज़ें',
     recentHeading: 'हाल के बदलाव',
     cancel: 'रद्द करें',
     cancelLabel: (title: string) => `रद्द करें: ${title}`,

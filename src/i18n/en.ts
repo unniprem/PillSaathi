@@ -508,7 +508,6 @@ export const en = {
     herPills: 'Her pills',
     pillsTitle: (name: string) => `${name}'s pills`,
     pillTitle: (name: string) => `${name}'s pill`,
-    soundsHeading: 'Alarm sounds',
     recentHeading: 'Recent changes',
     cancel: 'Cancel',
     cancelLabel: (title: string) => `Cancel ${title}`,

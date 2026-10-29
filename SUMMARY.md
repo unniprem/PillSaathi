@@ -1,8 +1,8 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 11 and 16 (running in parallel; 16 leaves ElderPills' pill-row link and its "Alarm sounds" section for the orchestrator to finish after both merge); then 18
-**Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 ✓ · C = 11 + 16 · then 18. Parallel agents don't edit this file; the orchestrator merges their branches (cherry-pick) and adds their notes here.
+**Next task**: 18 (needs the emulator and the Redmi for Steps 3–4)
+**Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 ✓ · C = 11 + 16 ✓ · then 18. Parallel tasks were merged by cherry-pick; their notes are below.
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
@@ -124,7 +124,7 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - The PillScreen sound-row tests now cover ElderPills' "Alarm sounds" section ("a time opens the sound list for her dose at that time" proves `{ elderId, hour, minute }` and `selectedSoundId`), so that section's test and the "8:00 AM · Ravi's sound" expectation can go with it. Phone checks (Task 18): sheet fields and Save stay above the keyboard; the camera returns to the summary with the new photo; the sound sheet is gone before SoundPicker slides in; 60-char name at font scale 2.0; hero readable on the night sky.
 
 ### Task 16: The relative's family pages
-**Status**: ✓ Done (parallel, branch `ui/task-16`; ElderPills' pill-row link repointed to `Pill` during the merge, "Alarm sounds" removed in the next commit)
+**Status**: ✓ Done (parallel, branch `ui/task-16`; ElderPills' pill-row link repointed to `Pill` during the merge, "Alarm sounds" removed in the follow-up commit "refactor: her sounds live on each pill's page": the section, its "a time opens the sound picker" test and `remote.soundsHeading` are gone; PillScreen's sound-row tests cover them)
 **Notes**:
 - AddFamily with `fromLogin`: no Back in the band (C4); "Skip for now" on the login and code steps resets to Main; the waiting step has ×; the phone's Back from the login leaves the app (as first-run Setup does). The code is six `digit-box`es over one nearly invisible `TextInput` (`number-pad`, `maxLength={6}`, digits only). "Logged in as …" sits beside his letter avatar.
 - Kit: `SkyBand` takes `picture` and `action` (her avatar before the title, which moves under the buttons, and Call after it) alongside Task 11's `children`. Her page keeps her low pills ("About N days.") in the amber card under her alarm problem; dose chips "✓ 8:04 AM", Missed, Later, Not reported yet, Skipped; Call is a 52 dp round button labelled "Call"; "Change pills" → "Her pills". `DoseCard.tsx` and `RefillBanner.tsx` deleted (`daysText` stays, ElderScreen uses it).

@@ -504,7 +504,6 @@ export const ml: Strings = {
     herPills: 'അവരുടെ മരുന്നുകൾ',
     pillsTitle: (name: string) => `${name}-ന്റെ മരുന്നുകൾ`,
     pillTitle: (name: string) => `${name}-ന്റെ മരുന്ന്`,
-    soundsHeading: 'അലാറം ശബ്ദങ്ങൾ',
     recentHeading: 'അടുത്തിടെയുള്ള മാറ്റങ്ങൾ',
     cancel: 'റദ്ദാക്കുക',
     cancelLabel: (title: string) => `റദ്ദാക്കുക: ${title}`,
