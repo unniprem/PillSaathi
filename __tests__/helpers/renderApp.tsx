@@ -5,27 +5,38 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   RootNavigator,
   RootStackParamList,
+  TAB_ROUTES,
+  TabParamList,
 } from '../../src/navigation/RootNavigator';
 
+/** Opens the app at [route]: a stack page, or one of the main pages under the tab bar. */
 export function renderApp(
-  initialRouteName?: keyof RootStackParamList,
-  initialParams?: object,
+  route?: keyof RootStackParamList | keyof TabParamList,
+  params?: object,
 ) {
+  const isTab = (TAB_ROUTES as string[]).includes(route ?? '');
   return render(
     <SafeAreaProvider>
       <NavigationContainer>
         <RootNavigator
-          initialRouteName={initialRouteName}
-          initialParams={initialParams}
+          initialRouteName={
+            isTab ? 'Main' : (route as keyof RootStackParamList | undefined)
+          }
+          initialParams={isTab ? { screen: route, params } : params}
         />
       </NavigationContainer>
     </SafeAreaProvider>,
   );
 }
 
-/** The titles in the native stack's headers, bottom screen first. */
+type Node = { children: (Node | string)[] } | string;
+
+const textOf = (node: Node): string =>
+  typeof node === 'string' ? node : node.children.map(textOf).join('');
+
+/** The titles in the pages' sky headers, bottom page first. */
 export function headerTitles(): string[] {
   return screen.container
-    .queryAll(n => n.type === 'RNSScreenStackHeaderConfig')
-    .map(n => n.props.title);
+    .queryAll(n => n.props.testID === 'sky-title')
+    .map(textOf);
 }

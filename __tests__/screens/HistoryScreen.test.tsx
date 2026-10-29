@@ -161,7 +161,7 @@ it('shares the month as text', async () => {
   jest.mocked(alarms.getHistory).mockResolvedValue(october);
   await renderApp('History');
   await screen.findByText('60% taken');
-  await fireEvent.press(screen.getByText('Share'));
+  await fireEvent.press(screen.getByLabelText('Share'));
   await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
   const { message } = share.mock.calls[0][0] as { message: string };
   expect(message.startsWith('PillSaathi · 1–26 Oct 2026\n')).toBe(true);
@@ -174,7 +174,7 @@ it('says so when the report cannot be shared', async () => {
   jest.spyOn(Share, 'share').mockRejectedValue(new Error('no sheet'));
   await renderApp('History');
   await screen.findByText('No doses recorded');
-  await fireEvent.press(screen.getByText('Share'));
+  await fireEvent.press(screen.getByLabelText('Share'));
   await waitFor(() =>
     expect(alert).toHaveBeenCalledWith(
       'Could not share the report',
@@ -209,7 +209,7 @@ it('shares what is recorded now, not what was loaded', async () => {
   await renderApp('History');
   await screen.findByText('60% taken');
   jest.mocked(alarms.getHistory).mockResolvedValue(withEveningMissed);
-  await fireEvent.press(screen.getByText('Share'));
+  await fireEvent.press(screen.getByLabelText('Share'));
   await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
   const { message } = share.mock.calls[0][0] as { message: string };
   expect(message).toContain('Taken 3 of 6 doses (50%)');
@@ -240,7 +240,7 @@ it('History for an elder reads her history and hides Mark as taken', async () =>
     .mockResolvedValue([
       { elderId: 'E', name: 'Amma', phone: null, delayMinutes: 30 },
     ]);
-  await renderApp('History', { elderId: 'E' });
+  await renderApp('ElderHistory', { elderId: 'E' });
   expect(await screen.findByText('60% taken')).toBeTruthy();
   expect(family.getElderHistory).toHaveBeenCalledWith(
     'E',

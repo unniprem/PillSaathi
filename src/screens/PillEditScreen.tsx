@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -46,7 +40,8 @@ import {
 import { errorCode, familyMessage } from '../lib/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
-import { colors, spacing } from '../theme';
+import { colors, radius, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PillEdit'>;
 
@@ -167,7 +162,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.replace('Today');
+      navigation.replace('Main');
     }
   }, [navigation]);
 
@@ -190,26 +185,6 @@ export default function PillEditScreen({ navigation, route }: Props) {
       hidden.remove();
     };
   }, []);
-
-  const renderCancel = useCallback(
-    () => (
-      <Pressable accessibilityRole="button" onPress={leave}>
-        <Text style={styles.headerButton}>{t.common.cancel}</Text>
-      </Pressable>
-    ),
-    [leave, t],
-  );
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: elderId
-        ? t.remote.pillTitle(elderName)
-        : pillId
-        ? t.pill.editTitle
-        : t.pill.addTitle,
-      headerLeft: renderCancel,
-    });
-  }, [navigation, pillId, elderId, elderName, renderCancel, t]);
 
   useEffect(() => {
     if (!elderId) {
@@ -508,265 +483,265 @@ export default function PillEditScreen({ navigation, route }: Props) {
     ]);
   }, [pillId, elderId, leave, t]);
 
-  const renderActions = useCallback(
-    () => (
-      <View style={styles.headerActions}>
-        {pillId ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={confirmDelete}
-            hitSlop={spacing.sm}
-          >
-            <Text style={styles.headerDelete}>{t.common.delete}</Text>
-          </Pressable>
-        ) : null}
+  const actions = (
+    <View style={styles.headerActions}>
+      {pillId ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: !ready || saving }}
-          onPress={save}
-          disabled={!ready || saving}
+          onPress={confirmDelete}
           hitSlop={spacing.sm}
         >
-          <Text style={[styles.headerSave, !ready && styles.disabled]}>
-            {t.common.save}
-          </Text>
+          <Text style={styles.headerDelete}>{t.common.delete}</Text>
         </Pressable>
-      </View>
-    ),
-    [pillId, confirmDelete, ready, saving, save, t],
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !ready || saving }}
+        onPress={save}
+        disabled={!ready || saving}
+        hitSlop={spacing.sm}
+      >
+        <Text style={[styles.headerSave, !ready && styles.disabled]}>
+          {t.common.save}
+        </Text>
+      </Pressable>
+    </View>
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: renderActions });
-  }, [navigation, renderActions]);
-
   return (
-    <ScrollView
-      ref={scroll}
-      testID="pill-page"
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: styles.content.paddingBottom + keyboardHeight },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      onContentSizeChange={scrollToCount}
-      onScrollBeginDrag={() => {
-        followCount.current = false;
-      }}
-    >
-      <Text style={styles.label}>{t.pill.name}</Text>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        maxLength={60}
-        placeholder={t.pill.namePlaceholder}
-        placeholderTextColor={colors.textMuted}
-        style={styles.input}
+    <View style={styles.container}>
+      <SkyBand
+        title={
+          elderId
+            ? t.remote.pillTitle(elderName)
+            : pillId
+            ? t.pill.editTitle
+            : t.pill.addTitle
+        }
+        onClose={leave}
+        right={actions}
       />
+      <ScrollView
+        ref={scroll}
+        testID="pill-page"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: styles.content.paddingBottom + keyboardHeight },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={scrollToCount}
+        onScrollBeginDrag={() => {
+          followCount.current = false;
+        }}
+      >
+        <Text style={styles.label}>{t.pill.name}</Text>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          maxLength={60}
+          placeholder={t.pill.namePlaceholder}
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+        />
 
-      <Text style={styles.label}>{t.pill.photo}</Text>
-      <View style={styles.photoRow}>
-        {photoUri ? (
-          <Image
-            testID="pill-photo"
-            source={{ uri: photoUri }}
-            style={styles.photo}
-          />
-        ) : null}
-        <View style={styles.photoButtons}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => choosePhoto('camera')}
-            style={styles.photoButton}
-          >
-            <Text style={styles.link}>
-              {photoUri ? t.pill.retake : t.pill.takePhoto}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => choosePhoto('gallery')}
-            style={styles.photoButton}
-          >
-            <Text style={styles.link}>{t.pill.chooseGallery}</Text>
-          </Pressable>
+        <Text style={styles.label}>{t.pill.photo}</Text>
+        <View style={styles.photoRow}>
           {photoUri ? (
+            <Image
+              testID="pill-photo"
+              source={{ uri: photoUri }}
+              style={styles.photo}
+            />
+          ) : null}
+          <View style={styles.photoButtons}>
             <Pressable
               accessibilityRole="button"
-              onPress={removePhoto}
+              onPress={() => choosePhoto('camera')}
               style={styles.photoButton}
             >
-              <Text style={styles.link}>{t.pill.removePhoto}</Text>
+              <Text style={styles.link}>
+                {photoUri ? t.pill.retake : t.pill.takePhoto}
+              </Text>
             </Pressable>
-          ) : null}
-        </View>
-      </View>
-
-      <Text style={styles.label}>{t.pill.type}</Text>
-      <View style={styles.chips}>
-        {FORMS.map(f => (
-          <Chip
-            key={f}
-            label={t.forms[f]}
-            selected={form === f}
-            onPress={() => chooseForm(f)}
-          />
-        ))}
-      </View>
-
-      <Text style={styles.label}>{t.pill.howMuch}</Text>
-      <AmountStepper form={form} amount={amount} onChange={setAmount} />
-
-      {counted ? (
-        <View testID="count-section" onLayout={onCountLayout}>
-          <Text style={styles.label}>
-            {form === 'capsule' ? t.pill.capsulesLeft : t.pill.tabletsLeft}
-          </Text>
-          <View style={styles.countRow}>
-            <TextInput
-              value={count}
-              onChangeText={changeCount}
-              accessibilityLabel={
-                form === 'capsule' ? t.pill.capsulesLeft : t.pill.tabletsLeft
-              }
-              autoFocus={focusCount}
-              keyboardType="decimal-pad"
-              maxLength={5}
-              style={[
-                styles.input,
-                styles.countInput,
-                !countValid && styles.invalid,
-              ]}
-            />
-            {QUICK_COUNTS.map(n => (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => choosePhoto('gallery')}
+              style={styles.photoButton}
+            >
+              <Text style={styles.link}>{t.pill.chooseGallery}</Text>
+            </Pressable>
+            {photoUri ? (
               <Pressable
-                key={n}
                 accessibilityRole="button"
-                onPress={() => addToCount(n)}
-                style={styles.chip}
+                onPress={removePhoto}
+                style={styles.photoButton}
               >
-                <Text style={styles.chipText}>{`+${n}`}</Text>
+                <Text style={styles.link}>{t.pill.removePhoto}</Text>
               </Pressable>
-            ))}
+            ) : null}
           </View>
-          <Text style={styles.note}>{t.pill.countNote}</Text>
         </View>
-      ) : null}
 
-      <Text style={styles.label}>{t.pill.when}</Text>
-      {times.map((time, i) => {
-        const label = formatTime(time.hour, time.minute, is24h);
-        return (
-          <View key={`${time.hour}:${time.minute}`} style={styles.timeRow}>
-            <Text style={styles.time}>{label}</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => chooseTime(i)}
-              style={styles.timeButton}
-            >
-              <Text style={styles.link}>{t.pill.change}</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.pill.removeTime(label)}
-              onPress={() => removeTime(i)}
-              style={styles.timeButton}
-            >
-              <Text style={styles.remove}>✕</Text>
-            </Pressable>
+        <Text style={styles.label}>{t.pill.type}</Text>
+        <View style={styles.chips}>
+          {FORMS.map(f => (
+            <Chip
+              key={f}
+              label={t.forms[f]}
+              selected={form === f}
+              onPress={() => chooseForm(f)}
+            />
+          ))}
+        </View>
+
+        <Text style={styles.label}>{t.pill.howMuch}</Text>
+        <AmountStepper form={form} amount={amount} onChange={setAmount} />
+
+        {counted ? (
+          <View testID="count-section" onLayout={onCountLayout}>
+            <Text style={styles.label}>
+              {form === 'capsule' ? t.pill.capsulesLeft : t.pill.tabletsLeft}
+            </Text>
+            <View style={styles.countRow}>
+              <TextInput
+                value={count}
+                onChangeText={changeCount}
+                accessibilityLabel={
+                  form === 'capsule' ? t.pill.capsulesLeft : t.pill.tabletsLeft
+                }
+                autoFocus={focusCount}
+                keyboardType="decimal-pad"
+                maxLength={5}
+                style={[
+                  styles.input,
+                  styles.countInput,
+                  !countValid && styles.invalid,
+                ]}
+              />
+              {QUICK_COUNTS.map(n => (
+                <Pressable
+                  key={n}
+                  accessibilityRole="button"
+                  onPress={() => addToCount(n)}
+                  style={styles.chip}
+                >
+                  <Text style={styles.chipText}>{`+${n}`}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.note}>{t.pill.countNote}</Text>
           </View>
-        );
-      })}
-      {times.length < MAX_TIMES ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => chooseTime()}
-          style={styles.addTime}
-        >
-          <Text style={styles.link}>{t.pill.addTime}</Text>
-        </Pressable>
-      ) : null}
-      {elderId && otherZone ? (
-        <Text style={styles.hint}>{t.family.herTime(elderName)}</Text>
-      ) : null}
+        ) : null}
 
-      <Text style={styles.label}>{t.pill.howLong}</Text>
-      <View style={styles.chips}>
-        {PRESETS.map(n => (
+        <Text style={styles.label}>{t.pill.when}</Text>
+        {times.map((time, i) => {
+          const label = formatTime(time.hour, time.minute, is24h);
+          return (
+            <View key={`${time.hour}:${time.minute}`} style={styles.timeRow}>
+              <Text style={styles.time}>{label}</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => chooseTime(i)}
+                style={styles.timeButton}
+              >
+                <Text style={styles.link}>{t.pill.change}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t.pill.removeTime(label)}
+                onPress={() => removeTime(i)}
+                style={styles.timeButton}
+              >
+                <Text style={styles.remove}>✕</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+        {times.length < MAX_TIMES ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => chooseTime()}
+            style={styles.addTime}
+          >
+            <Text style={styles.link}>{t.pill.addTime}</Text>
+          </Pressable>
+        ) : null}
+        {elderId && otherZone ? (
+          <Text style={styles.hint}>{t.family.herTime(elderName)}</Text>
+        ) : null}
+
+        <Text style={styles.label}>{t.pill.howLong}</Text>
+        <View style={styles.chips}>
+          {PRESETS.map(n => (
+            <Chip
+              key={n}
+              label={t.pill.nDays(n)}
+              selected={duration === n}
+              onPress={() => setDuration(n)}
+            />
+          ))}
           <Chip
-            key={n}
-            label={t.pill.nDays(n)}
-            selected={duration === n}
-            onPress={() => setDuration(n)}
+            label={t.pill.otherDays}
+            selected={duration === 'other'}
+            onPress={() => setDuration('other')}
           />
-        ))}
-        <Chip
-          label={t.pill.otherDays}
-          selected={duration === 'other'}
-          onPress={() => setDuration('other')}
-        />
-        <Chip
-          label={t.pill.noEnd}
-          selected={duration === 'none'}
-          onPress={() => setDuration('none')}
-        />
-      </View>
-      {duration === 'other' ? (
-        <TextInput
-          value={otherDays}
-          onChangeText={setOtherDays}
-          accessibilityLabel={t.pill.days}
-          placeholder={t.pill.days}
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          maxLength={3}
-          style={[styles.input, styles.daysInput]}
-        />
-      ) : null}
+          <Chip
+            label={t.pill.noEnd}
+            selected={duration === 'none'}
+            onPress={() => setDuration('none')}
+          />
+        </View>
+        {duration === 'other' ? (
+          <TextInput
+            value={otherDays}
+            onChangeText={setOtherDays}
+            accessibilityLabel={t.pill.days}
+            placeholder={t.pill.days}
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            maxLength={3}
+            style={[styles.input, styles.daysInput]}
+          />
+        ) : null}
 
-      {pillId ? null : (
-        <>
-          <Text style={styles.label}>{t.pill.starts}</Text>
-          <View style={styles.chips}>
-            <Chip
-              label={t.pill.startsToday}
-              selected={!startsTomorrow}
-              onPress={() => setStartsTomorrow(false)}
-            />
-            <Chip
-              label={t.pill.startsTomorrow}
-              selected={startsTomorrow}
-              onPress={() => setStartsTomorrow(true)}
-            />
-          </View>
-        </>
-      )}
+        {pillId ? null : (
+          <>
+            <Text style={styles.label}>{t.pill.starts}</Text>
+            <View style={styles.chips}>
+              <Chip
+                label={t.pill.startsToday}
+                selected={!startsTomorrow}
+                onPress={() => setStartsTomorrow(false)}
+              />
+              <Chip
+                label={t.pill.startsTomorrow}
+                selected={startsTomorrow}
+                onPress={() => setStartsTomorrow(true)}
+              />
+            </View>
+          </>
+        )}
 
-      {times.length > 0 && days !== undefined ? (
-        <Text style={styles.summary}>
-          {courseSummary({
-            startDate: courseStart,
-            days,
-            times,
-            today,
-            is24h,
-            t,
-          })}
-        </Text>
-      ) : null}
-    </ScrollView>
+        {times.length > 0 && days !== undefined ? (
+          <Text style={styles.summary}>
+            {courseSummary({
+              startDate: courseStart,
+              days,
+              times,
+              today,
+              is24h,
+              t,
+            })}
+          </Text>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, paddingBottom: spacing.lg * 2 },
-  headerButton: {
-    fontSize: 16,
-    color: colors.primary,
-    marginRight: spacing.md,
-  },
   label: {
     fontSize: 14,
     color: colors.textMuted,
@@ -822,10 +797,15 @@ const styles = StyleSheet.create({
   photoButtons: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
   photoButton: { paddingVertical: spacing.sm, paddingRight: spacing.md },
   summary: { marginTop: spacing.md, fontSize: 15, color: colors.text },
+  // On a white pill, so the words read on every sky, the night's too.
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
   },
   headerDelete: { fontSize: 16, color: colors.danger },
   headerSave: { fontSize: 17, fontWeight: '600', color: colors.primary },

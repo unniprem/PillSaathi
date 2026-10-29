@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
@@ -16,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NavigationProp, RouteProp } from '@react-navigation/native';
 import { addDays, formatDay, toISODate } from '../lib/course';
 import {
   addMonths,
@@ -32,12 +26,22 @@ import { reportText } from '../lib/report';
 import { getHistory, is24HourFormat, listPills } from '../native/alarms';
 import { getElderHistory, listElderPills, listFollows } from '../native/family';
 import type { History } from '../native/alarms';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type {
+  RootStackParamList,
+  TabParamList,
+} from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import { colors, spacing } from '../theme';
+import SkyBand, { RoundButton } from '../ui/SkyBand';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
+/** This phone's History, as a tab; or hers, on a relative's phone, as a page of its own. */
+type Props = {
+  navigation: NavigationProp<RootStackParamList>;
+  route:
+    | RouteProp<TabParamList, 'History'>
+    | RouteProp<RootStackParamList, 'ElderHistory'>;
+};
 
 /** A month on screen and its doses up to today. */
 type Shown = { month: string; history: History };
@@ -84,6 +88,8 @@ export default function HistoryScreen({ navigation, route }: Props) {
   const { t, lang } = useI18n();
   const [shown, setShown] = useState<Shown | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // What the relative calls her, for the title.
+  const [herName, setHerName] = useState<string | null>(null);
   const month = useRef<string | null>(null);
   const latest = useRef(0);
   const mounted = useRef(true);
@@ -170,24 +176,6 @@ export default function HistoryScreen({ navigation, route }: Props) {
     }
   }, [shown, lang, t, elderId]);
 
-  const renderShare = useCallback(
-    () => (
-      <Pressable
-        accessibilityRole="button"
-        disabled={!shown}
-        onPress={share}
-        hitSlop={spacing.sm}
-      >
-        <Text style={styles.share}>{t.history.share}</Text>
-      </Pressable>
-    ),
-    [shown, share, t],
-  );
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: renderShare });
-  }, [navigation, renderShare]);
-
   // An elder's History is titled with what he calls her.
   useEffect(() => {
     if (!elderId) {
@@ -197,15 +185,28 @@ export default function HistoryScreen({ navigation, route }: Props) {
       .then(follows => {
         const follow = follows.find(f => f.elderId === elderId);
         if (follow && mounted.current) {
-          navigation.setOptions({ title: t.family.historyOf(follow.name) });
+          setHerName(follow.name);
         }
       })
       .catch(e => console.warn('Could not read the follow', e));
-  }, [elderId, navigation, t]);
+  }, [elderId]);
+
+  const band = (
+    <SkyBand
+      title={herName ? t.family.historyOf(herName) : t.history.title}
+      onBack={elderId ? () => navigation.goBack() : undefined}
+      right={
+        shown ? (
+          <RoundButton icon="share" label={t.history.share} onPress={share} />
+        ) : undefined
+      }
+    />
+  );
 
   if (!shown) {
     return (
       <View style={styles.container}>
+        {band}
         {loadFailed && (
           <Text style={styles.message}>{t.history.loadFailed}</Text>
         )}
@@ -258,78 +259,87 @@ export default function HistoryScreen({ navigation, route }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {loadFailed && <Text style={styles.message}>{t.history.loadFailed}</Text>}
-      <View style={styles.monthRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.history.previousMonth}
-          disabled={!canPrevious}
-          onPress={() => load(addMonths(shown.month, -1))}
-          hitSlop={spacing.sm}
-          style={styles.arrow}
-        >
-          <Text style={[styles.arrowText, !canPrevious && styles.future]}>
-            ‹
-          </Text>
-        </Pressable>
-        <Text style={styles.monthLabel}>
-          {t.history.month(t.months[monthNumber - 1], year)}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.history.nextMonth}
-          disabled={!canNext}
-          onPress={() => load(addMonths(shown.month, 1))}
-          hitSlop={spacing.sm}
-          style={styles.arrow}
-        >
-          <Text style={[styles.arrowText, !canNext && styles.future]}>›</Text>
-        </Pressable>
-      </View>
-
-      {percent === null ? (
-        <Text style={styles.noDoses}>{t.history.noDoses}</Text>
-      ) : (
-        <View style={styles.summary}>
-          <Text style={styles.percent}>{t.history.percentTaken(percent)}</Text>
-          <Text style={styles.count}>{t.history.doseCount(taken, total)}</Text>
-        </View>
-      )}
-
-      <View style={styles.row}>
-        {weekdays(history.firstDayOfWeek).map(d => (
-          <Text
-            key={d}
-            style={styles.weekday}
-            numberOfLines={1}
-            adjustsFontSizeToFit
+    <View style={styles.container}>
+      {band}
+      <ScrollView contentContainerStyle={styles.content}>
+        {loadFailed && (
+          <Text style={styles.message}>{t.history.loadFailed}</Text>
+        )}
+        <View style={styles.monthRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.history.previousMonth}
+            disabled={!canPrevious}
+            onPress={() => load(addMonths(shown.month, -1))}
+            hitSlop={spacing.sm}
+            style={styles.arrow}
           >
-            {t.days[d]}
+            <Text style={[styles.arrowText, !canPrevious && styles.future]}>
+              ‹
+            </Text>
+          </Pressable>
+          <Text style={styles.monthLabel}>
+            {t.history.month(t.months[monthNumber - 1], year)}
           </Text>
-        ))}
-      </View>
-      {monthGrid(shown.month, history.firstDayOfWeek).map((row, i) => (
-        <View key={i} style={styles.row}>
-          {row.map((date, j) =>
-            date === null ? (
-              <View key={j} style={styles.cell} />
-            ) : (
-              renderDay(date)
-            ),
-          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.history.nextMonth}
+            disabled={!canNext}
+            onPress={() => load(addMonths(shown.month, 1))}
+            hitSlop={spacing.sm}
+            style={styles.arrow}
+          >
+            <Text style={[styles.arrowText, !canNext && styles.future]}>›</Text>
+          </Pressable>
         </View>
-      ))}
 
-      <View style={styles.legend}>
-        {(['all', 'some', 'none'] as const).map(state => (
-          <View key={state} style={styles.legendItem}>
-            <View style={[styles.swatch, { backgroundColor: FILL[state] }]} />
-            <Text style={styles.legendText}>{stateWord(state, t)}</Text>
+        {percent === null ? (
+          <Text style={styles.noDoses}>{t.history.noDoses}</Text>
+        ) : (
+          <View style={styles.summary}>
+            <Text style={styles.percent}>
+              {t.history.percentTaken(percent)}
+            </Text>
+            <Text style={styles.count}>
+              {t.history.doseCount(taken, total)}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.row}>
+          {weekdays(history.firstDayOfWeek).map(d => (
+            <Text
+              key={d}
+              style={styles.weekday}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {t.days[d]}
+            </Text>
+          ))}
+        </View>
+        {monthGrid(shown.month, history.firstDayOfWeek).map((row, i) => (
+          <View key={i} style={styles.row}>
+            {row.map((date, j) =>
+              date === null ? (
+                <View key={j} style={styles.cell} />
+              ) : (
+                renderDay(date)
+              ),
+            )}
           </View>
         ))}
-      </View>
-    </ScrollView>
+
+        <View style={styles.legend}>
+          {(['all', 'some', 'none'] as const).map(state => (
+            <View key={state} style={styles.legendItem}>
+              <View style={[styles.swatch, { backgroundColor: FILL[state] }]} />
+              <Text style={styles.legendText}>{stateWord(state, t)}</Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -342,7 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.textMuted,
   },
-  share: { fontSize: 18, fontWeight: '600', color: colors.primary },
   monthRow: {
     flexDirection: 'row',
     alignItems: 'center',

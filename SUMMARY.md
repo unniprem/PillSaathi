@@ -1,7 +1,7 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 4
+**Next task**: 5
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
@@ -31,6 +31,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Deviation: installed `@react-navigation/bottom-tabs` (7.21.0, pure JS) here, since `TabBar` is typed with its `BottomTabBarProps`; Task 4 can skip the `npm install`. TabBar sits in-flow under the page (not over it), so screens need no bottom padding; tab words are one line, shrink to fit, capped at 1.5× text size.
 - Fixed Task 1's `shadow` tokens: RN's `boxShadow` parser drops a non-zero length without `px`, so `'0 4 14 0 …'` drew nothing on the phone; now `px`, and a kit test parses every shadow. New tokens: `colors.blueText` (blue words on blue tint), `edge`, `dim`, `shadow.blue/green/coral`, `skyColors`; `sky.ts` gains `skyImage(sky, middle%)` and `skyInk(sky)` (white words at night; Today's "1 of 3 done" should use it).
 - Beyond the interface: `RoundButton` (named export of `SkyBand.tsx`, for `right` such as Share or the gear); `SkyBand title=""` puts the step bar beside close (E6); `Stepper` `lessDisabled`/`moreDisabled`; `DoseBars onCard` (full width, grey rest, for PersonCard). Both skies set light status-bar icons at night. `SkyTop` leaves 60 dp at its foot for the next card's −44 lift. `AmountStepper` keeps "1 tablet" whole as the value, so PillEdit tests stand. Sheet doesn't handle the keyboard yet: check sheets with inputs (Task 11) on the phone. Prettier 2.8.8 re-wrapped a few old lines in the i18n files.
+
+### Task 4: Navigation: bottom tabs, and a sky band on every page
+**Status**: ✓ Done
+**Notes**:
+- No `package.json` change (Task 3 installed bottom-tabs). `renderApp('Today' | 'History' | 'Family' | 'Settings', params)` opens `Main` at that tab; `headerTitles()` reads every `sky-title`, bottom page first. Visited tabs stay mounted, so after switching tabs use `toContain`; the tab bar's words are always on screen under `Main`, so `getByText('Family')` etc. can match a tab too (prefer `getByRole('tab', { name })`). Every stack page's band has `onBack={() => navigation.goBack()}`; tabs have none. Added a test that Back on a page opened from a tab returns to it.
+- Tab screens take `TabProps<'Today'>` (exported from `RootNavigator`). `HistoryScreen` serves the History tab and the `ElderHistory` route, so its props are `NavigationProp<RootStackParamList>` + a union of the two `RouteProp`s (a union of the two screen-props types isn't callable). `replace`/`popTo('Today')` became `'Main'`; FollowEdit's `popToTop` lands on Main.
+- Header buttons moved into the band: History's Share is a `RoundButton` (labelled "Share", shown once the month loads); Elder's gear is a `RoundButton` labelled `t.family.edit`; PillEdit's Cancel became the band's × (labelled "Close"), with Delete/Save on a white pill in `right` until Tasks 10–11 replace the page. Today's add button no longer adds `insets.bottom` (the tab bar pads for the gesture bar). Not yet viewed on a device.
 
 ---
 

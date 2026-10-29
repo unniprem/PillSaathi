@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -24,6 +24,7 @@ import {
 import type { ElderToday, FamilyCard } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand, { RoundButton } from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Elder'>;
 
@@ -74,31 +75,24 @@ export default function ElderScreen({ navigation, route }: Props) {
     }, [show, navigation]),
   );
 
-  const renderEdit = useCallback(
-    () => (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.family.edit}
-        onPress={() => navigation.navigate('FollowEdit', { elderId })}
-        hitSlop={spacing.sm}
-      >
-        <Text style={styles.gear}>⚙</Text>
-      </Pressable>
-    ),
-    [navigation, elderId, t],
-  );
-
   const name = card?.name ?? '';
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: name, headerRight: renderEdit });
-  }, [navigation, name, renderEdit]);
-
   const is24h = is24HourFormat();
   const phone = card?.phone;
   const warning = problemText(problem, t, name);
 
   return (
     <View style={styles.container}>
+      <SkyBand
+        title={name}
+        onBack={() => navigation.goBack()}
+        right={
+          <RoundButton
+            icon="settings"
+            label={t.family.edit}
+            onPress={() => navigation.navigate('FollowEdit', { elderId })}
+          />
+        }
+      />
       <RefillBanner refills={today?.refills ?? []} />
       <ScrollView contentContainerStyle={styles.list}>
         {warning ? <Text style={styles.warning}>{warning}</Text> : null}
@@ -130,7 +124,7 @@ export default function ElderScreen({ navigation, route }: Props) {
         <View style={styles.buttons}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => navigation.navigate('History', { elderId })}
+            onPress={() => navigation.navigate('ElderHistory', { elderId })}
             style={styles.button}
           >
             <Text style={styles.buttonText}>{t.history.title}</Text>
@@ -193,5 +187,4 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderRadius: 8,
   },
-  gear: { fontSize: 26, color: colors.text },
 });

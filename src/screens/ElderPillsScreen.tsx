@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -30,6 +30,7 @@ import {
 import type { ChangeView, ElderSetup } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ElderPills'>;
 
@@ -82,10 +83,6 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
     }, [load]),
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: t.remote.pillsTitle(name) });
-  }, [navigation, name, t]);
-
   const cancel = async (c: ChangeView) => {
     try {
       await cancelChange(elderId, c.id);
@@ -106,143 +103,152 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
   const byPill = waitingByPill(changes);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {problem ? <Text style={styles.warning}>{problem}</Text> : null}
-      {failed ? (
-        <Text style={styles.note}>{familyMessage(failed, t)}</Text>
-      ) : null}
-      {setup && !setup.editor ? (
-        <Text style={styles.note}>{t.remote.notEditor(name)}</Text>
-      ) : null}
-      {setup?.editor ? (
-        <>
-          <Text style={styles.muted}>{t.remote.delayNote(name)}</Text>
-          {setup.heardAt !== null ? (
-            <Text style={styles.muted}>
-              {t.family.lastHeard(
-                heardText(setup.heardAt, toISODate(new Date()), is24h, t),
-              )}
-            </Text>
-          ) : null}
-          {setup.otherZone ? (
-            <Text style={styles.muted}>{t.family.herTime(name)}</Text>
-          ) : null}
+    <View style={styles.container}>
+      <SkyBand
+        title={t.remote.pillsTitle(name)}
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView contentContainerStyle={styles.content}>
+        {problem ? <Text style={styles.warning}>{problem}</Text> : null}
+        {failed ? (
+          <Text style={styles.note}>{familyMessage(failed, t)}</Text>
+        ) : null}
+        {setup && !setup.editor ? (
+          <Text style={styles.note}>{t.remote.notEditor(name)}</Text>
+        ) : null}
+        {setup?.editor ? (
+          <>
+            <Text style={styles.muted}>{t.remote.delayNote(name)}</Text>
+            {setup.heardAt !== null ? (
+              <Text style={styles.muted}>
+                {t.family.lastHeard(
+                  heardText(setup.heardAt, toISODate(new Date()), is24h, t),
+                )}
+              </Text>
+            ) : null}
+            {setup.otherZone ? (
+              <Text style={styles.muted}>{t.family.herTime(name)}</Text>
+            ) : null}
 
-          {waiting.length > 0 ? (
-            <Text style={styles.heading}>{t.remote.waitingHeading}</Text>
-          ) : null}
-          {waiting.map(c => {
-            const title = changeTitle(c, t, is24h);
-            return (
-              <View key={c.id} style={styles.row}>
-                <View style={styles.grow}>
-                  <Text style={styles.name}>{title}</Text>
-                  <Text style={styles.muted}>
-                    {changeState(c, t, is24h, name)}
-                  </Text>
+            {waiting.length > 0 ? (
+              <Text style={styles.heading}>{t.remote.waitingHeading}</Text>
+            ) : null}
+            {waiting.map(c => {
+              const title = changeTitle(c, t, is24h);
+              return (
+                <View key={c.id} style={styles.row}>
+                  <View style={styles.grow}>
+                    <Text style={styles.name}>{title}</Text>
+                    <Text style={styles.muted}>
+                      {changeState(c, t, is24h, name)}
+                    </Text>
+                  </View>
+                  {c.mine && c.status === 'pending' ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t.remote.cancelLabel(title)}
+                      onPress={() => cancel(c)}
+                      style={styles.small}
+                    >
+                      <Text style={styles.smallText}>{t.remote.cancel}</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
-                {c.mine && c.status === 'pending' ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t.remote.cancelLabel(title)}
-                    onPress={() => cancel(c)}
-                    style={styles.small}
-                  >
-                    <Text style={styles.smallText}>{t.remote.cancel}</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            );
-          })}
+              );
+            })}
 
-          <Text style={styles.heading}>{t.remote.pillsTitle(name)}</Text>
-          {setup.pills.map(pill => {
-            const pending = byPill.get(pill.id);
-            return (
+            <Text style={styles.heading}>{t.remote.pillsTitle(name)}</Text>
+            {setup.pills.map(pill => {
+              const pending = byPill.get(pill.id);
+              return (
+                <Pressable
+                  key={pill.id}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    navigation.navigate('PillEdit', {
+                      elderId,
+                      pillId: pill.id,
+                    })
+                  }
+                  style={styles.row}
+                >
+                  <View style={styles.grow}>
+                    <Text
+                      style={[
+                        styles.name,
+                        pending?.kind === 'deletePill' && styles.struck,
+                      ]}
+                    >
+                      {pill.name}
+                    </Text>
+                    <Text style={styles.muted}>
+                      {pending
+                        ? t.remote.waiting(name)
+                        : pill.times
+                            .map(time =>
+                              formatTime(time.hour, time.minute, is24h),
+                            )
+                            .join(', ')}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('PillEdit', { elderId })}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>{t.remote.addPill}</Text>
+            </Pressable>
+
+            {setup.times.length > 0 ? (
+              <Text style={styles.heading}>{t.remote.soundsHeading}</Text>
+            ) : null}
+            {setup.times.map(time => (
               <Pressable
-                key={pill.id}
+                key={`${time.hour}:${time.minute}`}
                 accessibilityRole="button"
                 onPress={() =>
-                  navigation.navigate('PillEdit', { elderId, pillId: pill.id })
+                  navigation.navigate('SoundPicker', {
+                    elderId,
+                    hour: time.hour,
+                    minute: time.minute,
+                    selectedSoundId: time.soundId,
+                  })
                 }
                 style={styles.row}
               >
+                <Text style={styles.name}>
+                  {`${formatTime(time.hour, time.minute, is24h)} · ${
+                    time.soundName ?? t.remote.defaultTone
+                  }`}
+                </Text>
+              </Pressable>
+            ))}
+
+            {recent.length > 0 ? (
+              <Text style={styles.heading}>{t.remote.recentHeading}</Text>
+            ) : null}
+            {recent.map(c => (
+              <View key={c.id} style={styles.row}>
                 <View style={styles.grow}>
+                  <Text style={styles.name}>{changeTitle(c, t, is24h)}</Text>
                   <Text
                     style={[
-                      styles.name,
-                      pending?.kind === 'deletePill' && styles.struck,
+                      styles.muted,
+                      c.status === 'rejected' && styles.rejected,
                     ]}
                   >
-                    {pill.name}
-                  </Text>
-                  <Text style={styles.muted}>
-                    {pending
-                      ? t.remote.waiting(name)
-                      : pill.times
-                          .map(time =>
-                            formatTime(time.hour, time.minute, is24h),
-                          )
-                          .join(', ')}
+                    {changeState(c, t, is24h, name)}
                   </Text>
                 </View>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('PillEdit', { elderId })}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>{t.remote.addPill}</Text>
-          </Pressable>
-
-          {setup.times.length > 0 ? (
-            <Text style={styles.heading}>{t.remote.soundsHeading}</Text>
-          ) : null}
-          {setup.times.map(time => (
-            <Pressable
-              key={`${time.hour}:${time.minute}`}
-              accessibilityRole="button"
-              onPress={() =>
-                navigation.navigate('SoundPicker', {
-                  elderId,
-                  hour: time.hour,
-                  minute: time.minute,
-                  selectedSoundId: time.soundId,
-                })
-              }
-              style={styles.row}
-            >
-              <Text style={styles.name}>
-                {`${formatTime(time.hour, time.minute, is24h)} · ${
-                  time.soundName ?? t.remote.defaultTone
-                }`}
-              </Text>
-            </Pressable>
-          ))}
-
-          {recent.length > 0 ? (
-            <Text style={styles.heading}>{t.remote.recentHeading}</Text>
-          ) : null}
-          {recent.map(c => (
-            <View key={c.id} style={styles.row}>
-              <View style={styles.grow}>
-                <Text style={styles.name}>{changeTitle(c, t, is24h)}</Text>
-                <Text
-                  style={[
-                    styles.muted,
-                    c.status === 'rejected' && styles.rejected,
-                  ]}
-                >
-                  {changeState(c, t, is24h, name)}
-                </Text>
               </View>
-            </View>
-          ))}
-        </>
-      ) : null}
-    </ScrollView>
+            ))}
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 

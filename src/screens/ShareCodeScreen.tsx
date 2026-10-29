@@ -6,6 +6,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFollowRequests } from '../hooks/useFollowRequests';
@@ -20,6 +21,7 @@ import { createLinkCode, FamilyErrors } from '../native/family';
 import type { LinkCode } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ShareCode'>;
 
@@ -86,43 +88,46 @@ export default function ShareCodeScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {state.kind === 'code' ? (
-        <>
-          <Text style={styles.body}>{t.family.codeBody}</Text>
-          <Image
-            accessibilityLabel={t.family.scanCode}
-            source={{ uri: state.code.qrUri }}
-            style={styles.qr}
-          />
-          <Text style={styles.digits}>{formatCode(state.code.code)}</Text>
+    <View style={styles.container}>
+      <SkyBand title={t.family.codeTitle} onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={styles.content}>
+        {state.kind === 'code' ? (
+          <>
+            <Text style={styles.body}>{t.family.codeBody}</Text>
+            <Image
+              accessibilityLabel={t.family.scanCode}
+              source={{ uri: state.code.qrUri }}
+              style={styles.qr}
+            />
+            <Text style={styles.digits}>{formatCode(state.code.code)}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => send(state.code.code)}
+              style={styles.primary}
+            >
+              <Text style={styles.primaryText}>{t.family.sendCode}</Text>
+            </Pressable>
+          </>
+        ) : null}
+        {state.kind === 'expired' ? (
+          <Text style={styles.body}>{t.family.expired}</Text>
+        ) : null}
+        {state.kind === 'failed' ? (
+          <Text style={styles.body}>{familyMessage(state.error, t)}</Text>
+        ) : null}
+        {state.kind === 'expired' ||
+        (state.kind === 'failed' &&
+          errorCode(state.error) !== FamilyErrors.NotSetUp) ? (
           <Pressable
             accessibilityRole="button"
-            onPress={() => send(state.code.code)}
+            onPress={makeCode}
             style={styles.primary}
           >
-            <Text style={styles.primaryText}>{t.family.sendCode}</Text>
+            <Text style={styles.primaryText}>{t.family.newCode}</Text>
           </Pressable>
-        </>
-      ) : null}
-      {state.kind === 'expired' ? (
-        <Text style={styles.body}>{t.family.expired}</Text>
-      ) : null}
-      {state.kind === 'failed' ? (
-        <Text style={styles.body}>{familyMessage(state.error, t)}</Text>
-      ) : null}
-      {state.kind === 'expired' ||
-      (state.kind === 'failed' &&
-        errorCode(state.error) !== FamilyErrors.NotSetUp) ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={makeCode}
-          style={styles.primary}
-        >
-          <Text style={styles.primaryText}>{t.family.newCode}</Text>
-        </Pressable>
-      ) : null}
-    </ScrollView>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 

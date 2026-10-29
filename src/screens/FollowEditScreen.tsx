@@ -1,5 +1,12 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
 import { useI18n } from '../i18n';
@@ -8,6 +15,7 @@ import { getFamily, saveFollow, unfollow } from '../native/family';
 import type { FamilyCard, Follow } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FollowEdit'>;
 
@@ -34,11 +42,6 @@ export default function FollowEditScreen({ navigation, route }: Props) {
       mounted.current = false;
     };
   }, [elderId]);
-
-  const name = card?.name ?? '';
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: name });
-  }, [navigation, name]);
 
   const save = async (follow: Follow) => {
     try {
@@ -85,33 +88,35 @@ export default function FollowEditScreen({ navigation, route }: Props) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      {card ? (
-        <>
-          <FollowForm
-            initial={{
-              elderId,
-              name: card.name,
-              phone: card.phone,
-              delayMinutes: card.delayMinutes,
-            }}
-            submitLabel={t.common.save}
-            onSubmit={save}
-          />
-          <Pressable
-            accessibilityRole="button"
-            onPress={askStop}
-            style={styles.stop}
-          >
-            <Text style={styles.stopText}>{t.family.stopFollowing}</Text>
-          </Pressable>
-        </>
-      ) : null}
-    </ScrollView>
+    <View style={styles.container}>
+      <SkyBand title={card?.name ?? ''} onBack={() => navigation.goBack()} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {card ? (
+          <>
+            <FollowForm
+              initial={{
+                elderId,
+                name: card.name,
+                phone: card.phone,
+                delayMinutes: card.delayMinutes,
+              }}
+              submitLabel={t.common.save}
+              onSubmit={save}
+            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={askStop}
+              style={styles.stop}
+            >
+              <Text style={styles.stopText}>{t.family.stopFollowing}</Text>
+            </Pressable>
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 

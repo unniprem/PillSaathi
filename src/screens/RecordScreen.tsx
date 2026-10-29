@@ -30,6 +30,7 @@ import {
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Record'>;
 type Phase = 'idle' | 'recording' | 'recorded';
@@ -277,7 +278,7 @@ export default function RecordScreen({ navigation, route }: Props) {
           if (navigation.canGoBack()) {
             navigation.goBack();
           } else {
-            navigation.replace('Today');
+            navigation.replace('Main');
           }
         }
         return;
@@ -286,7 +287,7 @@ export default function RecordScreen({ navigation, route }: Props) {
         if (forHer) {
           navigation.popTo('ElderPills', { elderId: forHer.elderId });
         } else {
-          navigation.popTo('Today');
+          navigation.popTo('Main');
         }
       }
     } catch (e) {
@@ -308,91 +309,93 @@ export default function RecordScreen({ navigation, route }: Props) {
   });
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.timer}>{formatDuration(elapsedMs)}</Text>
+    <View style={styles.container}>
+      <SkyBand title={t.record.title} onBack={() => navigation.goBack()} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.timer}>{formatDuration(elapsedMs)}</Text>
 
-      {phase === 'idle' ? (
-        <>
-          <Text style={styles.hint}>{t.record.upTo}</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.record.start}
-            onPress={() => {
-              start();
-            }}
-            style={styles.recordButton}
-          >
-            <View style={styles.recordDot} />
-          </Pressable>
-        </>
-      ) : null}
-
-      {phase === 'recording' ? (
-        <>
-          <View style={styles.bars}>
-            {bars.map((h, i) => (
-              <View key={i} style={[styles.bar, { height: h }]} />
-            ))}
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.record.stop}
-            onPress={() => {
-              stop();
-            }}
-            style={styles.recordButton}
-          >
-            <View style={styles.stopSquare} />
-          </Pressable>
-          <Text style={styles.hint}>{t.record.tapToStop}</Text>
-        </>
-      ) : null}
-
-      {phase === 'recorded' ? (
-        <>
-          <View style={styles.actions}>
+        {phase === 'idle' ? (
+          <>
+            <Text style={styles.hint}>{t.record.upTo}</Text>
             <Pressable
               accessibilityRole="button"
-              onPress={toggleListen}
-              style={styles.secondary}
+              accessibilityLabel={t.record.start}
+              onPress={() => {
+                start();
+              }}
+              style={styles.recordButton}
             >
-              <Text style={styles.secondaryText}>
-                {listening ? t.record.stopListening : t.record.listen}
-              </Text>
+              <View style={styles.recordDot} />
             </Pressable>
+          </>
+        ) : null}
+
+        {phase === 'recording' ? (
+          <>
+            <View style={styles.bars}>
+              {bars.map((h, i) => (
+                <View key={i} style={[styles.bar, { height: h }]} />
+              ))}
+            </View>
             <Pressable
               accessibilityRole="button"
-              onPress={redo}
-              style={styles.secondary}
+              accessibilityLabel={t.record.stop}
+              onPress={() => {
+                stop();
+              }}
+              style={styles.recordButton}
             >
-              <Text style={styles.secondaryText}>{t.record.redo}</Text>
+              <View style={styles.stopSquare} />
             </Pressable>
-          </View>
-          <Text style={styles.label}>{t.record.name}</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder={t.record.defaultName}
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-          />
-          <Pressable
-            accessibilityRole="button"
-            disabled={saving}
-            onPress={() => {
-              saveTake();
-            }}
-            style={styles.primary}
-          >
-            <Text style={styles.primaryText}>{t.record.use}</Text>
-          </Pressable>
-        </>
-      ) : null}
-    </ScrollView>
+            <Text style={styles.hint}>{t.record.tapToStop}</Text>
+          </>
+        ) : null}
+
+        {phase === 'recorded' ? (
+          <>
+            <View style={styles.actions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={toggleListen}
+                style={styles.secondary}
+              >
+                <Text style={styles.secondaryText}>
+                  {listening ? t.record.stopListening : t.record.listen}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={redo}
+                style={styles.secondary}
+              >
+                <Text style={styles.secondaryText}>{t.record.redo}</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.label}>{t.record.name}</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder={t.record.defaultName}
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={saving}
+              onPress={() => {
+                saveTake();
+              }}
+              style={styles.primary}
+            >
+              <Text style={styles.primaryText}>{t.record.use}</Text>
+            </Pressable>
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 

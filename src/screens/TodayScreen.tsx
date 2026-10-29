@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
@@ -17,8 +11,6 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DoseCard from '../components/DoseCard';
 import FamilySection from '../components/FamilySection';
 import HealthBanner from '../components/HealthBanner';
@@ -42,12 +34,13 @@ import { getFamily, refreshFamily } from '../native/family';
 import type { FamilyCard } from '../native/family';
 import { listSounds } from '../native/sounds';
 import type { Sound } from '../native/sounds';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { TabProps } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Today'>;
+type Props = TabProps<'Today'>;
 
 /** While Today is on screen, the family cards are read again this often. */
 const FAMILY_REFRESH_MS = 120_000;
@@ -66,7 +59,6 @@ function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
 }
 
 export default function TodayScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
   const { t } = useI18n();
   // Read by the refresh and mount effects, which must not re-run when the language changes.
   const words = useRef(t);
@@ -195,37 +187,7 @@ export default function TodayScreen({ navigation }: Props) {
     }, [refresh, loadFamily]),
   );
 
-  const renderHeaderButtons = useCallback(
-    () => (
-      <View style={styles.headerButtons}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.history.title}
-          onPress={() => navigation.navigate('History')}
-          hitSlop={spacing.sm}
-        >
-          <Text style={styles.gear}>📅</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.settings.title}
-          onPress={() => navigation.navigate('Settings')}
-          hitSlop={spacing.sm}
-        >
-          <Text style={styles.gear}>⚙</Text>
-        </Pressable>
-      </View>
-    ),
-    [navigation, t],
-  );
-
   const date = today?.date;
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: date ? t.today.titleOn(formatDay(date, t)) : t.today.title,
-      headerRight: renderHeaderButtons,
-    });
-  }, [navigation, date, t, renderHeaderButtons]);
 
   // Only a missed or skipped dose: someone took it but didn't tap Taken.
   const confirmTaken = (card: TodayCard) => {
@@ -269,6 +231,9 @@ export default function TodayScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <SkyBand
+        title={date ? t.today.titleOn(formatDay(date, t)) : t.today.title}
+      />
       <HealthBanner issues={issues} onAction={runAction} />
       <RefillBanner
         refills={today?.refills ?? []}
@@ -327,8 +292,7 @@ export default function TodayScreen({ navigation }: Props) {
       <Pressable
         accessibilityRole="button"
         onPress={() => navigation.navigate('PillEdit', {})}
-        // Clear of the gesture bar: the app draws edge to edge.
-        style={[styles.add, { marginBottom: spacing.md + insets.bottom }]}
+        style={styles.add}
       >
         <Text style={styles.addText}>{t.today.addPill}</Text>
       </Pressable>
@@ -355,10 +319,4 @@ const styles = StyleSheet.create({
   addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
   addFamily: { alignSelf: 'center', padding: spacing.md },
   addFamilyText: { color: colors.primary, fontSize: 18, fontWeight: '600' },
-  gear: { fontSize: 26, color: colors.text },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
 });

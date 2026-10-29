@@ -33,6 +33,7 @@ import type { ElderSound, SoundKind } from '../native/family';
 import { useI18n } from '../i18n';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SoundPicker'>;
 
@@ -146,7 +147,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
       return;
     }
     if (mounted.current) {
-      navigation.popTo('Today');
+      navigation.popTo('Main');
     }
   };
 
@@ -228,64 +229,71 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.buttons}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => navigation.navigate('Record', forHer ?? { alarmId })}
-          style={styles.bigButton}
-        >
-          <Text style={styles.bigButtonText}>{t.sound.record}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ busy: importing }}
-          disabled={importing}
-          onPress={doImport}
-          style={[styles.bigButton, importing && styles.busy]}
-        >
-          <Text style={styles.bigButtonText}>
-            {importing ? t.sound.importing : t.sound.import}
-          </Text>
-        </Pressable>
-      </View>
+    <View style={styles.container}>
+      <SkyBand title={t.sound.title} onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.buttons}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('Record', forHer ?? { alarmId })}
+            style={styles.bigButton}
+          >
+            <Text style={styles.bigButtonText}>{t.sound.record}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ busy: importing }}
+            disabled={importing}
+            onPress={doImport}
+            style={[styles.bigButton, importing && styles.busy]}
+          >
+            <Text style={styles.bigButtonText}>
+              {importing ? t.sound.importing : t.sound.import}
+            </Text>
+          </Pressable>
+        </View>
 
-      {forHer ? null : <Text style={styles.heading}>{t.sound.yourSounds}</Text>}
-      <SoundRow
-        name={t.common.defaultTone}
-        selected={selectedId === null}
-        onPress={() => pick(null)}
-      />
-      {forHer && herSounds.length > 0 ? (
-        <Text style={styles.heading}>{t.remote.herSounds(elderName)}</Text>
-      ) : null}
-      {forHer
-        ? herSounds.map(sound => (
-            <SoundRow
-              key={`hers-${sound.id}`}
-              name={sound.name}
-              selected={selectedId === sound.id}
-              onPress={() => send('hers', sound.id)}
-            />
-          ))
-        : null}
-      {forHer ? <Text style={styles.heading}>{t.remote.mySounds}</Text> : null}
-      {sounds.map(sound => (
+        {forHer ? null : (
+          <Text style={styles.heading}>{t.sound.yourSounds}</Text>
+        )}
         <SoundRow
-          key={sound.id}
-          name={sound.name}
-          detail={`${
-            sound.kind === 'recorded' ? t.sound.recorded : t.sound.imported
-          } · ${formatDuration(sound.durationMs)}`}
-          selected={selectedId === sound.id}
-          playing={playingId === sound.id}
-          previewId={sound.id}
-          onPress={() => pick(sound.id)}
-          onLongPress={() => confirmDelete(sound)}
-          onTogglePreview={() => togglePreview(sound.id)}
+          name={t.common.defaultTone}
+          selected={selectedId === null}
+          onPress={() => pick(null)}
         />
-      ))}
-    </ScrollView>
+        {forHer && herSounds.length > 0 ? (
+          <Text style={styles.heading}>{t.remote.herSounds(elderName)}</Text>
+        ) : null}
+        {forHer
+          ? herSounds.map(sound => (
+              <SoundRow
+                key={`hers-${sound.id}`}
+                name={sound.name}
+                selected={selectedId === sound.id}
+                onPress={() => send('hers', sound.id)}
+              />
+            ))
+          : null}
+        {forHer ? (
+          <Text style={styles.heading}>{t.remote.mySounds}</Text>
+        ) : null}
+        {sounds.map(sound => (
+          <SoundRow
+            key={sound.id}
+            name={sound.name}
+            detail={`${
+              sound.kind === 'recorded' ? t.sound.recorded : t.sound.imported
+            } · ${formatDuration(sound.durationMs)}`}
+            selected={selectedId === sound.id}
+            playing={playingId === sound.id}
+            previewId={sound.id}
+            onPress={() => pick(sound.id)}
+            onLongPress={() => confirmDelete(sound)}
+            onTogglePreview={() => togglePreview(sound.id)}
+          />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 

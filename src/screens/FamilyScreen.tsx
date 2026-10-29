@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFollowRequests } from '../hooks/useFollowRequests';
 import { useI18n } from '../i18n';
 import { familyMessage } from '../lib/family';
@@ -20,10 +19,11 @@ import {
   setCanChange,
 } from '../native/family';
 import type { Follow, Follower, Person } from '../native/family';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { TabProps } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Family'>;
+type Props = TabProps<'Family'>;
 
 /**
  * Both sides of Family on this phone: who can see its pills (each with Remove, and a code for
@@ -105,63 +105,66 @@ export default function FamilyScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>{t.family.canSee}</Text>
-      {failed ? (
-        <Text style={styles.note}>{familyMessage(failed, t)}</Text>
-      ) : null}
-      {followers?.length === 0 ? (
-        <Text style={styles.note}>{t.family.noOne}</Text>
-      ) : null}
-      {followers?.map(person => (
-        <View key={person.uid} style={styles.row}>
-          <View style={styles.who}>
-            <Text style={styles.name}>{person.name}</Text>
-            <Text style={styles.email}>{person.email}</Text>
-            <View style={styles.canChange}>
-              <Switch
-                accessibilityLabel={t.family.canChangeLabel(person.name)}
-                value={person.canChange}
-                onValueChange={on => allowChanges(person, on)}
-              />
-              <Text style={styles.canChangeText}>{t.family.canChange}</Text>
+    <View style={styles.container}>
+      <SkyBand title={t.family.title} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>{t.family.canSee}</Text>
+        {failed ? (
+          <Text style={styles.note}>{familyMessage(failed, t)}</Text>
+        ) : null}
+        {followers?.length === 0 ? (
+          <Text style={styles.note}>{t.family.noOne}</Text>
+        ) : null}
+        {followers?.map(person => (
+          <View key={person.uid} style={styles.row}>
+            <View style={styles.who}>
+              <Text style={styles.name}>{person.name}</Text>
+              <Text style={styles.email}>{person.email}</Text>
+              <View style={styles.canChange}>
+                <Switch
+                  accessibilityLabel={t.family.canChangeLabel(person.name)}
+                  value={person.canChange}
+                  onValueChange={on => allowChanges(person, on)}
+                />
+                <Text style={styles.canChangeText}>{t.family.canChange}</Text>
+              </View>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t.family.removeLabel(person.name)}
+              onPress={() => remove(person)}
+              style={styles.remove}
+            >
+              <Text style={styles.removeText}>{t.family.remove}</Text>
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.family.removeLabel(person.name)}
-            onPress={() => remove(person)}
-            style={styles.remove}
-          >
-            <Text style={styles.removeText}>{t.family.remove}</Text>
-          </Pressable>
-        </View>
-      ))}
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('ShareCode')}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>{t.family.showCode}</Text>
-      </Pressable>
+        ))}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('ShareCode')}
+          style={styles.button}
+        >
+          <Text style={styles.buttonText}>{t.family.showCode}</Text>
+        </Pressable>
 
-      <Text style={styles.heading}>{t.family.lookAfter}</Text>
-      {follows?.length === 0 ? (
-        <Text style={styles.note}>{t.family.noOne}</Text>
-      ) : null}
-      {follows?.map(follow => (
-        <View key={follow.elderId} style={styles.row}>
-          <Text style={styles.name}>{follow.name}</Text>
-        </View>
-      ))}
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('AddFamily')}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>{t.family.addFamily}</Text>
-      </Pressable>
-    </ScrollView>
+        <Text style={styles.heading}>{t.family.lookAfter}</Text>
+        {follows?.length === 0 ? (
+          <Text style={styles.note}>{t.family.noOne}</Text>
+        ) : null}
+        {follows?.map(follow => (
+          <View key={follow.elderId} style={styles.row}>
+            <Text style={styles.name}>{follow.name}</Text>
+          </View>
+        ))}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('AddFamily')}
+          style={styles.button}
+        >
+          <Text style={styles.buttonText}>{t.family.addFamily}</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
 

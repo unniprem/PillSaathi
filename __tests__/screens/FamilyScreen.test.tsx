@@ -157,19 +157,24 @@ test('Family says "No one yet." when looking after no one', async () => {
   );
 });
 
-test('the Settings row opens Family', async () => {
+test('Family is a tab of its own, no longer a Settings row', async () => {
   jest.mocked(alarms.getSettings).mockResolvedValue({
     language: 'en',
     readAloud: true,
     languages: [{ code: 'en', label: 'English', draft: false }],
   });
   await renderApp('Settings');
-  await fireEvent.press(await screen.findByText('Family'));
-  await waitFor(() => expect(headerTitles()).toEqual(['Settings', 'Family']));
+  await screen.findByText('English');
+  expect(screen.queryByRole('button', { name: 'Family' })).toBeNull();
+  await fireEvent.press(screen.getByRole('tab', { name: 'Family' }));
+  await waitFor(() => expect(headerTitles()).toContain('Family'));
+  expect(
+    screen.getByRole('tab', { name: 'Family', selected: true }),
+  ).toBeTruthy();
 });
 
-test('the Settings row reads Family in Malayalam', async () => {
+test('the Family tab reads Family in Malayalam', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('ml');
   await renderApp('Settings');
-  expect(await screen.findByText('കുടുംബം')).toBeTruthy();
+  expect(await screen.findByRole('tab', { name: 'കുടുംബം' })).toBeTruthy();
 });

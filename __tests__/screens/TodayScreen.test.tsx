@@ -177,20 +177,22 @@ test('shows Today in Hindi', async () => {
   expect(headerTitles()[0]).toContain('आज');
 });
 
-test('opens Settings from the gear', async () => {
+test('opens Settings from the tab bar', async () => {
   await renderApp();
-  await fireEvent.press(await screen.findByLabelText('Settings'));
-  await waitFor(() =>
-    expect(headerTitles()).toEqual(['Today · Mon 26 Oct', 'Settings']),
-  );
+  await fireEvent.press(await screen.findByRole('tab', { name: 'Settings' }));
+  await waitFor(() => expect(headerTitles()).toContain('Settings'));
+  expect(
+    screen.getByRole('tab', { name: 'Settings', selected: true }),
+  ).toBeTruthy();
 });
 
-test('opens History from the calendar icon', async () => {
+test('opens History from the tab bar', async () => {
   await renderApp();
-  await fireEvent.press(await screen.findByLabelText('History'));
-  await waitFor(() =>
-    expect(headerTitles()).toEqual(['Today · Mon 26 Oct', 'History']),
-  );
+  await fireEvent.press(await screen.findByRole('tab', { name: 'History' }));
+  await waitFor(() => expect(headerTitles()).toContain('History'));
+  expect(
+    screen.getByRole('tab', { name: 'History', selected: true }),
+  ).toBeTruthy();
 });
 
 test('marks a missed dose taken after confirming', async () => {
@@ -500,7 +502,8 @@ describe('family on Today', () => {
     jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
     await renderApp('Today');
     expect(await screen.findByText('Amma')).toBeTruthy();
-    expect(screen.getByText('Family')).toBeTruthy();
+    // The section's heading, and the tab's word.
+    expect(screen.getAllByText('Family')).toHaveLength(2);
     expect(screen.getByText('2 taken · 1 missed · 1 later')).toBeTruthy();
     expect(screen.getByText('Telma 40: 4 tablets left')).toBeTruthy();
     expect(screen.getByText('+ Add family')).toBeTruthy();

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
@@ -24,6 +25,7 @@ import {
 import type { Follow } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddFamily'>;
 
@@ -188,80 +190,82 @@ export default function AddFamilyScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      {step.kind === 'signIn' ? (
-        <>
-          {step.message ? (
-            <Text style={styles.message}>{step.message}</Text>
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            disabled={busy}
-            onPress={signIn}
-            style={[styles.primary, busy && styles.busy]}
-          >
-            <Text style={styles.primaryText}>{t.family.signIn}</Text>
-          </Pressable>
-        </>
-      ) : null}
-      {step.kind === 'code' ? (
-        <>
-          {step.message || step.scanning ? (
-            <Text style={styles.message}>
-              {step.scanning ? t.family.opening : step.message}
-            </Text>
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            disabled={busy || step.scanning}
-            onPress={scan}
-            style={[styles.primary, (busy || step.scanning) && styles.busy]}
-          >
-            <Text style={styles.primaryText}>{t.family.scanCode}</Text>
-          </Pressable>
-          <Text style={styles.label}>{t.family.typeDigits}</Text>
-          <TextInput
-            accessibilityLabel={t.family.typeDigits}
-            value={typed}
-            onChangeText={setTyped}
-            keyboardType="number-pad"
-            maxLength={7}
-            onSubmitEditing={next}
-            style={styles.digits}
+    <View style={styles.container}>
+      <SkyBand title={t.family.addTitle} onBack={() => navigation.goBack()} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {step.kind === 'signIn' ? (
+          <>
+            {step.message ? (
+              <Text style={styles.message}>{step.message}</Text>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={signIn}
+              style={[styles.primary, busy && styles.busy]}
+            >
+              <Text style={styles.primaryText}>{t.family.signIn}</Text>
+            </Pressable>
+          </>
+        ) : null}
+        {step.kind === 'code' ? (
+          <>
+            {step.message || step.scanning ? (
+              <Text style={styles.message}>
+                {step.scanning ? t.family.opening : step.message}
+              </Text>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy || step.scanning}
+              onPress={scan}
+              style={[styles.primary, (busy || step.scanning) && styles.busy]}
+            >
+              <Text style={styles.primaryText}>{t.family.scanCode}</Text>
+            </Pressable>
+            <Text style={styles.label}>{t.family.typeDigits}</Text>
+            <TextInput
+              accessibilityLabel={t.family.typeDigits}
+              value={typed}
+              onChangeText={setTyped}
+              keyboardType="number-pad"
+              maxLength={7}
+              onSubmitEditing={next}
+              style={styles.digits}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !digitsOf(typed) || busy }}
+              onPress={next}
+              style={[
+                styles.secondary,
+                (!digitsOf(typed) || busy) && styles.busy,
+              ]}
+            >
+              <Text style={styles.secondaryText}>{t.family.next}</Text>
+            </Pressable>
+          </>
+        ) : null}
+        {step.kind === 'waiting' ? (
+          <Text style={styles.message}>{t.family.waiting}</Text>
+        ) : null}
+        {step.kind === 'form' ? (
+          <FollowForm
+            initial={{
+              elderId: step.elderId,
+              name: '',
+              phone: null,
+              delayMinutes: 30,
+            }}
+            submitLabel={t.family.done}
+            onSubmit={done}
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !digitsOf(typed) || busy }}
-            onPress={next}
-            style={[
-              styles.secondary,
-              (!digitsOf(typed) || busy) && styles.busy,
-            ]}
-          >
-            <Text style={styles.secondaryText}>{t.family.next}</Text>
-          </Pressable>
-        </>
-      ) : null}
-      {step.kind === 'waiting' ? (
-        <Text style={styles.message}>{t.family.waiting}</Text>
-      ) : null}
-      {step.kind === 'form' ? (
-        <FollowForm
-          initial={{
-            elderId: step.elderId,
-            name: '',
-            phone: null,
-            delayMinutes: 30,
-          }}
-          submitLabel={t.family.done}
-          onSubmit={done}
-        />
-      ) : null}
-    </ScrollView>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 

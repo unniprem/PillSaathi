@@ -13,6 +13,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import { currentManufacturer, stepsFor } from '../setup/oemSteps';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Setup'>;
 
@@ -67,6 +68,7 @@ export default function SetupScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <SkyBand title={t.setup.title} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>{t.setup.intro}</Text>
         {steps.map(step => (
@@ -80,9 +82,7 @@ export default function SetupScreen({ navigation }: Props) {
                   onPress={() => open(step.setting!)}
                   style={styles.button}
                 >
-                  <Text style={styles.buttonText}>
-                    {t.common.openSettings}
-                  </Text>
+                  <Text style={styles.buttonText}>{t.common.openSettings}</Text>
                 </Pressable>
               ) : null}
               {step.autoDone ? (

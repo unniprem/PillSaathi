@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatAmount } from '../lib/amount';
+import { formatDay } from '../lib/course';
 import { formatTime } from '../lib/time';
 import { getHistory, is24HourFormat, markDoseTaken } from '../native/alarms';
 import { getElderHistory } from '../native/family';
@@ -19,6 +20,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 import PillPicture from '../ui/PillPicture';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HistoryDay'>;
@@ -44,7 +46,7 @@ function statusOf(dose: HistoryDose, is24h: boolean, t: Strings): string {
 }
 
 /** One day's doses by time, each with its pills as they were then. */
-export default function HistoryDayScreen({ route }: Props) {
+export default function HistoryDayScreen({ navigation, route }: Props) {
   const { date, elderId } = route.params;
   const { lang, t } = useI18n();
   const [doses, setDoses] = useState<HistoryDose[] | null>(null);
@@ -119,53 +121,56 @@ export default function HistoryDayScreen({ route }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.list}>
-      {loadFailed ? (
-        <Text style={styles.message}>{t.history.loadFailed}</Text>
-      ) : null}
-      {doses !== null && doses.length === 0 ? (
-        <Text style={styles.message}>{t.history.dayEmpty}</Text>
-      ) : null}
-      {(doses ?? []).map(dose => {
-        // An elder's dose is hers to mark, on her phone.
-        const canMark = !elderId && dose.outcome !== 'taken';
-        return (
-          <View key={`${dose.hour}:${dose.minute}`} style={styles.card}>
-            <View style={styles.header}>
-              <Text style={styles.time}>
-                {formatTime(dose.hour, dose.minute, is24h)}
-              </Text>
-              <Text
-                style={[
-                  styles.status,
-                  canMark ? styles.attention : styles.taken,
-                ]}
-              >
-                {statusOf(dose, is24h, t)}
-              </Text>
-            </View>
-            {dose.pills.map(pill => (
-              <View key={pill.pillId} style={styles.pillRow}>
-                <PillPicture key={pill.photoUri ?? ''} pill={pill} />
-                <Text style={styles.pillName}>{pill.name}</Text>
-                <Text style={styles.amount}>
-                  {formatAmount(pill.form, pill.amount, lang)}
+    <View style={styles.container}>
+      <SkyBand title={formatDay(date, t)} onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={styles.list}>
+        {loadFailed ? (
+          <Text style={styles.message}>{t.history.loadFailed}</Text>
+        ) : null}
+        {doses !== null && doses.length === 0 ? (
+          <Text style={styles.message}>{t.history.dayEmpty}</Text>
+        ) : null}
+        {(doses ?? []).map(dose => {
+          // An elder's dose is hers to mark, on her phone.
+          const canMark = !elderId && dose.outcome !== 'taken';
+          return (
+            <View key={`${dose.hour}:${dose.minute}`} style={styles.card}>
+              <View style={styles.header}>
+                <Text style={styles.time}>
+                  {formatTime(dose.hour, dose.minute, is24h)}
+                </Text>
+                <Text
+                  style={[
+                    styles.status,
+                    canMark ? styles.attention : styles.taken,
+                  ]}
+                >
+                  {statusOf(dose, is24h, t)}
                 </Text>
               </View>
-            ))}
-            {canMark ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => confirmTaken(dose)}
-                style={styles.mark}
-              >
-                <Text style={styles.markText}>{t.today.markTaken}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        );
-      })}
-    </ScrollView>
+              {dose.pills.map(pill => (
+                <View key={pill.pillId} style={styles.pillRow}>
+                  <PillPicture key={pill.photoUri ?? ''} pill={pill} />
+                  <Text style={styles.pillName}>{pill.name}</Text>
+                  <Text style={styles.amount}>
+                    {formatAmount(pill.form, pill.amount, lang)}
+                  </Text>
+                </View>
+              ))}
+              {canMark ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => confirmTaken(dose)}
+                  style={styles.mark}
+                >
+                  <Text style={styles.markText}>{t.today.markTaken}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 

@@ -8,7 +8,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LANGUAGE_LABELS, isLang, useI18n } from '../i18n';
 import {
   getSettings,
@@ -17,10 +16,11 @@ import {
   tryReadAloud,
 } from '../native/alarms';
 import type { LanguageOption } from '../native/alarms';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { TabProps } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
+type Props = TabProps<'Settings'>;
 
 /** The app's language, reading pills aloud, a note on text size, and a way to Setup. */
 export default function SettingsScreen({ navigation }: Props) {
@@ -106,66 +106,62 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>{t.settings.language}</Text>
-      {languages.map(option => {
-        const selected = option.code === lang;
-        return (
-          <Pressable
-            key={option.code}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: selected }}
-            onPress={() => chooseLanguage(option.code)}
-            style={styles.row}
-          >
-            <Text style={styles.rowText}>
-              {`${option.label}${option.draft ? t.settings.draft : ''}`}
-            </Text>
-            <View style={[styles.radio, selected && styles.radioOn]}>
-              {selected ? <View style={styles.dot} /> : null}
-            </View>
-          </Pressable>
-        );
-      })}
+    <View style={styles.container}>
+      <SkyBand title={t.settings.title} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>{t.settings.language}</Text>
+        {languages.map(option => {
+          const selected = option.code === lang;
+          return (
+            <Pressable
+              key={option.code}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              onPress={() => chooseLanguage(option.code)}
+              style={styles.row}
+            >
+              <Text style={styles.rowText}>
+                {`${option.label}${option.draft ? t.settings.draft : ''}`}
+              </Text>
+              <View style={[styles.radio, selected && styles.radioOn]}>
+                {selected ? <View style={styles.dot} /> : null}
+              </View>
+            </Pressable>
+          );
+        })}
 
-      <Text style={styles.heading}>{t.settings.whenItRings}</Text>
-      <View style={styles.row}>
-        <Text style={styles.rowText}>{t.settings.readAloud}</Text>
-        <Switch
-          accessibilityLabel={t.settings.readAloud}
-          value={readAloud}
-          onValueChange={changeReadAloud}
-        />
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ busy: trying }}
-        disabled={trying}
-        onPress={tryIt}
-        style={[styles.button, trying && styles.busy]}
-      >
-        <Text style={styles.buttonText}>{t.settings.tryIt}</Text>
-      </Pressable>
+        <Text style={styles.heading}>{t.settings.whenItRings}</Text>
+        <View style={styles.row}>
+          <Text style={styles.rowText}>{t.settings.readAloud}</Text>
+          <Switch
+            accessibilityLabel={t.settings.readAloud}
+            value={readAloud}
+            onValueChange={changeReadAloud}
+          />
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ busy: trying }}
+          disabled={trying}
+          onPress={tryIt}
+          style={[styles.button, trying && styles.busy]}
+        >
+          <Text style={styles.buttonText}>{t.settings.tryIt}</Text>
+        </Pressable>
 
-      <Text style={styles.heading}>{t.settings.textSize}</Text>
-      <Text style={styles.note}>{t.settings.textSizeNote}</Text>
+        <Text style={styles.heading}>{t.settings.textSize}</Text>
+        <Text style={styles.note}>{t.settings.textSizeNote}</Text>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('Family')}
-        style={[styles.row, styles.familyRow]}
-      >
-        <Text style={styles.link}>{t.family.title}</Text>
-      </Pressable>
-      <Text style={styles.heading}>{t.settings.reliability}</Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('Setup')}
-        style={styles.row}
-      >
-        <Text style={styles.link}>{t.settings.makeReliable}</Text>
-      </Pressable>
-    </ScrollView>
+        <Text style={styles.heading}>{t.settings.reliability}</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('Setup')}
+          style={styles.row}
+        >
+          <Text style={styles.link}>{t.settings.makeReliable}</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -215,5 +211,4 @@ const styles = StyleSheet.create({
   buttonText: { fontSize: 18, color: colors.primary, fontWeight: '600' },
   note: { fontSize: 18, color: colors.text },
   link: { flex: 1, fontSize: 20, color: colors.primary },
-  familyRow: { marginTop: spacing.lg },
 });
