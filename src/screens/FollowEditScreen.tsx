@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
 import { useI18n } from '../i18n';
+import { familyMessage } from '../lib/family';
 import { getFamily, saveFollow, unfollow } from '../native/family';
 import type { FamilyCard, Follow } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -55,7 +56,7 @@ export default function FollowEditScreen({ navigation, route }: Props) {
       navigation.popToTop();
     } catch (e) {
       console.warn('Could not stop following', e);
-      Alert.alert(t.family.offline);
+      Alert.alert(familyMessage(e, t));
     }
   };
 

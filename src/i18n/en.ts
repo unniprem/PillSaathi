@@ -317,6 +317,7 @@ export const en = {
     no: 'No',
     allow: 'Allow',
     offline: 'No internet. Please try again.',
+    failed: 'Something went wrong. Please try again later.',
     notSetUp: "Family isn't set up in this build.",
     lookAfter: 'People I look after',
     addFamily: '+ Add family',

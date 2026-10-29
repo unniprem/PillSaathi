@@ -11,7 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
-import { errorCode } from '../lib/family';
+import { errorCode, familyMessage } from '../lib/family';
 import {
   FamilyErrors,
   followState,
@@ -46,12 +46,10 @@ function messageFor(e: unknown, t: Strings): string {
   switch (errorCode(e)) {
     case FamilyErrors.BadCode:
       return t.family.badCode;
-    case FamilyErrors.NotSetUp:
-      return t.family.notSetUp;
     case FamilyErrors.NoScanner:
       return t.family.noScanner;
     default:
-      return t.family.offline;
+      return familyMessage(e, t);
   }
 }
 

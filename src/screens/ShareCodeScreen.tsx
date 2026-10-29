@@ -10,7 +10,12 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFollowRequests } from '../hooks/useFollowRequests';
 import { useI18n } from '../i18n';
-import { errorCode, formatCode, shareMessage } from '../lib/family';
+import {
+  errorCode,
+  familyMessage,
+  formatCode,
+  shareMessage,
+} from '../lib/family';
 import { createLinkCode, FamilyErrors } from '../native/family';
 import type { LinkCode } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -22,7 +27,7 @@ type State =
   | { kind: 'loading' }
   | { kind: 'code'; code: LinkCode }
   | { kind: 'expired' }
-  | { kind: 'failed'; notSetUp: boolean };
+  | { kind: 'failed'; error: unknown };
 
 /**
  * A new family code: the 6 digits, the scan code and Send code, live for 15 minutes. While it is
@@ -43,10 +48,7 @@ export default function ShareCodeScreen({ navigation }: Props) {
     } catch (e) {
       console.warn('Could not make a family code', e);
       if (mounted.current) {
-        setState({
-          kind: 'failed',
-          notSetUp: errorCode(e) === FamilyErrors.NotSetUp,
-        });
+        setState({ kind: 'failed', error: e });
       }
     }
   }, []);
@@ -107,12 +109,11 @@ export default function ShareCodeScreen({ navigation }: Props) {
         <Text style={styles.body}>{t.family.expired}</Text>
       ) : null}
       {state.kind === 'failed' ? (
-        <Text style={styles.body}>
-          {state.notSetUp ? t.family.notSetUp : t.family.offline}
-        </Text>
+        <Text style={styles.body}>{familyMessage(state.error, t)}</Text>
       ) : null}
       {state.kind === 'expired' ||
-      (state.kind === 'failed' && !state.notSetUp) ? (
+      (state.kind === 'failed' &&
+        errorCode(state.error) !== FamilyErrors.NotSetUp) ? (
         <Pressable
           accessibilityRole="button"
           onPress={makeCode}

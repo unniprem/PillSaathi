@@ -190,6 +190,16 @@ test('BAD_CODE and OFFLINE show their messages', async () => {
   ).toBeTruthy();
 });
 
+test('only OFFLINE is called no internet', async () => {
+  jest
+    .mocked(family.signedInRelative)
+    .mockRejectedValue(failing(family.FamilyErrors.Permission));
+  await renderApp('AddFamily');
+  expect(
+    await screen.findByText('Something went wrong. Please try again later.'),
+  ).toBeTruthy();
+});
+
 test('Next waits for all 6 digits', async () => {
   await renderApp('AddFamily');
   await typeCode('48291');

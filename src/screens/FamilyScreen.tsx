@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFollowRequests } from '../hooks/useFollowRequests';
 import { useI18n } from '../i18n';
+import { familyMessage } from '../lib/family';
 import { listFollowers, listFollows, removeFollower } from '../native/family';
 import type { Follow, Person } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -26,7 +27,7 @@ export default function FamilyScreen({ navigation }: Props) {
   const { t } = useI18n();
   const [followers, setFollowers] = useState<Person[] | null>(null);
   const [follows, setFollows] = useState<Follow[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<unknown>(null);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -34,12 +35,12 @@ export default function FamilyScreen({ navigation }: Props) {
       const people = await listFollowers();
       if (mounted.current) {
         setFollowers(people);
-        setFailed(false);
+        setFailed(null);
       }
     } catch (e) {
       console.warn('Could not list who can see my pills', e);
       if (mounted.current) {
-        setFailed(true);
+        setFailed(e ?? new Error('Could not list'));
       }
     }
   }, []);
@@ -79,7 +80,7 @@ export default function FamilyScreen({ navigation }: Props) {
             await removeFollower(person.uid);
           } catch (e) {
             console.warn('Could not remove a follower', e);
-            Alert.alert(t.family.offline);
+            Alert.alert(familyMessage(e, t));
           }
           await load();
         },
@@ -90,7 +91,9 @@ export default function FamilyScreen({ navigation }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>{t.family.canSee}</Text>
-      {failed ? <Text style={styles.note}>{t.family.offline}</Text> : null}
+      {failed ? (
+        <Text style={styles.note}>{familyMessage(failed, t)}</Text>
+      ) : null}
       {followers?.length === 0 ? (
         <Text style={styles.note}>{t.family.noOne}</Text>
       ) : null}
