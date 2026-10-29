@@ -112,7 +112,8 @@ class FamilyCloud private constructor(context: Context) {
    */
   fun deleteElderCopy(uid: String) {
     val ref = elder(uid)
-    for (sub in listOf(MONTHS, PHOTOS, REQUESTS)) {
+    // Changes and their parts too: pill names and times, photos and voices.
+    for (sub in listOf(MONTHS, PHOTOS, REQUESTS, CHANGES, PARTS)) {
       await(ref.collection(sub).get(Source.SERVER)).documents.forEach { await(it.reference.delete()) }
     }
     madeCodes.toList().forEach { deleteCode(it) }
@@ -430,13 +431,12 @@ class FamilyCloud private constructor(context: Context) {
    */
   fun deleteCopyAsFollower(elderId: String) {
     val ref = familyDb().collection(ELDERS).document(elderId)
-    for (sub in listOf(MONTHS, PHOTOS)) {
+    for (sub in listOf(MONTHS, PHOTOS, CHANGES, PARTS)) {
       await(ref.collection(sub).get(Source.SERVER)).documents.forEach { await(it.reference.delete()) }
     }
     await(ref.delete())
   }
 
-  /** Followed elder [elderId]'s doc from the server; PERMISSION once she removed him or her copy went. */
   /**
    * Sends change [changeId] to elder [elderId]: its file [parts] first, then the change, in a
    * transaction, which fails offline instead of being queued and sent later (a second try would
@@ -488,6 +488,7 @@ class FamilyCloud private constructor(context: Context) {
     }
   }
 
+  /** Followed elder [elderId]'s doc from the server; PERMISSION once she removed him or her copy went. */
   fun readFollowedElder(elderId: String): ElderDoc? =
     elderOf(await(familyDb().collection(ELDERS).document(elderId).get(Source.SERVER)))
 

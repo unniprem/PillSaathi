@@ -456,3 +456,28 @@ test('a follower who leaves takes himself off editors too', async () => {
   );
   await assertFails(change(as('R'), 'c1'));
 });
+
+test('a follower deletes the changes and parts of an abandoned copy too', async () => {
+  const sitaSent = {
+    'elders/E/changes/cS': {
+      by: 'S',
+      byName: 'Sita',
+      status: 'applied',
+      kind: 'deletePill',
+      pillId: 'p1',
+      parts: 1,
+    },
+    'elders/E/parts/cS_0': { change: 'cS', index: 0, by: 'S', data: bytes(10) },
+  };
+  await elderE(29 * DAY, ['R', 'S']);
+  await seed(sitaSent);
+  const r = as('R');
+  await assertFails(deleteDoc(doc(r, 'elders/E/changes/cS')));
+  await assertFails(deleteDoc(doc(r, 'elders/E/parts/cS_0')));
+  await elderE(31 * DAY, ['R', 'S']);
+  await seed(sitaSent);
+  await assertSucceeds(getDocs(collection(r, 'elders/E/changes')));
+  await assertSucceeds(deleteDoc(doc(r, 'elders/E/changes/cS')));
+  await assertSucceeds(getDocs(query(collection(r, 'elders/E/parts'))));
+  await assertSucceeds(deleteDoc(doc(r, 'elders/E/parts/cS_0')));
+});

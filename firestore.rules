@@ -104,7 +104,8 @@ service cloud.firestore {
         allow create: if sends();
         allow update: if isUser(e);
         allow delete: if isUser(e)
-          || (signedIn() && resource.data.by == request.auth.uid && resource.data.status == 'pending');
+          || (signedIn() && resource.data.by == request.auth.uid && resource.data.status == 'pending')
+          || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
       }
 
       // Part of a photo or sound sent with a change: Firestore documents hold at most 1 MiB, and
@@ -122,9 +123,11 @@ service cloud.firestore {
             && data.data is bytes && data.data.size() <= 716800;
         }
 
-        allow read: if isUser(e) || (signedIn() && resource.data.by == request.auth.uid);
+        allow read: if isUser(e) || (signedIn() && resource.data.by == request.auth.uid)
+          || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
         allow create: if sendsPart();
-        allow delete: if isUser(e) || (signedIn() && resource.data.by == request.auth.uid);
+        allow delete: if isUser(e) || (signedIn() && resource.data.by == request.auth.uid)
+          || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
       }
 
       // A relative asking to follow her, with a live code of hers. Her phone answers it. The
