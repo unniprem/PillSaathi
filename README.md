@@ -150,9 +150,9 @@ Last run: 2026-10-29, emulator `Medium_Phone_API_34` as the elder (linked to the
 - [x] A sound (AAC) set for 3:18 PM: notice "Ravi set the 3:18 PM alarm sound to RavisVoice.", and the 3:18 ring logged "Playing sound file a727d9c4….m4a".
 - [x] Rules (emulator): editors send changes and parts; followers who aren't editors, and strangers, can't; only her phone sets a state or writes editors; Cancel only while pending; parts at most 716800 bytes; leaving takes him off editors.
 
-**Pending (needs the rules deployed and the Redmi unlocked):**
+**Pending (needs the Redmi unlocked):**
 
-- [ ] Deploy the rules: `npx firebase deploy --only firestore:rules`.
+- [x] Rules deployed to `pillsaathi` on 2026-10-29 (`npx firebase deploy --only firestore:rules --project pillsaathi`; the repo has no `.firebaserc`).
 - [ ] From the Redmi, with her app open: + Add pill arrives within seconds, her notice shows, and it rings.
 - [ ] With her app swiped away: the change waits ("Waiting for Amma's phone"), then arrives at the next check-in or ring.
 - [ ] Record a voice on the Redmi for one of her times: her alarm rings with it.
