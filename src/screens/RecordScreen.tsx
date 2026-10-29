@@ -13,6 +13,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatDuration } from '../lib/time';
 import { setCardSound } from '../native/alarms';
+import { errorCode, familyMessage } from '../lib/family';
+import { FamilyErrors, sendSound } from '../native/family';
 import {
   discardRecording,
   onPreviewEnded,
@@ -36,7 +38,12 @@ const BAR_COUNT = 24;
 const MAX_BAR_HEIGHT = 60;
 
 export default function RecordScreen({ navigation, route }: Props) {
-  const { alarmId } = route.params;
+  const { alarmId, elderId, hour, minute } = route.params;
+  // On a relative's phone: the recording is sent for her dose at hour:minute.
+  const forHer =
+    elderId !== undefined && hour !== undefined && minute !== undefined
+      ? { elderId, hour, minute }
+      : null;
   const { t } = useI18n();
   // For the native event callbacks, which subscribe once.
   const words = useRef(t);
@@ -121,20 +128,16 @@ export default function RecordScreen({ navigation, route }: Props) {
   }, [phase]);
 
   const micOff = useCallback(() => {
-    Alert.alert(
-      t.record.micOffTitle,
-      t.record.micMessage,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.common.openSettings,
-          onPress: () =>
-            Linking.openSettings().catch(e =>
-              console.warn('Could not open settings', e),
-            ),
-        },
-      ],
-    );
+    Alert.alert(t.record.micOffTitle, t.record.micMessage, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.common.openSettings,
+        onPress: () =>
+          Linking.openSettings().catch(e =>
+            console.warn('Could not open settings', e),
+          ),
+      },
+    ]);
   }, [t]);
 
   const start = async () => {
@@ -243,17 +246,34 @@ export default function RecordScreen({ navigation, route }: Props) {
     savingRef.current = true;
     setSaving(true);
     try {
-      const sound = await saveRecording(
-        name.trim() || t.record.defaultName,
-      );
+      const sound = await saveRecording(name.trim() || t.record.defaultName);
       saved.current = true;
       try {
-        await setCardSound(alarmId, sound.id);
+        if (forHer) {
+          // Kept in this phone's sounds too, so it can go to her other times.
+          await sendSound(
+            forHer.elderId,
+            forHer.hour,
+            forHer.minute,
+            'mine',
+            sound.id,
+          );
+        } else if (alarmId) {
+          await setCardSound(alarmId, sound.id);
+        }
       } catch (e) {
         // The recording is kept and listed in the picker; only the card's sound didn't change.
         console.warn('Could not set the recording on the card', e);
         if (mounted.current) {
-          Alert.alert(t.record.changeFailed, t.common.tryAgain);
+          const code = errorCode(e);
+          Alert.alert(
+            forHer
+              ? code === FamilyErrors.TooBig
+                ? t.remote.tooBig
+                : familyMessage(e, t)
+              : t.record.changeFailed,
+            forHer ? undefined : t.common.tryAgain,
+          );
           if (navigation.canGoBack()) {
             navigation.goBack();
           } else {
@@ -263,7 +283,11 @@ export default function RecordScreen({ navigation, route }: Props) {
         return;
       }
       if (mounted.current) {
-        navigation.popTo('Today');
+        if (forHer) {
+          navigation.popTo('ElderPills', { elderId: forHer.elderId });
+        } else {
+          navigation.popTo('Today');
+        }
       }
     } catch (e) {
       console.warn('Could not save the recording', e);

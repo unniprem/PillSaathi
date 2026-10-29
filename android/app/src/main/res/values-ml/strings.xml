@@ -31,4 +31,9 @@
     <string name="family_call">വിളിക്കുക</string>
     <string name="family_open">തുറക്കുക</string>
     <string name="family_checking">കുടുംബത്തെ അന്വേഷിക്കുന്നു…</string>
+    <string name="channel_family_changes">കുടുംബം: മാറ്റങ്ങൾ</string>
+    <string name="family_change_added">%1$s %2$s ചേർത്തു (%3$s).</string>
+    <string name="family_change_changed">%1$s %2$s മാറ്റി.</string>
+    <string name="family_change_deleted">%1$s %2$s നീക്കം ചെയ്തു.</string>
+    <string name="family_change_sound">%1$s %2$s-ന്റെ അലാറം ശബ്ദം %3$s ആക്കി.</string>
 </resources>

@@ -51,7 +51,9 @@ data class Pill(
 
 /**
  * A pill as the app sends it to be saved: [id] is null for a new pill. [remaining] counts only when
- * [remainingChanged] (or for a new pill), so a page left open can't put back an older count.
+ * [remainingChanged] (or for a new pill), so a page left open can't put back an older count. A new
+ * pill sent from a relative's phone comes with its id ([newId], the change's, so applying the change
+ * twice edits it instead of adding a second) and the [startDate] he meant; both are ignored on edits.
  */
 data class PillDraft(
   val id: String?,
@@ -64,6 +66,8 @@ data class PillDraft(
   val photo: String? = null,
   val remaining: Double? = null,
   val remainingChanged: Boolean = false,
+  val newId: String? = null,
+  val startDate: LocalDate? = null,
 )
 
 enum class DoseOutcome(val json: String) {

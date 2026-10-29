@@ -34,6 +34,7 @@ object FamilyJson {
       .put("pinged", JSONArray(l.pinged.sorted()))
       .put("refillPinged", JSONObject(l.refillPinged.mapValues { it.value.json }))
       .put("silentWarned", JSONObject(l.silentWarned))
+      .put("editors", JSONArray(l.editors))
       .toString()
 
   fun localFromJson(json: String?): FamilyLocal {
@@ -55,6 +56,7 @@ object FamilyJson {
         ?.mapNotNull { (k, v) -> RefillLevel.fromJson(v)?.let { k to it } }?.toMap() ?: emptyMap(),
       silentWarned = o.optJSONObject("silentWarned")?.let { s -> s.keys().asSequence().associateWith { s.getLong(it) } }
         ?: emptyMap(),
+      editors = o.optJSONArray("editors")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
     )
   }
 
@@ -135,7 +137,44 @@ object FamilyJson {
         val p = v as? Map<*, *> ?: return@mapNotNull null
         (uid as? String ?: return@mapNotNull null) to Person(p["name"] as? String ?: "", p["email"] as? String ?: "")
       }.toMap(),
+      editors = (m["editors"] as? List<*>).orEmpty().filterIsInstance<String>(),
+      cards = cardsFromMap(m["cards"]),
+      sounds = soundsFromMap(m["sounds"]),
+      health = healthFromMap(m["health"]),
     )
+
+  fun cardsToMap(cards: List<CardSound>): List<Map<String, Any?>> =
+    cards.map { mapOf("hour" to it.hour, "minute" to it.minute, "soundId" to it.soundId, "sound" to it.soundName) }
+
+  fun soundsToMap(sounds: List<SoundRef>): List<Map<String, Any?>> = sounds.map { mapOf("id" to it.id, "name" to it.name) }
+
+  fun healthToMap(h: ElderHealth): Map<String, Any?> =
+    mapOf(
+      "notifications" to h.notifications, "alarmChannel" to h.alarmChannel, "exactAlarms" to h.exactAlarms,
+      "fullScreen" to h.fullScreen, "battery" to h.battery, "unrestricted" to h.unrestricted, "setupSeen" to h.setupSeen,
+    )
+
+  private fun cardsFromMap(value: Any?): List<CardSound> =
+    (value as? List<*>).orEmpty().mapNotNull {
+      val c = it as? Map<*, *> ?: return@mapNotNull null
+      CardSound(
+        (c["hour"] as? Number)?.toInt() ?: return@mapNotNull null, (c["minute"] as? Number)?.toInt() ?: return@mapNotNull null,
+        c["soundId"] as? String, c["sound"] as? String,
+      )
+    }
+
+  private fun soundsFromMap(value: Any?): List<SoundRef> =
+    (value as? List<*>).orEmpty().mapNotNull {
+      val s = it as? Map<*, *> ?: return@mapNotNull null
+      SoundRef(s["id"] as? String ?: return@mapNotNull null, s["name"] as? String ?: "")
+    }
+
+  /** Her alarm health; a field missing reads as fine, so an odd doc never cries wolf. */
+  private fun healthFromMap(value: Any?): ElderHealth? {
+    val h = value as? Map<*, *> ?: return null
+    fun on(key: String) = h[key] as? Boolean ?: true
+    return ElderHealth(on("notifications"), on("alarmChannel"), on("exactAlarms"), on("fullScreen"), on("battery"), on("unrestricted"), on("setupSeen"))
+  }
 
   /** The SHA-1 of [records]' month document, to tell which months changed since the last upload. */
   fun monthHash(records: List<DoseRecord>): String {
@@ -179,6 +218,10 @@ object FamilyJson {
       .put("recent", JSONArray(PillJson.dosesToJson(f.recent)))
       .put("photos", JSONObject(f.photos))
       .put("since", f.since ?: JSONObject.NULL)
+      .put("editor", f.editor)
+      .put("cards", JSONArray(cardsToMap(f.cards).map { JSONObject(it) }))
+      .put("sounds", JSONArray(soundsToMap(f.sounds).map { JSONObject(it) }))
+      .put("health", f.health?.let { JSONObject(healthToMap(it)) } ?: JSONObject.NULL)
 
   private fun followFromJson(o: JSONObject): Follow =
     Follow(
@@ -193,7 +236,15 @@ object FamilyJson {
       recent = PillJson.dosesFromJson(o.optJSONArray("recent")?.toString()),
       photos = o.optJSONObject("photos")?.strings() ?: emptyMap(),
       since = o.optLongOrNull("since"),
+      editor = o.optBoolean("editor", false),
+      cards = cardsFromMap(o.optJSONArray("cards")?.let { jsonList(it) }),
+      sounds = soundsFromMap(o.optJSONArray("sounds")?.let { jsonList(it) }),
+      health = healthFromMap(o.optJSONObject("health")?.let { jsonMap(it) }),
     )
+
+  private fun jsonList(a: JSONArray): List<Any?> = (0 until a.length()).map { a.optJSONObject(it)?.let(::jsonMap) }
+
+  private fun jsonMap(o: JSONObject): Map<String, Any?> = o.keys().asSequence().associateWith { if (o.isNull(it)) null else o.get(it) }
 
   /** [value] as JSON with every map's keys sorted, so equal maps always give equal text. */
   private fun canonical(value: Any?): String = when (value) {

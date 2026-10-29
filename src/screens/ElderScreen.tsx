@@ -13,8 +13,14 @@ import DoseCard from '../components/DoseCard';
 import RefillBanner from '../components/RefillBanner';
 import { useI18n } from '../i18n';
 import { heardText } from '../lib/family';
+import { problemText } from '../lib/remote';
 import { is24HourFormat } from '../native/alarms';
-import { getElderToday, getFamily, refreshFamily } from '../native/family';
+import {
+  getElderSetup,
+  getElderToday,
+  getFamily,
+  refreshFamily,
+} from '../native/family';
 import type { ElderToday, FamilyCard } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
@@ -30,15 +36,18 @@ export default function ElderScreen({ navigation, route }: Props) {
   const { t } = useI18n();
   const [card, setCard] = useState<FamilyCard | null>(null);
   const [today, setToday] = useState<ElderToday | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
   const mounted = useRef(true);
 
   const show = useCallback(
     async (cards: FamilyCard[]) => {
       const mine = cards.find(c => c.elderId === elderId) ?? null;
       const day = mine ? await getElderToday(elderId) : null;
+      const setup = mine ? await getElderSetup(elderId) : null;
       if (mounted.current) {
         setCard(mine);
         setToday(day);
+        setProblem(setup?.problem ?? null);
       }
       return mine;
     },
@@ -86,11 +95,13 @@ export default function ElderScreen({ navigation, route }: Props) {
 
   const is24h = is24HourFormat();
   const phone = card?.phone;
+  const warning = problemText(problem, t, name);
 
   return (
     <View style={styles.container}>
       <RefillBanner refills={today?.refills ?? []} />
       <ScrollView contentContainerStyle={styles.list}>
+        {warning ? <Text style={styles.warning}>{warning}</Text> : null}
         {today?.heardAt != null ? (
           <Text style={styles.heard}>
             {t.family.lastHeard(heardText(today.heardAt, today.date, is24h, t))}
@@ -109,6 +120,13 @@ export default function ElderScreen({ navigation, route }: Props) {
             readOnly
           />
         ))}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('ElderPills', { elderId })}
+          style={[styles.button, styles.change]}
+        >
+          <Text style={styles.buttonText}>{t.remote.changePills}</Text>
+        </Pressable>
         <View style={styles.buttons}>
           <Pressable
             accessibilityRole="button"
@@ -165,5 +183,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { fontSize: 18, color: colors.primary, fontWeight: '600' },
+  change: { flex: 0, marginHorizontal: spacing.md, marginTop: spacing.md },
+  warning: {
+    fontSize: 18,
+    color: colors.text,
+    backgroundColor: '#FEF3C7',
+    padding: spacing.md,
+    margin: spacing.md,
+    marginBottom: 0,
+    borderRadius: 8,
+  },
   gear: { fontSize: 26, color: colors.text },
 });

@@ -17,6 +17,7 @@ import com.pillsaathi.alarm.DoseRules
 import com.pillsaathi.alarm.History
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.family.CodeImage
+import com.pillsaathi.family.CheckIn
 import com.pillsaathi.family.CodeScanner
 import com.pillsaathi.family.ElderSync
 import com.pillsaathi.family.FamilyChecks
@@ -30,6 +31,17 @@ import com.pillsaathi.family.FollowRequest
 import com.pillsaathi.family.GoogleSignIn
 import com.pillsaathi.family.Person
 import com.pillsaathi.family.Relative
+import com.pillsaathi.family.CardSound
+import com.pillsaathi.family.ChangeBody
+import com.pillsaathi.family.FamilyJson
+import com.pillsaathi.family.FileParts
+import com.pillsaathi.family.PhotoChoice
+import com.pillsaathi.family.RemoteChange
+import com.pillsaathi.family.RemoteRules
+import com.pillsaathi.family.SoundChoice
+import com.pillsaathi.family.Thumbnails
+import com.pillsaathi.sound.SoundLibrary
+import java.util.UUID
 import com.pillsaathi.specs.NativeFamilySpec
 import java.io.File
 import java.time.LocalDate
@@ -61,6 +73,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
   private var watching = false
   private var requestsListener: ListenerRegistration? = null
   private var requestsRetryAt = 0L
+  private var watchingChanges = false
+  private var changesListener: ListenerRegistration? = null
   private var pending: List<FollowRequest> = emptyList()
   private val answered = mutableSetOf<String>()
   private var currentCode: String? = null
@@ -144,7 +158,11 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
           store.locked { store.saveFamily(store.loadFamily().copy(sharing = true)) }
           FamilyWork.requestUpload(reactApplicationContext)
           FamilyWork.ensureHeartbeat(reactApplicationContext)
+          // Anything of his from an earlier link is never applied now.
+          cloud.revokeChanges(elder, request.uid)
           cloud.answerRequest(elder, request, true)
+          store.locked { store.saveFamily(store.loadFamily().let { it.copy(editors = (it.editors + uid).distinct()) }) }
+          FamilyWork.ensureCheckIn(reactApplicationContext)
         }
         if (request.code == currentCode) currentCode = null
       } else {
@@ -152,6 +170,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       answered.add(key(request))
       pending = pending.filterNot { it.uid == uid }
+      // He may change her pills now; the son standing next to her shouldn't wait for the hour.
+      if (allow) listenForChanges()
       null
     }
 
@@ -159,15 +179,97 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     onWorker(promise) {
       val uid = cloud.signedInElder() ?: return@onWorker Arguments.createArray()
       val elder = cloud.readElderCached(uid) ?: return@onWorker Arguments.createArray()
-      people(elder.followers.map { it to (elder.people[it] ?: Person("", "")) })
+      Arguments.createArray().apply {
+        elder.followers.forEach { follower ->
+          val p = elder.people[follower] ?: Person("", "")
+          pushMap(
+            Arguments.createMap().apply {
+              putString("uid", follower)
+              putString("name", p.name)
+              putString("email", p.email)
+              putBoolean("canChange", follower in elder.editors)
+            },
+          )
+        }
+      }
     }
+
+  override fun setCanChange(uid: String, on: Boolean, promise: Promise) =
+    onWorker(promise) {
+      val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
+      // Under the upload lock, so a check-in can't apply his change halfway through. Switched
+      // off, what he sent is not done; switched on, nothing he sent before is applied now.
+      val editors = synchronized(ElderSync.lock) {
+        if (on) cloud.revokeChanges(elder, uid)
+        val editors = cloud.setEditor(elder, uid, on)
+        if (!on) cloud.revokeChanges(elder, uid)
+        editors
+      }
+      store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
+      if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext) else FamilyWork.ensureCheckIn(reactApplicationContext)
+      // Listen now if someone may change her pills, and stop when no one may.
+      changesListener?.remove()
+      changesListener = null
+      listenForChanges()
+      null
+    }
+
+  override fun checkIn(promise: Promise) =
+    onWorker(promise) { synchronized(ElderSync.lock) { CheckIn.apply(reactApplicationContext) }.toDouble() }
+
+  override fun watchChanges(on: Boolean, promise: Promise) =
+    onWorker(promise) {
+      watchingChanges = on
+      changesListener?.remove()
+      changesListener = null
+      listenForChanges()
+      null
+    }
+
+  /**
+   * While the app is in front, listens for changes her family sends and applies them at once. A
+   * listener stopped by an error starts again after [RETRY_MS]. Worker thread.
+   */
+  private fun listenForChanges() {
+    if (!watchingChanges || changesListener != null) return
+    val local = store.locked { store.loadFamily() }
+    if (!FamilyRules.uploads(local) || local.editors.isEmpty()) return
+    val uid = cloud.signedInElder() ?: return
+    lateinit var listener: ListenerRegistration
+    listener = cloud.listenChanges(
+      uid,
+      worker,
+      onError = {
+        if (changesListener === listener) {
+          changesListener = null
+          handler.postDelayed({ listenForChanges() }, RETRY_MS)
+        }
+      },
+    ) {
+      // Outside onWorker: anything thrown here would crash the app on every open while the
+      // change waits, so every failure is caught and left to the background check-in.
+      try {
+        synchronized(ElderSync.lock) { CheckIn.apply(reactApplicationContext) }
+        Unit
+      } catch (e: Exception) {
+        Log.w(TAG, "Live check-in failed", e)
+        FamilyWork.requestCheckIn(reactApplicationContext)
+      }
+    }
+    changesListener = listener
+  }
 
   override fun removeFollower(uid: String, promise: Promise) =
     onWorker(promise) {
       val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
       // After any upload still running, so nothing it writes outlives the copy.
       synchronized(ElderSync.lock) {
-        if (cloud.removeFollower(elder, uid).isEmpty()) ElderSync.stopSharing(reactApplicationContext, elder)
+        val left = cloud.removeFollower(elder, uid)
+        if (left.isNotEmpty()) cloud.revokeChanges(elder, uid)
+        val editors = store.locked { store.loadFamily().editors - uid }
+        store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
+        if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext)
+        if (left.isEmpty()) ElderSync.stopSharing(reactApplicationContext, elder)
       }
       null
     }
@@ -356,10 +458,179 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       Arguments.createArray().apply { follow.pills.sortedBy { it.createdAt }.forEach { pushMap(maps.pill(it)) } }
     }
 
+  override fun getElderSetup(elderId: String, promise: Promise) =
+    onWorker(promise) {
+      val follow = follow(elderId)
+      val zone = zoneOf(follow)
+      val local = ZoneId.systemDefault()
+      val maps = elderMaps(follow, zone)
+      // A phone that hasn't uploaded its cards yet: her pills' times, sounds unknown.
+      val cards = follow.cards.ifEmpty {
+        follow.pills.flatMap { it.times }.distinct().sorted().map { CardSound(it.hour, it.minute, null, null) }
+      }
+      Arguments.createMap().apply {
+        putBoolean("editor", follow.editor)
+        putBoolean("otherZone", FamilyRules.card(follow, System.currentTimeMillis(), local).otherZone)
+        follow.heardAt?.let { putDouble("heardAt", FamilyRules.wallClock(it, zone, local).toDouble()) } ?: putNull("heardAt")
+        putArray("pills", Arguments.createArray().apply { follow.pills.sortedBy { it.createdAt }.forEach { pushMap(maps.pill(it)) } })
+        putArray(
+          "times",
+          Arguments.createArray().apply {
+            cards.forEach { c ->
+              pushMap(
+                Arguments.createMap().apply {
+                  putInt("hour", c.hour)
+                  putInt("minute", c.minute)
+                  putString("soundId", c.soundId)
+                  putString("soundName", c.soundName)
+                },
+              )
+            }
+          },
+        )
+        putArray(
+          "sounds",
+          Arguments.createArray().apply {
+            follow.sounds.forEach { sound ->
+              pushMap(Arguments.createMap().apply { putString("id", sound.id); putString("name", sound.name) })
+            }
+          },
+        )
+        putString("problem", FamilyRules.healthProblem(follow.health))
+      }
+    }
+
+  override fun sendPill(elderId: String, input: ReadableMap, promise: Promise) =
+    onWorker(promise) {
+      val follow = follow(elderId)
+      val raw = input.toHashMap()
+      val draft =
+        try {
+          PillInputValidator.validate(raw - "photo" - "photoChoice")
+        } catch (e: AlarmException) {
+          throw FamilyException(e.code, e.message ?: "Invalid pill", e)
+        }
+      val photo = PhotoChoice.fromJson(input.getString("photoChoice")) ?: throw IllegalArgumentException("Unknown photo choice")
+      // "Start tomorrow" is her tomorrow, worked out here, so a change her phone gets after
+      // midnight still starts on the day he meant.
+      val startDate = if (draft.id != null) null else LocalDate.now(zoneOf(follow)).plusDays(if (draft.startsTomorrow) 1L else 0L)
+      val file =
+        if (photo == PhotoChoice.NEW) {
+          val name = input.getString("photo")?.takeIf(FamilyJson::isSafeFileName) ?: throw IllegalArgumentException("No photo")
+          Thumbnails.jpeg(File(AlarmStore(reactApplicationContext).photosDir, name), SENT_PHOTO_PX, SENT_PHOTO_QUALITY)
+            ?: throw FamilyException(FamilyCloud.NOT_FOUND, "The photo can't be read")
+        } else {
+          null
+        }
+      send(elderId, ChangeBody.SavePill(draft, startDate, photo), file)
+    }
+
+  override fun sendDeletePill(elderId: String, pillId: String, promise: Promise) =
+    onWorker(promise) { send(elderId, ChangeBody.DeletePill(pillId), null) }
+
+  override fun sendSound(elderId: String, hour: Double, minute: Double, kind: String, soundId: String?, promise: Promise) =
+    onWorker(promise) {
+      var file: ByteArray? = null
+      val choice = when (kind) {
+        "default" -> SoundChoice.Default
+        "hers" -> SoundChoice.Hers(soundId ?: throw IllegalArgumentException("No sound"))
+        "mine" -> {
+          val library = SoundLibrary(reactApplicationContext)
+          val id = soundId ?: throw IllegalArgumentException("No sound")
+          val sound = library.list().firstOrNull { it.sound.id == id }?.sound
+          val path = library.fileOf(id)
+          if (sound == null || path == null) throw FamilyException(FamilyCloud.NOT_FOUND, "No sound $id")
+          if (path.length() > FileParts.MAX_SEND_BYTES) throw FamilyException(FamilyCloud.TOO_BIG, "${path.length()} bytes")
+          file = path.readBytes()
+          SoundChoice.New(sound.name, sound.durationMs, path.extension.lowercase())
+        }
+        else -> throw IllegalArgumentException("Unknown sound kind $kind")
+      }
+      send(elderId, ChangeBody.SetSound(hour.toInt(), minute.toInt(), choice), file)
+    }
+
+  override fun listChanges(elderId: String, promise: Promise) =
+    onWorker(promise) {
+      val follow = follow(elderId)
+      val zone = zoneOf(follow)
+      val local = ZoneId.systemDefault()
+      val me = cloud.relativeUid()
+      val since = System.currentTimeMillis() - RemoteRules.KEEP_DAYS * 86_400_000L
+      val shift = { at: Long? -> at?.let { FamilyRules.wallClock(it, zone, local).toDouble() } }
+      val changes = cloud.readChanges(elderId)
+        .filter { it.status == RemoteRules.PENDING || it.status == RemoteRules.APPLYING || (it.doneAt ?: 0L) >= since }
+        .sortedByDescending { it.at ?: Long.MAX_VALUE }
+      Arguments.createArray().apply {
+        changes.forEach { c -> pushMap(changeToJs(c, follow, me, shift)) }
+      }
+    }
+
+  override fun cancelChange(elderId: String, changeId: String, promise: Promise) =
+    onWorker(promise) {
+      cloud.cancelChange(elderId, changeId)
+      null
+    }
+
+  /** Sends [body], with [file] in parts, to [elderId]'s phone; gives the change's id. */
+  private fun send(elderId: String, body: ChangeBody, file: ByteArray?): String {
+    val relative = cloud.relative() ?: throw FamilyException(FamilyCloud.NOT_SIGNED_IN, "Not signed in")
+    val parts = file?.let(FileParts::split).orEmpty()
+    if (parts.size > FileParts.MAX_PARTS) throw FamilyException(FamilyCloud.TOO_BIG, "${file?.size} bytes")
+    val changeId = UUID.randomUUID().toString()
+    try {
+      cloud.sendChange(elderId, changeId, RemoteRules.changeToMap(cloud.relativeUid(), relative.name, body, parts.size), parts)
+    } catch (e: FamilyException) {
+      // Her phone hasn't allowed him to change her pills (or not any more).
+      throw if (e.code == FamilyCloud.PERMISSION) FamilyException(FamilyCloud.NOT_ALLOWED, "Not an editor", e) else e
+    }
+    return changeId
+  }
+
+  private fun changeToJs(c: RemoteChange, follow: Follow, me: String, shift: (Long?) -> Double?): WritableMap =
+    Arguments.createMap().apply {
+      putString("id", c.id)
+      putString("status", c.status)
+      putString("reason", c.reason)
+      putBoolean("mine", c.by == me)
+      putString("byName", c.byName)
+      shift(c.at)?.let { putDouble("at", it) } ?: putNull("at")
+      shift(c.doneAt)?.let { putDouble("doneAt", it) } ?: putNull("doneAt")
+      putNull("pillId")
+      putNull("pillName")
+      putNull("hour")
+      putNull("minute")
+      putNull("soundName")
+      when (val body = c.body) {
+        is ChangeBody.SavePill -> {
+          putString("kind", "pill")
+          putString("pillId", body.draft.id)
+          putString("pillName", body.draft.name)
+        }
+        is ChangeBody.DeletePill -> {
+          putString("kind", "deletePill")
+          putString("pillId", body.pillId)
+          putString("pillName", follow.pills.firstOrNull { it.id == body.pillId }?.name)
+        }
+        is ChangeBody.SetSound -> {
+          putString("kind", "sound")
+          putInt("hour", body.hour)
+          putInt("minute", body.minute)
+          when (val choice = body.choice) {
+            SoundChoice.Default -> putNull("soundName")
+            is SoundChoice.Hers -> putString("soundName", follow.sounds.firstOrNull { it.id == choice.id }?.name)
+            is SoundChoice.New -> putString("soundName", choice.name)
+          }
+        }
+        is ChangeBody.Invalid -> putString("kind", "invalid")
+      }
+    }
+
   override fun invalidate() {
     handler.post {
       requestsListener?.remove()
       requestsListener = null
+      changesListener?.remove()
+      changesListener = null
       asks.values.forEach { it.listener?.remove() }
       asks.clear()
       thread.quitSafely()
@@ -491,5 +762,7 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     private const val TAG = "PillSaathiFamily"
     private const val STORAGE_ERROR = "STORAGE_ERROR"
     private const val RETRY_MS = 10_000L
+    private const val SENT_PHOTO_PX = 1024
+    private const val SENT_PHOTO_QUALITY = 80
   }
 }

@@ -1,15 +1,35 @@
 import NativeFamily from '../../specs/NativeFamily';
 import type {
+  ChangeView,
+  ElderSetup,
+  ElderSound,
+  ElderTime,
   Follow,
+  Follower,
   LinkCode,
   NativeFamilyCard,
   Person,
   Relative,
+  RemotePillInput,
   Spec,
 } from '../../specs/NativeFamily';
 import type { History, Pill, Refill, Today } from './alarms';
 
-export type { Follow, LinkCode, Person, Relative };
+export type {
+  ChangeView,
+  ElderSetup,
+  ElderSound,
+  ElderTime,
+  Follow,
+  Follower,
+  LinkCode,
+  Person,
+  Relative,
+  RemotePillInput,
+};
+
+/** What a sound change sets: the default tone, one of her sounds, or one of this phone's. */
+export type SoundKind = 'default' | 'hers' | 'mine';
 
 /** An elder's card in Today's Family section. */
 export type FamilyCard = Omit<NativeFamilyCard, 'refills'> & {
@@ -38,6 +58,12 @@ export const FamilyErrors = {
   Permission: 'PERMISSION',
   /** Google's scanner module isn't on the phone yet and didn't download in time. */
   NoScanner: 'NO_SCANNER',
+  /** Her phone hasn't allowed this relative to change her pills. */
+  NotAllowed: 'NOT_ALLOWED',
+  /** A sound over 5 MB, too big to send. */
+  TooBig: 'TOO_BIG',
+  /** Cancel came too late: her phone has the change already. */
+  AlreadyTaken: 'ALREADY_TAKEN',
 } as const;
 
 function native(): Spec {
@@ -71,8 +97,23 @@ export async function answerRequest(
 }
 
 /** The people who can see this phone's pills; none when it has never shared. */
-export async function listFollowers(): Promise<Person[]> {
+export async function listFollowers(): Promise<Follower[]> {
   return native().listFollowers();
+}
+
+/** Applies the changes this phone's family sent; how many were applied. */
+export async function checkIn(): Promise<number> {
+  return native().checkIn();
+}
+
+/** Applies family changes live while on (the app is in front). */
+export async function watchChanges(on: boolean): Promise<void> {
+  return native().watchChanges(on);
+}
+
+/** Lets a follower change this phone's pills and alarm sounds, or stops them. */
+export async function setCanChange(uid: string, on: boolean): Promise<void> {
+  return native().setCanChange(uid, on);
 }
 
 /** Stops someone seeing this phone's pills. The last one gone deletes the online copy. */
@@ -156,4 +197,49 @@ export async function getElderHistory(
 /** Her pills, from the last read. Rejects `NOT_FOUND`. */
 export async function listElderPills(elderId: string): Promise<Pill[]> {
   return (await native().listElderPills(elderId)) as Pill[];
+}
+
+/** Her pills, times, sounds and alarm health, as this phone last read them. */
+export async function getElderSetup(elderId: string): Promise<ElderSetup> {
+  return native().getElderSetup(elderId);
+}
+
+/** Sends a new or changed pill to her phone; gives the change's id. */
+export async function sendPill(
+  elderId: string,
+  input: RemotePillInput,
+): Promise<string> {
+  return native().sendPill(elderId, input);
+}
+
+/** Asks her phone to delete a pill; gives the change's id. */
+export async function sendDeletePill(
+  elderId: string,
+  pillId: string,
+): Promise<string> {
+  return native().sendDeletePill(elderId, pillId);
+}
+
+/** Sets the sound of her dose at hour:minute; gives the change's id. */
+export async function sendSound(
+  elderId: string,
+  hour: number,
+  minute: number,
+  kind: SoundKind,
+  soundId: string | null,
+): Promise<string> {
+  return native().sendSound(elderId, hour, minute, kind, soundId);
+}
+
+/** The changes sent to her phone, newest first, from the last 7 days and any still waiting. */
+export async function listChanges(elderId: string): Promise<ChangeView[]> {
+  return native().listChanges(elderId);
+}
+
+/** Takes back a change her phone hasn't picked up yet. */
+export async function cancelChange(
+  elderId: string,
+  changeId: string,
+): Promise<void> {
+  return native().cancelChange(elderId, changeId);
 }

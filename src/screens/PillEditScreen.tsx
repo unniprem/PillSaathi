@@ -35,7 +35,15 @@ import {
   pickTime,
   savePill,
 } from '../native/alarms';
-import type { DoseTime } from '../native/alarms';
+import type { DoseTime, Pill } from '../native/alarms';
+import {
+  FamilyErrors,
+  getElderSetup,
+  getFamily,
+  sendDeletePill,
+  sendPill,
+} from '../native/family';
+import { errorCode, familyMessage } from '../lib/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import { colors, spacing } from '../theme';
@@ -102,8 +110,21 @@ function Chip({
   );
 }
 
+/** Her pills, as this phone last read them, shaped like this phone's own. */
+async function herPills(elderId: string): Promise<Pill[]> {
+  const setup = await getElderSetup(elderId);
+  return setup.pills.map(p => ({ ...p, form: p.form as PillForm }));
+}
+
 export default function PillEditScreen({ navigation, route }: Props) {
   const pillId = route.params?.pillId;
+  // On a relative's phone: her pill, whose Save and Delete are sent to her phone.
+  const elderId = route.params?.elderId;
+  const [elderName, setElderName] = useState('');
+  // Her times are on her clock; said so when she lives in another zone.
+  const [otherZone, setOtherZone] = useState(false);
+  // Her photo as loaded, to tell her phone to keep it, drop it or take a new one.
+  const herPhoto = useRef<string | null>(null);
   const focusCount = route.params?.focusCount ?? false;
   const { t } = useI18n();
   // For the load, which must not run again (and undo edits) when the language changes.
@@ -181,16 +202,35 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: pillId ? t.pill.editTitle : t.pill.addTitle,
+      title: elderId
+        ? t.remote.pillTitle(elderName)
+        : pillId
+        ? t.pill.editTitle
+        : t.pill.addTitle,
       headerLeft: renderCancel,
     });
-  }, [navigation, pillId, renderCancel, t]);
+  }, [navigation, pillId, elderId, elderName, renderCancel, t]);
+
+  useEffect(() => {
+    if (!elderId) {
+      return;
+    }
+    Promise.all([getFamily(), getElderSetup(elderId)])
+      .then(([cards, setup]) => {
+        const called = cards.find(c => c.elderId === elderId)?.name;
+        if (mounted.current) {
+          setElderName(called ?? '');
+          setOtherZone(setup.otherZone);
+        }
+      })
+      .catch(e => console.warn('Could not read her name', e));
+  }, [elderId]);
 
   useEffect(() => {
     if (!pillId) {
       return;
     }
-    listPills()
+    (elderId ? herPills(elderId) : listPills())
       .then(list => {
         const pill = list.find(p => p.id === pillId);
         if (!mounted.current) {
@@ -207,6 +247,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         setStartDate(pill.startDate);
         setPhoto(pill.photo);
         setPhotoUri(pill.photoUri);
+        herPhoto.current = pill.photo;
         setCount(pill.remaining === null ? '' : String(pill.remaining));
         if (pill.days === null) {
           setDuration('none');
@@ -225,7 +266,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
           leave();
         }
       });
-  }, [pillId, leave]);
+  }, [pillId, elderId, leave]);
 
   const chooseForm = (next: PillForm) => {
     if (next !== form) {
@@ -339,19 +380,44 @@ export default function PillEditScreen({ navigation, route }: Props) {
       return;
     }
     setSaving(true);
+    const input = {
+      id: pillId ?? null,
+      name: name.trim(),
+      form,
+      amount,
+      times,
+      startsTomorrow: pillId ? false : startsTomorrow,
+      days,
+      photo,
+      remaining,
+      remainingChanged: countChanged,
+    };
+    if (elderId) {
+      // Her phone takes it from here; the setup and alarm prompts are about this phone.
+      const photoChoice =
+        photo === null ? 'none' : photo === herPhoto.current ? 'keep' : 'new';
+      try {
+        await sendPill(elderId, {
+          ...input,
+          photo: photoChoice === 'new' ? photo : null,
+          photoChoice,
+        });
+        leave();
+      } catch (e) {
+        console.warn('Could not send the pill', e);
+        if (mounted.current) {
+          Alert.alert(
+            errorCode(e) === FamilyErrors.NotAllowed
+              ? t.remote.notEditor(elderName)
+              : familyMessage(e, t),
+          );
+          setSaving(false);
+        }
+      }
+      return;
+    }
     try {
-      await savePill({
-        id: pillId ?? null,
-        name: name.trim(),
-        form,
-        amount,
-        times,
-        startsTomorrow: pillId ? false : startsTomorrow,
-        days,
-        photo,
-        remaining,
-        remainingChanged: countChanged,
-      });
+      await savePill(input);
     } catch (e) {
       console.warn('Could not save the pill', e);
       if (mounted.current) {
@@ -396,6 +462,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
     ready,
     days,
     pillId,
+    elderId,
+    elderName,
     name,
     form,
     amount,
@@ -405,6 +473,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
     remaining,
     countChanged,
     finish,
+    leave,
     t,
   ]);
 
@@ -419,18 +488,25 @@ export default function PillEditScreen({ navigation, route }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deletePill(pillId);
+            if (elderId) {
+              await sendDeletePill(elderId, pillId);
+            } else {
+              await deletePill(pillId);
+            }
             leave();
           } catch (e) {
             console.warn('Could not delete the pill', e);
             if (mounted.current) {
-              Alert.alert(t.pill.deleteFailed, t.common.tryAgain);
+              Alert.alert(
+                elderId ? familyMessage(e, t) : t.pill.deleteFailed,
+                elderId ? undefined : t.common.tryAgain,
+              );
             }
           }
         },
       },
     ]);
-  }, [pillId, leave, t]);
+  }, [pillId, elderId, leave, t]);
 
   const renderActions = useCallback(
     () => (
@@ -611,6 +687,9 @@ export default function PillEditScreen({ navigation, route }: Props) {
           <Text style={styles.link}>{t.pill.addTime}</Text>
         </Pressable>
       ) : null}
+      {elderId && otherZone ? (
+        <Text style={styles.hint}>{t.family.herTime(elderName)}</Text>
+      ) : null}
 
       <Text style={styles.label}>{t.pill.howLong}</Text>
       <View style={styles.chips}>
@@ -735,6 +814,7 @@ const styles = StyleSheet.create({
   time: { flex: 1, fontSize: 22, color: colors.text },
   timeButton: { padding: spacing.sm },
   link: { fontSize: 16, color: colors.primary },
+  hint: { fontSize: 16, color: colors.textMuted, marginTop: spacing.sm },
   remove: { fontSize: 18, color: colors.textMuted },
   addTime: { paddingVertical: spacing.sm },
   photoRow: { flexDirection: 'row', alignItems: 'center' },

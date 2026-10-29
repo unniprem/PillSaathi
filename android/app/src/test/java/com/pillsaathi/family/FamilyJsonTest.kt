@@ -100,6 +100,43 @@ class FamilyJsonTest {
     )
   }
 
+  @Test fun elder_readsEditorsCardsSoundsAndHealth() {
+    val cards = listOf(CardSound(8, 0, "s1", "Ravi's sound"), CardSound(20, 0, null, null))
+    val sounds = listOf(SoundRef("s1", "Ravi's sound"))
+    val health = ElderHealth(true, true, true, false, false, true, true)
+    val m: Map<String, Any?> = mapOf(
+      "zone" to "Asia/Kolkata", "pills" to emptyList<Any>(), "followers" to listOf("R", "S"), "people" to emptyMap<String, Any>(),
+      "editors" to listOf("R"), "cards" to FamilyJson.cardsToMap(cards), "sounds" to FamilyJson.soundsToMap(sounds),
+      "health" to FamilyJson.healthToMap(health),
+    )
+    val elder = FamilyJson.elderFromMap(firestoreNumbers(m), null)
+    assertEquals(listOf("R"), elder.editors)
+    assertEquals(cards, elder.cards)
+    assertEquals(sounds, elder.sounds)
+    assertEquals(health, elder.health)
+  }
+
+  @Test fun elder_withoutRemoteFields_readsEmpty() {
+    val elder = FamilyJson.elderFromMap(mapOf("followers" to listOf("R")), null)
+    assertEquals(emptyList<String>(), elder.editors)
+    assertEquals(emptyList<CardSound>(), elder.cards)
+    assertEquals(emptyList<SoundRef>(), elder.sounds)
+    assertEquals(null, elder.health)
+  }
+
+  @Test fun local_roundTrip_remoteFields() {
+    val local = FamilyLocal(
+      editors = listOf("R"),
+      follows = listOf(
+        Follow(
+          "E", "Amma", null, 30, editor = true, cards = listOf(CardSound(8, 0, "s1", "Ravi's sound")),
+          sounds = listOf(SoundRef("s1", "Ravi's sound")), health = ElderHealth(true, true, true, true, false, true, false),
+        ),
+      ),
+    )
+    assertEquals(local, FamilyJson.localFromJson(FamilyJson.localToJson(local)))
+  }
+
   @Test fun monthHash_stable() {
     val a = FamilyJson.monthHash(listOf(taken, missed))
     assertEquals(a, FamilyJson.monthHash(listOf(missed, taken)))

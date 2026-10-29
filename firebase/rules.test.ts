@@ -10,6 +10,7 @@ import {
 import {
   arrayRemove,
   arrayUnion,
+  Bytes,
   collection,
   deleteDoc,
   deleteField,
@@ -55,10 +56,14 @@ async function seed(data: Record<string, object>) {
   });
 }
 
-/** Elder E, followed by R and S, heard from [heardAgo] ms ago, with a month and a photo. */
-function elderE(heardAgo = MINUTE) {
+/**
+ * Elder E, followed by R and S, heard from [heardAgo] ms ago, with a month and a photo. Those in
+ * [editors] may change her pills.
+ */
+function elderE(heardAgo = MINUTE, editors: string[] = []) {
   return seed({
     'elders/E': {
+      editors,
       zone: 'Asia/Kolkata',
       heardAt: at(-heardAgo),
       oldest: '2026-10-01',
@@ -342,4 +347,137 @@ test('a follower deletes the copy only after 30 days of silence', async () => {
   await assertSucceeds(deleteDoc(doc(r, 'elders/E/months/2026-10')));
   await assertSucceeds(deleteDoc(doc(r, 'elders/E/photos/p1')));
   await assertSucceeds(deleteDoc(doc(r, 'elders/E')));
+});
+
+const bytes = (n: number) => Bytes.fromUint8Array(new Uint8Array(n));
+
+/** A change request from [uid], as his phone sends it. */
+function change(db: ReturnType<typeof as>, id: string, uid = 'R', extra = {}) {
+  return setDoc(doc(db, `elders/E/changes/${id}`), {
+    by: uid,
+    byName: 'Ravi',
+    at: serverTimestamp(),
+    status: 'pending',
+    kind: 'deletePill',
+    pillId: 'p1',
+    parts: 0,
+    ...extra,
+  });
+}
+
+/** Part [index] of change [id]'s file, from [uid]. */
+function part(db: ReturnType<typeof as>, id: string, index: number, uid = 'R', size = 100) {
+  return setDoc(doc(db, `elders/E/parts/${id}_${index}`), {
+    change: id,
+    index,
+    by: uid,
+    at: serverTimestamp(),
+    data: bytes(size),
+  });
+}
+
+test('an editor sends a change and its parts; a follower who is not an editor cannot', async () => {
+  await elderE(MINUTE, ['R']);
+  const r = as('R');
+  await assertSucceeds(part(r, 'c1', 0));
+  await assertSucceeds(change(r, 'c1', 'R', { parts: 1 }));
+  await assertSucceeds(
+    change(r, 'c2', 'R', {
+      kind: 'sound',
+      pillId: null,
+      hour: 8,
+      minute: 0,
+      sound: { kind: 'default' },
+    }),
+  );
+  const s = as('S');
+  await assertFails(part(s, 'c3', 0, 'S'));
+  await assertFails(change(s, 'c3', 'S'));
+  await assertFails(change(r, 'c4', 'S'));
+  await assertFails(change(r, 'c5', 'R', { status: 'applied' }));
+  await assertFails(change(r, 'c6', 'R', { parts: 9 }));
+  await assertFails(change(r, 'c7', 'R', { kind: 'wipe' }));
+  await assertFails(change(r, 'c8', 'R', { extra: true }));
+  await assertFails(change(as('stranger'), 'c9', 'stranger'));
+  await assertFails(part(r, 'c1', 1, 'R', 716801));
+  await assertSucceeds(part(r, 'c1', 1, 'R', 716800));
+});
+
+test('only her phone sets a change state; its maker cancels only while pending', async () => {
+  await elderE(MINUTE, ['R', 'S']);
+  const r = as('R');
+  await assertSucceeds(change(r, 'c1'));
+  await assertFails(updateDoc(doc(r, 'elders/E/changes/c1'), { status: 'applied' }));
+  await assertFails(deleteDoc(doc(as('S'), 'elders/E/changes/c1')));
+  await assertSucceeds(updateDoc(doc(as('E'), 'elders/E/changes/c1'), { status: 'applying' }));
+  await assertFails(deleteDoc(doc(r, 'elders/E/changes/c1')));
+  await assertSucceeds(change(r, 'c2'));
+  await assertSucceeds(deleteDoc(doc(r, 'elders/E/changes/c2')));
+  await assertSucceeds(deleteDoc(doc(as('E'), 'elders/E/changes/c1')));
+});
+
+test('followers read changes; only her phone writes editors', async () => {
+  await elderE(MINUTE, ['R']);
+  const r = as('R');
+  await assertSucceeds(part(r, 'c1', 0));
+  await assertSucceeds(change(r, 'c1', 'R', { parts: 1 }));
+  await assertSucceeds(getDocs(collection(as('S'), 'elders/E/changes')));
+  await assertFails(getDocs(collection(as('stranger'), 'elders/E/changes')));
+  await assertSucceeds(getDoc(doc(r, 'elders/E/parts/c1_0')));
+  await assertFails(getDoc(doc(as('S'), 'elders/E/parts/c1_0')));
+  await assertSucceeds(getDoc(doc(as('E'), 'elders/E/parts/c1_0')));
+  await assertSucceeds(deleteDoc(doc(as('E'), 'elders/E/parts/c1_0')));
+  await assertFails(updateDoc(doc(as('S'), 'elders/E'), { editors: arrayUnion('S') }));
+  await assertFails(updateDoc(doc(r, 'elders/E'), { editors: ['R', 'S'] }));
+  await assertSucceeds(updateDoc(doc(as('E'), 'elders/E'), { editors: ['R', 'S'] }));
+});
+
+test('a follower who leaves takes himself off editors too', async () => {
+  await elderE(MINUTE, ['R', 'S']);
+  await assertFails(
+    updateDoc(doc(as('R'), 'elders/E'), {
+      followers: arrayRemove('R'),
+      'people.R': deleteField(),
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(as('S'), 'elders/E'), {
+      followers: arrayRemove('S'),
+      'people.S': deleteField(),
+      editors: arrayRemove('R', 'S'),
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(as('R'), 'elders/E'), {
+      followers: arrayRemove('R'),
+      'people.R': deleteField(),
+      editors: arrayRemove('R'),
+    }),
+  );
+  await assertFails(change(as('R'), 'c1'));
+});
+
+test('a follower deletes the changes and parts of an abandoned copy too', async () => {
+  const sitaSent = {
+    'elders/E/changes/cS': {
+      by: 'S',
+      byName: 'Sita',
+      status: 'applied',
+      kind: 'deletePill',
+      pillId: 'p1',
+      parts: 1,
+    },
+    'elders/E/parts/cS_0': { change: 'cS', index: 0, by: 'S', data: bytes(10) },
+  };
+  await elderE(29 * DAY, ['R', 'S']);
+  await seed(sitaSent);
+  const r = as('R');
+  await assertFails(deleteDoc(doc(r, 'elders/E/changes/cS')));
+  await assertFails(deleteDoc(doc(r, 'elders/E/parts/cS_0')));
+  await elderE(31 * DAY, ['R', 'S']);
+  await seed(sitaSent);
+  await assertSucceeds(getDocs(collection(r, 'elders/E/changes')));
+  await assertSucceeds(deleteDoc(doc(r, 'elders/E/changes/cS')));
+  await assertSucceeds(getDocs(query(collection(r, 'elders/E/parts'))));
+  await assertSucceeds(deleteDoc(doc(r, 'elders/E/parts/cS_0')));
 });

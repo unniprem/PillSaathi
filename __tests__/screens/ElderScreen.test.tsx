@@ -134,3 +134,33 @@ test('Call dials her number', async () => {
   await fireEvent.press(await screen.findByText('Call'));
   expect(open).toHaveBeenCalledWith('tel:+919800000000');
 });
+
+test('Change pills opens her pills page', async () => {
+  jest.mocked(family.getFamily).mockResolvedValue([amma]);
+  jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+  jest.mocked(family.getElderToday).mockResolvedValue(herToday);
+  await renderApp('Elder', { elderId: 'E' });
+  await fireEvent.press(await screen.findByText('Change pills'));
+  await waitFor(() => expect(headerTitles()).toEqual(['Amma', "Amma's pills"]));
+});
+
+test('her page warns when her phone may not ring alarms', async () => {
+  jest.mocked(family.getFamily).mockResolvedValue([amma]);
+  jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+  jest.mocked(family.getElderToday).mockResolvedValue(herToday);
+  jest.mocked(family.getElderSetup).mockResolvedValue({
+    editor: true,
+    otherZone: false,
+    heardAt: null,
+    pills: [],
+    times: [],
+    sounds: [],
+    problem: 'notifications',
+  });
+  await renderApp('Elder', { elderId: 'E' });
+  expect(
+    await screen.findByText(
+      "Amma's phone may not ring alarms: notifications are off. On her phone, open PillSaathi and tap the yellow banner.",
+    ),
+  ).toBeTruthy();
+});

@@ -23,6 +23,9 @@ object FamilyWork {
   private const val CHECK = "family-check"
   private const val REFRESH = "family-refresh"
   private const val REFRESH_NOW = "family-refresh-now"
+  private const val CHECK_IN = "family-check-in"
+  private const val CHECK_IN_NOW = "family-check-in-now"
+  private const val CHECK_IN_HOURS = 1L
   private const val HEARTBEAT_HOURS = 6L
   private const val REFRESH_HOURS = 6L
 
@@ -77,6 +80,29 @@ object FamilyWork {
     WorkManager.getInstance(context).cancelUniqueWork(REFRESH_NOW)
   }
 
+  /**
+   * Her phone checks in every hour for changes her family sent, while someone may change her pills.
+   * It also checks in before every upload, on app open, and live while the app is open.
+   */
+  fun ensureCheckIn(context: Context) {
+    val work = PeriodicWorkRequestBuilder<CheckInWorker>(CHECK_IN_HOURS, TimeUnit.HOURS).setConstraints(online).build()
+    WorkManager.getInstance(context).enqueueUniquePeriodicWork(CHECK_IN, ExistingPeriodicWorkPolicy.KEEP, work)
+  }
+
+  /** Stops the hourly check-in once no one may change her pills. */
+  fun cancelCheckIn(context: Context) {
+    WorkManager.getInstance(context).cancelUniqueWork(CHECK_IN)
+  }
+
+  /** Checks in once, as soon as there is internet. */
+  fun requestCheckIn(context: Context) {
+    val work = OneTimeWorkRequestBuilder<CheckInWorker>()
+      .setConstraints(online)
+      .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+      .build()
+    WorkManager.getInstance(context).enqueueUniqueWork(CHECK_IN_NOW, ExistingWorkPolicy.REPLACE, work)
+  }
+
   fun cancelHeartbeat(context: Context) {
     WorkManager.getInstance(context).cancelUniqueWork(HEARTBEAT)
   }
@@ -103,6 +129,21 @@ class UploadWorker(context: Context, params: WorkerParameters) : Worker(context,
       if (e.code == FamilyCloud.OFFLINE) Result.retry() else Result.failure()
     } catch (e: Exception) {
       Log.e(FAMILY_TAG, "Upload failed", e)
+      Result.failure()
+    }
+}
+
+/** Her check-in ([CheckIn]); Firestore out of reach retries with backoff. */
+class CheckInWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
+  override fun doWork(): Result =
+    try {
+      synchronized(ElderSync.lock) { CheckIn.apply(applicationContext) }
+      Result.success()
+    } catch (e: FamilyException) {
+      Log.w(FAMILY_TAG, "Check-in failed (${e.code})", e)
+      if (e.code == FamilyCloud.OFFLINE) Result.retry() else Result.failure()
+    } catch (e: Exception) {
+      Log.e(FAMILY_TAG, "Check-in failed", e)
       Result.failure()
     }
 }

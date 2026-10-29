@@ -57,11 +57,22 @@ class FamilyCloud private constructor(context: Context) {
   }
 
   /** Her zone, oldest record and pills, and the "last heard from" time, which every upload sets. */
-  fun writeElder(uid: String, zone: String, oldest: String?, pills: List<Pill>) {
+  fun writeElder(
+    uid: String,
+    zone: String,
+    oldest: String?,
+    pills: List<Pill>,
+    cards: List<CardSound>,
+    sounds: List<SoundRef>,
+    health: ElderHealth,
+  ) {
     val data = mapOf(
       "zone" to zone,
       "oldest" to oldest,
       "pills" to pills.map(FamilyJson::pillToMap),
+      "cards" to FamilyJson.cardsToMap(cards),
+      "sounds" to FamilyJson.soundsToMap(sounds),
+      "health" to FamilyJson.healthToMap(health),
       "heardAt" to FieldValue.serverTimestamp(),
     )
     await(elder(uid).set(data, SetOptions.merge()))
@@ -101,7 +112,8 @@ class FamilyCloud private constructor(context: Context) {
    */
   fun deleteElderCopy(uid: String) {
     val ref = elder(uid)
-    for (sub in listOf(MONTHS, PHOTOS, REQUESTS)) {
+    // Changes and their parts too: pill names and times, photos and voices.
+    for (sub in listOf(MONTHS, PHOTOS, REQUESTS, CHANGES, PARTS)) {
       await(ref.collection(sub).get(Source.SERVER)).documents.forEach { await(it.reference.delete()) }
     }
     madeCodes.toList().forEach { deleteCode(it) }
@@ -168,8 +180,9 @@ class FamilyCloud private constructor(context: Context) {
     }
 
   /**
-   * Answers [request] to elder [uid]. Allow adds the relative to her followers and uses up the
-   * code, in one batch; No marks the request denied.
+   * Answers [request] to elder [uid]. Allow adds the relative to her followers and her editors (he
+   * may change her pills, which the prompt says) and uses up the code, in one batch; No marks the
+   * request denied.
    */
   fun answerRequest(uid: String, request: FollowRequest, allow: Boolean) {
     val requestRef = elder(uid).collection(REQUESTS).document(request.uid)
@@ -182,6 +195,7 @@ class FamilyCloud private constructor(context: Context) {
       elder(uid),
       mapOf(
         "followers" to FieldValue.arrayUnion(request.uid),
+        "editors" to FieldValue.arrayUnion(request.uid),
         "people.${request.uid}" to mapOf("name" to request.name, "email" to request.email),
       ),
     )
@@ -200,13 +214,116 @@ class FamilyCloud private constructor(context: Context) {
     return FollowRequest(snap.id, snap.getString("name") ?: "", snap.getString("email") ?: "", snap.getString("code"))
   }
 
+  /** Her changes still to apply (pending, or claimed by a check-in that stopped), oldest first. */
+  fun waitingChanges(uid: String): List<RemoteChange> =
+    await(elder(uid).collection(CHANGES).whereIn("status", listOf(RemoteRules.PENDING, RemoteRules.APPLYING)).get(Source.SERVER))
+      .documents.map(::changeOf)
+      .sortedBy { it.at ?: Long.MAX_VALUE }
+
+  /**
+   * Claims change [changeId] for applying, in a transaction, so its maker can't cancel it halfway;
+   * false when it was cancelled, or is already done.
+   */
+  fun claim(uid: String, changeId: String): Boolean {
+    val ref = elder(uid).collection(CHANGES).document(changeId)
+    return await(
+      db().runTransaction { tx ->
+        val status = tx.get(ref).takeIf { it.exists() }?.getString("status")
+        if (status == RemoteRules.PENDING || status == RemoteRules.APPLYING) {
+          tx.update(ref, "status", RemoteRules.APPLYING)
+          true
+        } else {
+          false
+        }
+      },
+    )
+  }
+
+  /** Marks change [changeId] applied, or rejected for [reason]. */
+  fun finish(uid: String, changeId: String, reason: String?) {
+    await(
+      elder(uid).collection(CHANGES).document(changeId).update(
+        mapOf(
+          "status" to if (reason == null) RemoteRules.APPLIED else RemoteRules.REJECTED,
+          "reason" to reason,
+          "doneAt" to FieldValue.serverTimestamp(),
+        ),
+      ),
+    )
+  }
+
+  /** The parts of change [changeId]'s file that are there, by index. */
+  fun readParts(uid: String, changeId: String, count: Int): Map<Int, ByteArray> =
+    (0 until count).mapNotNull { i ->
+      val snap = await(elder(uid).collection(PARTS).document(FileParts.partId(changeId, i)).get(Source.SERVER))
+      snap.getBlob("data")?.let { i to it.toBytes() }
+    }.toMap()
+
+  fun deleteParts(uid: String, changeId: String, count: Int) {
+    val batch = db().batch()
+    (0 until count).forEach { batch.delete(elder(uid).collection(PARTS).document(FileParts.partId(changeId, it))) }
+    await(batch.commit())
+  }
+
+  /** Marks [follower]'s changes still waiting not done ("not allowed"), and deletes their parts. */
+  fun revokeChanges(uid: String, follower: String) {
+    val his = await(elder(uid).collection(CHANGES).whereEqualTo("by", follower).get(Source.SERVER)).documents.map(::changeOf)
+    RemoteRules.revoked(his, follower).forEach {
+      finish(uid, it.id, RemoteRules.NOT_ALLOWED)
+      if (it.parts > 0) deleteParts(uid, it.id, it.parts)
+    }
+  }
+
+  /** Deletes done changes, and parts no change waits for, from before [before]. */
+  fun cleanUp(uid: String, before: Long) {
+    val cutoff = Timestamp(Date(before))
+    val old = await(elder(uid).collection(CHANGES).whereLessThan("doneAt", cutoff).get(Source.SERVER)).documents
+    val waiting = waitingChanges(uid).map { it.id }.toSet()
+    val parts = await(elder(uid).collection(PARTS).whereLessThan("at", cutoff).get(Source.SERVER)).documents
+      .filter { it.getString("change") !in waiting }
+    (old.map { it.reference } + parts.map { it.reference }).chunked(400).forEach { refs ->
+      val batch = db().batch()
+      refs.forEach(batch::delete)
+      await(batch.commit())
+    }
+  }
+
+  /**
+   * Calls [onWaiting] on [executor] whenever a change waits for her phone, until removed. As with
+   * [listenRequests], [onError] means the listener has stopped.
+   */
+  fun listenChanges(uid: String, executor: Executor, onError: () -> Unit, onWaiting: () -> Unit): ListenerRegistration =
+    elder(uid).collection(CHANGES).whereEqualTo("status", RemoteRules.PENDING).addSnapshotListener(executor) { snap, e ->
+      if (e != null) {
+        Log.w(FAMILY_TAG, "Listening for changes failed", e)
+        onError()
+        return@addSnapshotListener
+      }
+      if (snap != null && !snap.isEmpty) onWaiting()
+    }
+
   /** Elder [uid]'s doc from the server, or from the cache when offline; null when there is none. */
   fun readElderCached(uid: String): ElderDoc? = elderOf(await(elder(uid).get()))
 
   /** Takes [follower] off elder [uid]'s list. Returns who is left. */
   fun removeFollower(uid: String, follower: String): List<String> {
-    await(elder(uid).update(mapOf("followers" to FieldValue.arrayRemove(follower), "people.$follower" to FieldValue.delete())))
+    await(
+      elder(uid).update(
+        mapOf(
+          "followers" to FieldValue.arrayRemove(follower),
+          "editors" to FieldValue.arrayRemove(follower),
+          "people.$follower" to FieldValue.delete(),
+        ),
+      ),
+    )
     return readElder(uid)?.followers.orEmpty()
+  }
+
+  /** Lets [follower] change elder [uid]'s pills, or stops him; gives her editors as the server has them. */
+  fun setEditor(uid: String, follower: String, on: Boolean): List<String> {
+    val change = if (on) FieldValue.arrayUnion(follower) else FieldValue.arrayRemove(follower)
+    await(elder(uid).update("editors", change))
+    return readElder(uid)?.editors.orEmpty()
   }
 
   /** The uid this phone's default app is signed in as, or null when it never has been. */
@@ -295,7 +412,13 @@ class FamilyCloud private constructor(context: Context) {
     try {
       await(
         familyDb().collection(ELDERS).document(elderId)
-          .update(mapOf("followers" to FieldValue.arrayRemove(uid), "people.$uid" to FieldValue.delete())),
+          .update(
+            mapOf(
+              "followers" to FieldValue.arrayRemove(uid),
+              "editors" to FieldValue.arrayRemove(uid),
+              "people.$uid" to FieldValue.delete(),
+            ),
+          ),
       )
     } catch (e: FamilyException) {
       if (e.code != PERMISSION && e.code != NOT_FOUND) throw e
@@ -308,10 +431,61 @@ class FamilyCloud private constructor(context: Context) {
    */
   fun deleteCopyAsFollower(elderId: String) {
     val ref = familyDb().collection(ELDERS).document(elderId)
-    for (sub in listOf(MONTHS, PHOTOS)) {
+    for (sub in listOf(MONTHS, PHOTOS, CHANGES, PARTS)) {
       await(ref.collection(sub).get(Source.SERVER)).documents.forEach { await(it.reference.delete()) }
     }
     await(ref.delete())
+  }
+
+  /**
+   * Sends change [changeId] to elder [elderId]: its file [parts] first, then the change, in a
+   * transaction, which fails offline instead of being queued and sent later (a second try would
+   * then add a second pill). Parts written before a failure are deleted, best effort.
+   */
+  fun sendChange(elderId: String, changeId: String, data: Map<String, Any?>, parts: List<ByteArray>) {
+    val elder = familyDb().collection(ELDERS).document(elderId)
+    val me = relativeUid()
+    val written = mutableListOf<DocumentReference>()
+    try {
+      parts.forEachIndexed { i, bytes ->
+        val ref = elder.collection(PARTS).document(FileParts.partId(changeId, i))
+        val part = mapOf("change" to changeId, "index" to i, "by" to me, "at" to FieldValue.serverTimestamp(), "data" to Blob.fromBytes(bytes))
+        await(ref.set(part))
+        written += ref
+      }
+      val ref = elder.collection(CHANGES).document(changeId)
+      await(familyDb().runTransaction { tx -> tx.set(ref, data + ("at" to FieldValue.serverTimestamp())) })
+    } catch (e: FamilyException) {
+      written.forEach { ref -> ref.delete().addOnFailureListener { Log.w(FAMILY_TAG, "Could not delete part ${ref.id}", it) } }
+      throw e
+    }
+  }
+
+  /** Elder [elderId]'s changes, as the server has them. */
+  fun readChanges(elderId: String): List<RemoteChange> =
+    await(familyDb().collection(ELDERS).document(elderId).collection(CHANGES).get(Source.SERVER)).documents.map(::changeOf)
+
+  /**
+   * Takes back this relative's change [changeId] while it still waits, then its parts. Throws
+   * [FamilyException] ALREADY_TAKEN once her phone has claimed it.
+   */
+  fun cancelChange(elderId: String, changeId: String) {
+    val elder = familyDb().collection(ELDERS).document(elderId)
+    val ref = elder.collection(CHANGES).document(changeId)
+    // -1: her phone has it already.
+    val parts = await(
+      familyDb().runTransaction { tx ->
+        val snap = tx.get(ref)
+        if (snap.exists() && snap.getString("status") != RemoteRules.PENDING) return@runTransaction -1
+        if (snap.exists()) tx.delete(ref)
+        (snap.getLong("parts") ?: 0L).toInt()
+      },
+    )
+    if (parts < 0) throw FamilyException(ALREADY_TAKEN, "Change $changeId is already on her phone")
+    (0 until parts).forEach { i ->
+      elder.collection(PARTS).document(FileParts.partId(changeId, i)).delete()
+        .addOnFailureListener { Log.w(FAMILY_TAG, "Could not delete part $i of $changeId", it) }
+    }
   }
 
   /** Followed elder [elderId]'s doc from the server; PERMISSION once she removed him or her copy went. */
@@ -356,6 +530,9 @@ class FamilyCloud private constructor(context: Context) {
     const val NOT_FOUND = "NOT_FOUND"
     const val PERMISSION = "PERMISSION"
     const val NO_SCANNER = "NO_SCANNER"
+    const val NOT_ALLOWED = "NOT_ALLOWED"
+    const val TOO_BIG = "TOO_BIG"
+    const val ALREADY_TAKEN = "ALREADY_TAKEN"
 
     const val TIMEOUT_S = 20L
     const val FAMILY_APP = "family"
@@ -367,6 +544,8 @@ class FamilyCloud private constructor(context: Context) {
     const val CODES = "codes"
     const val MONTHS = "months"
     const val PHOTOS = "photos"
+    const val CHANGES = "changes"
+    const val PARTS = "parts"
     const val REQUESTS = "requests"
 
     @Volatile private var instance: FamilyCloud? = null
@@ -375,6 +554,11 @@ class FamilyCloud private constructor(context: Context) {
       instance ?: synchronized(this) { instance ?: FamilyCloud(context.applicationContext).also { instance = it } }
 
     /** The elder doc in [snap], or null when it doesn't exist. */
+    internal fun changeOf(snap: DocumentSnapshot): RemoteChange =
+      RemoteRules.changeFromMap(
+        snap.id, snap.data.orEmpty(), snap.getTimestamp("at")?.toDate()?.time, snap.getTimestamp("doneAt")?.toDate()?.time,
+      )
+
     internal fun elderOf(snap: DocumentSnapshot): ElderDoc? {
       val data = snap.data ?: return null
       return FamilyJson.elderFromMap(data, snap.getTimestamp("heardAt")?.toDate()?.time)

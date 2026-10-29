@@ -246,9 +246,12 @@ object FamilyRules {
    * [follow] after reading her doc and [recent] records: his own name, number and delay stay, the
    * copy of hers is replaced. Null when the read was refused or the doc is gone, so the follow goes.
    */
-  fun afterRefresh(follow: Follow, elder: ElderDoc?, recent: List<DoseRecord>): Follow? =
+  fun afterRefresh(follow: Follow, elder: ElderDoc?, recent: List<DoseRecord>, me: String? = null): Follow? =
     elder?.let {
-      follow.copy(zone = it.zone, heardAt = it.heardAt, oldest = it.oldest, pills = it.pills, recent = recent)
+      follow.copy(
+        zone = it.zone, heardAt = it.heardAt, oldest = it.oldest, pills = it.pills, recent = recent,
+        editor = me != null && me in it.editors, cards = it.cards, sounds = it.sounds, health = it.health,
+      )
     }
 
   /**
@@ -291,6 +294,24 @@ object FamilyRules {
 
   /** Whether this phone uploads its pills: only once someone can see them. */
   fun uploads(local: FamilyLocal): Boolean = local.sharing
+
+  /**
+   * The first reason her phone may not ring alarms, in the order her Today banner would fix them:
+   * notifications, alarmChannel, exactAlarms, fullScreen, battery, restricted, setup; null when
+   * none, or when her phone hasn't said.
+   */
+  fun healthProblem(h: ElderHealth?): String? =
+    when {
+      h == null -> null
+      !h.notifications -> "notifications"
+      !h.alarmChannel -> "alarmChannel"
+      !h.exactAlarms -> "exactAlarms"
+      !h.fullScreen -> "fullScreen"
+      !h.battery -> "battery"
+      !h.unrestricted -> "restricted"
+      !h.setupSeen -> "setup"
+      else -> null
+    }
 
   /** When a pill is next due at [t]: today's time if still to come, else the next day one is due, else null. */
   private fun nextDue(pills: List<Pill>, t: DoseTime, today: LocalDate, now: Long, zone: ZoneId): Long? {

@@ -75,12 +75,12 @@ class AlarmEngine private constructor(context: Context) {
           refillNotified = refillNotified,
         )
           ?: Pill(
-            id = UUID.randomUUID().toString(),
+            id = draft.newId ?: UUID.randomUUID().toString(),
             name = draft.name,
             form = draft.form,
             amount = draft.amount,
             times = draft.times,
-            startDate = dateOf(now).plusDays(if (draft.startsTomorrow) 1L else 0L),
+            startDate = draft.startDate ?: dateOf(now).plusDays(if (draft.startsTomorrow) 1L else 0L),
             days = draft.days,
             createdAt = now,
             photo = photo,
@@ -135,6 +135,22 @@ class AlarmEngine private constructor(context: Context) {
       val card = alarms.firstOrNull { it.id == alarmId } ?: throw NoSuchElementException("No card $alarmId")
       store.saveAlarms(alarms.replace(card.copy(soundId = soundId)))
     }
+    FamilyHooks.changed(context)
+  }
+
+  /**
+   * Sets the sound of the card at [hour]:[minute], as a relative's phone names it; null is the
+   * default alarm tone. False when no card rings at that time any more.
+   */
+  fun setSoundAt(hour: Int, minute: Int, soundId: String?): Boolean {
+    val set = store.locked {
+      val alarms = store.loadAlarms()
+      val card = alarms.firstOrNull { it.enabled && it.hour == hour && it.minute == minute } ?: return@locked false
+      store.saveAlarms(alarms.replace(card.copy(soundId = soundId)))
+      true
+    }
+    if (set) FamilyHooks.changed(context)
+    return set
   }
 
   /**

@@ -42,6 +42,7 @@ class FamilySystemReceiver : BroadcastReceiver() {
         if (FamilyRules.uploads(local)) {
           FamilyWork.requestUpload(context)
           FamilyWork.ensureHeartbeat(context)
+          if (local.editors.isNotEmpty()) FamilyWork.ensureCheckIn(context)
         }
         if (local.follows.isNotEmpty()) FamilyWork.ensureRefresh(context)
       } catch (e: Exception) {

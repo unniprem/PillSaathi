@@ -29,14 +29,20 @@ service cloud.firestore {
         && data.heardAt < request.time - duration.value(30, 'd');
     }
 
-    // A follower taking himself off her list, and nothing else.
+    // Someone her phone allowed to change her pills (always one of her followers).
+    function editor(e) {
+      return signedIn() && request.auth.uid in elderDoc(e).get('editors', []);
+    }
+
+    // A follower taking himself off her lists, and nothing else.
     function removesOnlyHimself() {
       let uid = request.auth.uid;
       let before = resource.data;
       let after = request.resource.data;
       return follows(before)
-        && after.diff(before).affectedKeys().hasOnly(['followers', 'people'])
+        && after.diff(before).affectedKeys().hasOnly(['followers', 'people', 'editors'])
         && after.get('followers', []) == before.get('followers', []).removeAll([uid])
+        && after.get('editors', []) == before.get('editors', []).removeAll([uid])
         && !(uid in after.get('people', {}))
         && before.get('people', {}).diff(after.get('people', {})).affectedKeys().hasOnly([uid]);
     }
@@ -76,6 +82,52 @@ service cloud.firestore {
         allow read: if isUser(e) || follows(elderDoc(e));
         allow create, update: if isUser(e) && elderExists(e);
         allow delete: if isUser(e) || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
+      }
+
+      // A change to her pills or alarm sounds, asked by a relative her phone allowed. Her phone
+      // alone applies it and sets its state; he can take it back only while it still waits.
+      match /changes/{c} {
+        function sends() {
+          let data = request.resource.data;
+          return editor(e)
+            && data.keys().hasOnly(['by', 'byName', 'at', 'status', 'kind', 'pill', 'photo', 'pillId',
+              'hour', 'minute', 'sound', 'parts'])
+            && data.by == request.auth.uid
+            && data.byName is string
+            && data.at == request.time
+            && data.status == 'pending'
+            && data.kind in ['pill', 'deletePill', 'sound']
+            && data.parts is int && data.parts >= 0 && data.parts <= 8;
+        }
+
+        allow read: if isUser(e) || follows(elderDoc(e));
+        allow create: if sends();
+        allow update: if isUser(e);
+        allow delete: if isUser(e)
+          || (signedIn() && resource.data.by == request.auth.uid && resource.data.status == 'pending')
+          || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
+      }
+
+      // Part of a photo or sound sent with a change: Firestore documents hold at most 1 MiB, and
+      // Spark has no Cloud Storage. Written before its change; her phone deletes it once used.
+      match /parts/{p} {
+        function sendsPart() {
+          let data = request.resource.data;
+          return editor(e)
+            && data.keys().hasOnly(['change', 'index', 'by', 'at', 'data'])
+            && data.by == request.auth.uid
+            && data.at == request.time
+            && data.change is string
+            && data.index is int && data.index >= 0 && data.index < 8
+            && p == data.change + '_' + string(data.index)
+            && data.data is bytes && data.data.size() <= 716800;
+        }
+
+        allow read: if isUser(e) || (signedIn() && resource.data.by == request.auth.uid)
+          || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
+        allow create: if sendsPart();
+        allow delete: if isUser(e) || (signedIn() && resource.data.by == request.auth.uid)
+          || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
       }
 
       // A relative asking to follow her, with a live code of hers. Her phone answers it. The

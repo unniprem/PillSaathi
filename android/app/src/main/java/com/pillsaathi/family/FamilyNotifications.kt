@@ -33,6 +33,8 @@ import java.util.Locale
 object FamilyNotifications {
   const val CHANNEL_MISSED = "family_missed"
   const val CHANNEL_REFILL = "family_refill"
+  const val CHANNEL_CHANGES = "family_changes"
+  private const val CHANGES_ID = 2002
 
   private const val FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
 
@@ -45,7 +47,44 @@ object FamilyNotifications {
     val refill = NotificationChannelCompat.Builder(CHANNEL_REFILL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
       .setName(words.getString(R.string.channel_family_refill))
       .build()
-    NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(missed, refill))
+    val changes = NotificationChannelCompat.Builder(CHANNEL_CHANGES, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+      .setName(words.getString(R.string.channel_family_changes))
+      .build()
+    NotificationManagerCompat.from(context).createNotificationChannelsCompat(listOf(missed, refill, changes))
+  }
+
+  /**
+   * On her phone: what her family changed at one check-in, one line each, such as "Ravi added
+   * Telma 40 (8:00 AM, 8:00 PM)." Open opens the app, where Today shows the result.
+   */
+  fun postChanges(context: Context, applied: List<AppliedChange>) {
+    val words = words(context)
+    val clock = { t: com.pillsaathi.alarm.DoseTime -> clock(context, LocalTime.of(t.hour, t.minute)) }
+    val tone = AlarmEngine.get(context).defaultToneName()
+    val lines = applied.map { a ->
+      val res = when (a.kind) {
+        NoticeKind.ADDED -> R.string.family_change_added
+        NoticeKind.CHANGED -> R.string.family_change_changed
+        NoticeKind.DELETED -> R.string.family_change_deleted
+        NoticeKind.SOUND -> R.string.family_change_sound
+      }
+      words.getString(res, *CheckIn.noticeArgs(a, clock, tone).toTypedArray())
+    }
+    val text = lines.joinToString("\n")
+    val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
+    val notification = NotificationCompat.Builder(context, CHANNEL_CHANGES)
+      .setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setContentText(lines.first())
+      .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+      .setContentIntent(open)
+      .setAutoCancel(true)
+      .build()
+    try {
+      ensureChannels(context)
+      NotificationManagerCompat.from(context).notify(CHANGES_ID + applied.hashCode() % 1000, notification)
+    } catch (e: SecurityException) {
+      Log.w(FAMILY_TAG, "Notifications not allowed; a family change notice wasn't shown", e)
+    }
   }
 
   /** "Amma hasn't taken Azee 500 (2:00 PM)." */

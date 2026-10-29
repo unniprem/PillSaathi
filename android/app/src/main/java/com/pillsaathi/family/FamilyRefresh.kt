@@ -52,7 +52,7 @@ object FamilyRefresh {
     val records = days.map(FamilyRules::monthKey).toSet()
       .flatMap { cloud.readFollowedMonth(follow.elderId, it) }
       .filter { it.date in days }
-    val refreshed = FamilyRules.afterRefresh(follow, elder, records) ?: return null
+    val refreshed = FamilyRules.afterRefresh(follow, elder, records, cloud.relativeUid()) ?: return null
     return refreshed.copy(photos = photos(context, cloud, refreshed))
   }
 

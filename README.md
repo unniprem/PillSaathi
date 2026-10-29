@@ -19,10 +19,11 @@ Over time, for the elder and for the relatives who ask "did Amma take her tablet
 
 And for the relative who lives elsewhere, **Family** (Settings → Family, or **+ Add family** on Today):
 
-- **Linking, once.** On the elder's phone, **Show a code to a family member** shows a scan code and the same code as 6 digits, with **Send code** to share it ("Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes."). The relative signs in with Google, scans or types the code, and the elder's phone asks "Let Ravi see your pills?" with **Allow** and **No**. Nothing is shared before Allow. The relative then says what he calls her, optionally her number for **Call**, and when to ping him (15, 30 or 60 minutes after a dose, or Off).
+- **Linking, once.** On the elder's phone, **Show a code to a family member** shows a scan code and the same code as 6 digits, with **Send code** to share it ("Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes."). The relative signs in with Google, scans or types the code, and the elder's phone asks "Let Ravi see and change your pills?" with **Allow** and **No**. Nothing is shared before Allow. The relative then says what he calls her, optionally her number for **Call**, and when to ping him (15, 30 or 60 minutes after a dose, or Off).
 - **Her day on his phone.** Today gets a **Family** section above his own pills, one card per elder: "2 taken · 1 missed · 1 later", any pill running low, and "Not heard from since …" when her phone has gone quiet for 12 hours. Her page shows her cards read-only (a dose her phone hasn't uploaded reads "Not reported yet", never taken), when her phone was last heard from, her History and Call.
 - **Pings.** After each of her dose times plus his delay, his phone checks her record and notifies him: "Amma hasn't taken Azee 500 (2:00 PM).", or "Amma's phone hasn't reported the 2:00 PM dose (Azee 500). Last heard from at 1:12 PM." when nothing came in, one "We haven't heard from Amma's phone since …" when it has been silent 12 hours, and once per level "Amma's Telma 40: 4 tablets left". Each dose pings once at most.
 - **Who can see.** Her Family page lists everyone who can see her pills, each with **Remove**; he can **Stop following** from his side. When the last one goes, her online copy is deleted.
+- **Setting up from afar.** Her page on his phone has **Change pills**: her pills, **+ Add pill**, and her dose times with their alarm sounds. The usual pill page and sound picker open "for Amma": Save sends the change to her phone, and a sound can be one of hers, the default tone, or one of his (recorded or imported on his phone, up to 5 MB). Her phone applies each change itself, through the same paths as her own screens, and tells her ("Ravi added Telma 40 (8:00 AM)."). It checks in when the app opens, live while it is open, before every upload (after each ring), and every hour. His page shows each change as "Waiting for Amma's phone" (with **Cancel**), "Done at 3:05 PM" or "Not done" with why, and warns "Amma's phone may not ring alarms: battery setup not done…" when her phone reports a problem. Her Family page has **Can change my pills** per person; people linked before this update can see but not change until it is on.
 
 It runs on Firebase's free Spark plan with no billing account, and needs a Firebase project of your own (see [Firebase setup](#firebase-setup)). A build without one works as before, and Family says "Family isn't set up in this build."
 
@@ -125,6 +126,8 @@ adb shell am broadcast -a <ACTION> -n com.pillsaathi/.family.debug.DebugFamilyRe
 | `com.pillsaathi.DEBUG_FAMILY_UPLOAD` | Runs the elder's upload now and logs how it went                                        |
 | `com.pillsaathi.DEBUG_FAMILY_CHECK`  | Runs the relative's due checks now, as the wake-up would, and logs each decision        |
 | `com.pillsaathi.DEBUG_FAMILY_LIST`   | Logs `family.json`, with each follow's pills reduced to their names                     |
+| `com.pillsaathi.DEBUG_FAMILY_CHANGED` | Queues an upload as a change of hers would (background work, once online)              |
+| `com.pillsaathi.DEBUG_FAMILY_APPLY`  | Applies a family change on her phone without Firestore: `--es id`, `--es name` (no spaces), `--ei hour`/`minute`; `--es kind sound --es file <name in the app's files>`; `--es kind delete --es pillId` |
 
 Example: `adb shell am broadcast -a com.pillsaathi.DEBUG_ADD_PILL -n com.pillsaathi/.alarm.debug.DebugAlarmReceiver --ei minutes_from_now 2 --es name Telma --ef amount 0.5`
 
@@ -135,6 +138,27 @@ To move the emulator's clock without root (Play Store images): `adb shell cmd al
 Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb shell dumpsys activity services com.pillsaathi`, `adb shell dumpsys audio` (look for the `USAGE_ALARM` player), `adb shell am force-stop com.pillsaathi` (simulates an OEM kill).
 
 ## Device test matrix
+
+### Remote setup
+
+Last run: 2026-10-29, emulator `Medium_Phone_API_34` as the elder (linked to the Redmi, sharing on), with `DEBUG_FAMILY_APPLY` standing in for the relative's phone. The Redmi was locked, so nothing that needs it ran.
+
+- [x] A pill added "from Ravi" for 2 minutes ahead: notice "Ravi added RemoteTelma (3:16 PM).", it rang at 15:16:01, and `:ringing` logged no Firebase or WorkManager line.
+- [x] The same change applied twice: "Ravi changed RemoteTelma." and still 6 pills (no second pill).
+- [x] A delete: "Ravi deleted Remote.", and the upload counted one pill fewer.
+- [x] A sound that isn't audio: "fileBroken", the card kept its sound, and its file was deleted.
+- [x] A sound (AAC) set for 3:18 PM: notice "Ravi set the 3:18 PM alarm sound to RavisVoice.", and the 3:18 ring logged "Playing sound file a727d9c4….m4a".
+- [x] Rules (emulator): editors send changes and parts; followers who aren't editors, and strangers, can't; only her phone sets a state or writes editors; Cancel only while pending; parts at most 716800 bytes; leaving takes him off editors.
+
+**Pending (needs the rules deployed and the Redmi unlocked):**
+
+- [ ] Deploy the rules: `npx firebase deploy --only firestore:rules`.
+- [ ] From the Redmi, with her app open: + Add pill arrives within seconds, her notice shows, and it rings.
+- [ ] With her app swiped away: the change waits ("Waiting for Amma's phone"), then arrives at the next check-in or ring.
+- [ ] Record a voice on the Redmi for one of her times: her alarm rings with it.
+- [ ] Edit (with a new photo) and delete from the Redmi; Cancel a waiting change; a late Cancel says "Amma's phone already has it."
+- [ ] Turn off **Can change my pills**: his page explains, and a send is refused.
+- [ ] Battery optimisation back on for her: his pages warn.
 
 ### Family online
 

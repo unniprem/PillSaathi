@@ -272,6 +272,32 @@ class FamilyRulesTest {
     )
   }
 
+  @Test fun afterRefresh_setsEditorAndCopiesHerSetup() {
+    val doc = elder().copy(
+      editors = listOf("R"), cards = listOf(CardSound(14, 0, null, null)), sounds = listOf(SoundRef("s1", "Bell")),
+      health = ElderHealth(true, true, true, true, true, true, true),
+    )
+    val mine = FamilyRules.afterRefresh(amma, doc, emptyList(), "R")!!
+    assertTrue(mine.editor)
+    assertEquals(doc.cards, mine.cards)
+    assertEquals(doc.sounds, mine.sounds)
+    assertEquals(doc.health, mine.health)
+    assertFalse(FamilyRules.afterRefresh(amma, doc, emptyList(), "S")!!.editor)
+  }
+
+  @Test fun healthProblem_namesTheFirstProblemInOrder() {
+    val fine = ElderHealth(true, true, true, true, true, true, true)
+    assertNull(FamilyRules.healthProblem(null))
+    assertNull(FamilyRules.healthProblem(fine))
+    assertEquals("notifications", FamilyRules.healthProblem(fine.copy(notifications = false, battery = false)))
+    assertEquals("alarmChannel", FamilyRules.healthProblem(fine.copy(alarmChannel = false)))
+    assertEquals("exactAlarms", FamilyRules.healthProblem(fine.copy(exactAlarms = false, setupSeen = false)))
+    assertEquals("fullScreen", FamilyRules.healthProblem(fine.copy(fullScreen = false)))
+    assertEquals("battery", FamilyRules.healthProblem(fine.copy(battery = false, unrestricted = false)))
+    assertEquals("restricted", FamilyRules.healthProblem(fine.copy(unrestricted = false)))
+    assertEquals("setup", FamilyRules.healthProblem(fine.copy(setupSeen = false)))
+  }
+
   @Test fun wallClock_showsElderTime() {
     val london = ZoneId.of("Europe/London")
     val shifted = FamilyRules.wallClock(Instant.parse("2026-11-10T08:30:00Z").toEpochMilli(), kolkata, london)
