@@ -1,12 +1,49 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 18 (needs the emulator and the Redmi for Steps 3–4)
+**Next task**: Review fixes A–D (see "Next: review fixes" below; run them in parallel worktrees, then merge), then Task 18 (phone checks: fresh install on both phones, as the user chose)
 **Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 ✓ · C = 11 + 16 ✓ · then 18. Parallel tasks were merged by cherry-pick; their notes are below.
-**Last updated**: 2026-10-29
+**Last updated**: 2026-10-29 22:15 IST (stopped for the night at the user's request; nothing in progress)
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
 Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside it (`10-journeys.html` wins).
+
+## Next: review fixes (from the whole-branch review of 227e043..dd72795, three reviewers)
+
+Verified by the orchestrator: C1 (only TodayScreen calls `reconcileOnAppOpen`) and I-1 (the base screen had `maxLength={7}`). The others came with probe tests. Each fix agent: verify first (superpowers:receiving-code-review), failing test first, one commit `fix: review: …` on its own branch, then cherry-pick. File ownership as listed so they can run at once.
+
+**Fix A — her phone (owns App.tsx, lib/start.ts, Login/Who, TodayScreen except the family block, lib/today.ts, components/today/* except PersonCard, AddPillScreen):**
+- **C1 Critical:** the app-open reconcile (`reconcileOnAppOpen`, the only re-arm after an OEM force-stop) runs only from Today, so a phone stuck at Login never re-arms. Reconcile in `App.tsx` at start and on AppState active, whatever the start route; hand the missed list to Today's "Missed medicines" alert (once). App test: Login shown → reconcile called.
+- **I1:** the minute tick doesn't reload cards, so once the next dose's time passes Today says "in 23 hr 59 min" (and stays on yesterday after midnight). Refresh when `now` passes the next dose or the date changes; `untilText` says "now", not a wrap.
+- **I2 (Review Focus 5):** a 0:30 dose seen at 23:00 shows "All done for today · Tomorrow, 12:30 AM", never "Tonight · in 1 hr 30 min". Screen-level test at 23:00.
+- **I3:** done and later lines show pill names as plain text, so a taken pill can't be opened from Today (her phone has no other pill list). Make each name a link; put the ported "opens the pill page from a pill row" test back on a taken card.
+- Minor: "Tomorrow, 7:00 AM" uses `cards[0]` (can be a record-only or last-day card); "Later today" heading covers tomorrow's `later` cards; the phone's Back in Add pill should step back on steps 2–5; a 7th ready time fails silently; Login with `again` should show Continue offline from the start; LoginScreen duplicates `firstName`; skipped lines' "I took it" needs the time in its TalkBack label; `start.ts`: logged in but no role → go to Who (not Google again, which could switch the relative's id).
+
+**Fix B — the pill summary (owns PillScreen, components/pill/*, lib/remote.ts):**
+- **C2 Critical:** on his phone each sheet sends the whole pill from her last-known copy, so a second Save while the first waits undoes it (add 8:00, then set 30 days → 8:00 dropped). Build the next draft from the waiting change (or block sheets while one waits). Test: two Saves in a row keep both.
+- `waitingByPill` keeps the oldest waiting change (newest-first list overwritten); keep the newest.
+- Minor: the camera works before the pill loads and the photo is silently dropped.
+
+**Fix C — family, History, Settings, kit (owns theme.ts, src/ui/*, Family/ShareCode/AddFamily/FollowEdit/Elder/ElderPills/History/HistoryDay/Settings screens, FollowForm, AllowDialog, PersonCard):**
+- **I-1:** AddFamily `maxLength={6}` cuts a pasted "482 913" to 5 digits. Drop maxLength (keep the digit filter); test what the boxes show after pasting.
+- **I-2:** blue words on the page (`#2A7BB8` on `#F5F8FB`) are 4.26:1. Darken `colors.blue` to about `#2672AC` (4.82:1 on the page, 5.14:1 on white) and fix the theme comment.
+- **I-3:** switches' off track `colors.edge` is 1.28:1 on white (Family "Can change my pills", Settings "Read aloud"); use ≥3:1.
+- **I-4:** ElderScreen's band sits above the ScrollView; a 40-character name at font scale 2.0 fills the screen. Move it into the ScrollView; test with a 40-char name.
+- Minor: ElderPills Cancel 44 → 48 dp; share message "tap Add family" → "tap Family, then + Add family"; unreported doses drawn like future ones and nearly invisible (DoseBars, PersonCard); History's today ring hides the amber "some missed" ring (and amber is 2.15:1); legend vs TalkBack words differ; remove the unused old colour aliases; Hindi "दिखाएं"/"दिखाएँ"; keyboard padding on AddFamily and FollowEdit; `key={line.text}` collisions (key by pillId); the morning time tile is 2.62:1; add `SectionLabel`, `AddRow`, `CallButton` to the kit (Today can switch over later).
+
+**Fix D — the ringing screen (android only; owns activity_ringing.xml, RingingActivity.kt, ringing drawables, strings):**
+- **I-1:** the title, time and three buttons are outside the scroll and the pill list is weighted 0dp, so in landscape (or Malayalam at font scale 2.0) the pills vanish and Skip is clipped. Move title and time into the ScrollView, `minHeight` ~80 dp on the list; optional `layout-land`.
+- Minor: on API 24–25 load fonts through `createDeviceProtectedStorageContext()` (cache dir is unavailable before first unlock); catch `Throwable` in font loading; a dark nav-bar colour below API 26; short notification-only action strings (the Malayalam snooze label is cut in the heads-up); each pill card one TalkBack unit; two night stars sit under the time digits.
+
+Native reviewer found no Critical: handlers, guard, lifecycle, flags and `RingingService` untouched; contrast on all four skies passes; fonts can't stop the screen showing.
+
+## Next after the fixes: Task 18 phone checks (user chose fresh install on both phones)
+
+- `android/app/google-services.json` (gitignored) is now the `pillsaathi` project's config, copied from `~/Downloads/google-services-10.json`; builds before tonight had no Firebase.
+- Build `cd android && ./gradlew assembleRelease` (debug-key signed; release lists English only).
+- Order on each phone: (1) `adb install -r` over the current build → the login shows once, pills and followers stay (Review Focus 4). (2) Then uninstall, install fresh, walk E1–E14 on Amma's emulator (`Medium_Phone_API_34`) and C1–C11 on the Redmi (M2101K7AI, wireless adb), re-link family, compare with `10-journeys.html`. (3) Ring it (see the Task 17 blocker below). (4) `adb shell settings put system font_scale 2.0`, check, then back to `1.0`.
+- Phone-check notes per task are in each task's notes above (keyboard over sheets, code field paste/number pad, switches, night sky words, font scale 2.0).
+- Then README matrix, JOURNAL, and the PR (check `gh pr list` first; the user merges PRs on GitHub silently).
 
 ---
 
