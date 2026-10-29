@@ -60,10 +60,16 @@ class SoundLibrary(context: Context) {
    * Saves the record for [file], which must already be complete in the sounds directory: the
    * `:ringing` process may play it as soon as the record exists.
    */
-  fun add(file: File, name: String, kind: SoundKind, durationMs: Long): Sound = store.locked {
+  fun add(
+    file: File,
+    name: String,
+    kind: SoundKind,
+    durationMs: Long,
+    id: String = UUID.randomUUID().toString(),
+  ): Sound = store.locked {
     val sound =
       Sound(
-        id = UUID.randomUUID().toString(),
+        id = id,
         name = name,
         kind = kind,
         durationMs = durationMs,
@@ -94,6 +100,27 @@ class SoundLibrary(context: Context) {
   }
 
   /**
+   * Saves a sound sent from a relative's phone as sound [id] (his change's id), so saving it twice
+   * gives back the first. Null, with nothing kept, unless [bytes] read as audio. [ext] must be a
+   * plain extension, or the file is saved as `.audio`.
+   */
+  fun addBytes(id: String, name: String, ext: String, bytes: ByteArray): Sound? {
+    store.locked { store.loadSounds() }.firstOrNull { it.id == id }?.let { return it }
+    val plain = ext.length in 1..MAX_EXT_LENGTH && ext.all { it in 'a'..'z' || it in '0'..'9' }
+    val file = newFile(if (plain) ext else DEFAULT_EXTENSION)
+    var added = false
+    try {
+      bytes.inputStream().use { copyDurably(it, file) }
+      val durationMs = audioDurationMs(file) ?: return null
+      val sound = add(file, name, SoundKind.IMPORTED, durationMs, id)
+      added = true
+      return sound
+    } finally {
+      if (!added) file.delete()
+    }
+  }
+
+  /**
    * Deletes sound [id], its record and then its file, and points the alarms that used it back at
    * the default tone, all under one lock. Returns false if there is no such sound.
    */
@@ -110,6 +137,8 @@ class SoundLibrary(context: Context) {
   companion object {
     private const val DEFAULT_RECORDING_NAME = "My recording"
     private const val RECORDING_EXTENSION = "m4a"
+    private const val DEFAULT_EXTENSION = "audio"
+    private const val MAX_EXT_LENGTH = 10
   }
 }
 
