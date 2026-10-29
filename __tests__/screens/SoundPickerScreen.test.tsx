@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as alarms from '../../src/native/alarms';
+import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { ml } from '../../src/i18n/ml';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
@@ -218,4 +219,78 @@ test('deleting the sound that is previewing stops the preview first', async () =
   });
   expect(sounds.stopPreview).toHaveBeenCalledTimes(1);
   expect(sounds.deleteSound).toHaveBeenCalledWith('s1');
+});
+
+describe('for her, on a relative’s phone', () => {
+  const amma = {
+    elderId: 'E',
+    name: 'Amma',
+    phone: null,
+    delayMinutes: 30,
+    heardAt: null,
+    silent: false,
+    abandoned: false,
+    otherZone: false,
+    tally: { taken: 0, skipped: 0, missed: 0, notReported: 0, later: 0 },
+    refills: [],
+  };
+  const forHer = { elderId: 'E', hour: 8, minute: 0, selectedSoundId: 'h1' };
+
+  beforeEach(() => {
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.getElderSetup).mockResolvedValue({
+      editor: true,
+      otherZone: false,
+      heardAt: null,
+      pills: [],
+      times: [],
+      sounds: [{ id: 'h1', name: 'Bell' }],
+      problem: null,
+    });
+    jest.mocked(family.sendSound).mockResolvedValue('c1');
+  });
+
+  test('shows her sounds and mine; choosing hers sends hers', async () => {
+    await renderApp('SoundPicker', forHer);
+    expect(await screen.findByText('Bell')).toBeTruthy();
+    expect(screen.getByText("Amma's sounds")).toBeTruthy();
+    expect(screen.getByText('My sounds')).toBeTruthy();
+    const names = screen
+      .getAllByTestId('sound-name')
+      .map(n => n.props.children as string);
+    expect(names).toEqual([
+      'Default alarm tone',
+      'Bell',
+      'My voice',
+      'Birdsong',
+    ]);
+    await fireEvent.press(screen.getByText('Bell'));
+    expect(family.sendSound).toHaveBeenCalledWith('E', 8, 0, 'hers', 'h1');
+    expect(alarms.setCardSound).not.toHaveBeenCalled();
+  });
+
+  test('Default tone sends default, and mine sends mine', async () => {
+    await renderApp('SoundPicker', forHer);
+    await fireEvent.press(await screen.findByText('Default alarm tone'));
+    expect(family.sendSound).toHaveBeenCalledWith('E', 8, 0, 'default', null);
+    await renderApp('SoundPicker', forHer);
+    await fireEvent.press(await screen.findByText('My voice'));
+    expect(family.sendSound).toHaveBeenCalledWith('E', 8, 0, 'mine', 's1');
+  });
+
+  test('TOO_BIG says the sound is too big', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest
+      .mocked(family.sendSound)
+      .mockRejectedValue(
+        Object.assign(new Error('TOO_BIG'), { code: 'TOO_BIG' }),
+      );
+    await renderApp('SoundPicker', forHer);
+    await fireEvent.press(await screen.findByText('Birdsong'));
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        'This sound is too big to send (over 5 MB).',
+      ),
+    );
+  });
 });

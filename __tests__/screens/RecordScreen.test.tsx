@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert, Linking, PermissionsAndroid } from 'react-native';
 import * as alarms from '../../src/native/alarms';
+import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { hi } from '../../src/i18n/hi';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
@@ -286,4 +287,17 @@ test('an unexpected stop failure discards the take and returns to idle', async (
   );
   expect(sounds.discardRecording).toHaveBeenCalledTimes(1);
   expect(await screen.findByText('Up to 2:00')).toBeTruthy();
+});
+
+test('for her: Use this sound sends the recording as mine', async () => {
+  jest.mocked(family.sendSound).mockResolvedValue('c1');
+  await renderApp('Record', { elderId: 'E', hour: 8, minute: 0 });
+  await fireEvent.press(await screen.findByLabelText('Start recording'));
+  await screen.findByText('Tap to stop');
+  await fireEvent.press(screen.getByLabelText('Stop recording'));
+  await fireEvent.press(await screen.findByText('Use this sound'));
+  await waitFor(() =>
+    expect(family.sendSound).toHaveBeenCalledWith('E', 8, 0, 'mine', 's9'),
+  );
+  expect(alarms.setCardSound).not.toHaveBeenCalled();
 });

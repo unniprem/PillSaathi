@@ -22,6 +22,14 @@ import {
 } from '../native/sounds';
 import type { Sound } from '../native/sounds';
 import { setCardSound } from '../native/alarms';
+import { errorCode, familyMessage } from '../lib/family';
+import {
+  FamilyErrors,
+  getElderSetup,
+  getFamily,
+  sendSound,
+} from '../native/family';
+import type { ElderSound, SoundKind } from '../native/family';
 import { useI18n } from '../i18n';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
@@ -29,7 +37,14 @@ import { colors, spacing } from '../theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'SoundPicker'>;
 
 export default function SoundPickerScreen({ navigation, route }: Props) {
-  const { alarmId } = route.params;
+  const { alarmId, elderId, hour, minute } = route.params;
+  // On a relative's phone: the sound of her dose at hour:minute, sent to her phone.
+  const forHer =
+    elderId !== undefined && hour !== undefined && minute !== undefined
+      ? { elderId, hour, minute }
+      : null;
+  const [elderName, setElderName] = useState('');
+  const [herSounds, setHerSounds] = useState<ElderSound[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(
     route.params.selectedSoundId ?? null,
   );
@@ -51,6 +66,46 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
       .then(list => mounted.current && setSounds(list))
       .catch(e => console.warn('Could not load sounds', e));
   }, []);
+
+  useEffect(() => {
+    if (!elderId) {
+      return;
+    }
+    Promise.all([getFamily(), getElderSetup(elderId)])
+      .then(([cards, setup]) => {
+        if (mounted.current) {
+          setElderName(cards.find(c => c.elderId === elderId)?.name ?? '');
+          setHerSounds(setup.sounds);
+        }
+      })
+      .catch(e => console.warn('Could not load her sounds', e));
+  }, [elderId]);
+
+  /** Sends the sound for her dose, then returns to her pills. */
+  const send = async (kind: SoundKind, id: string | null) => {
+    if (!forHer) {
+      return;
+    }
+    try {
+      await sendSound(forHer.elderId, forHer.hour, forHer.minute, kind, id);
+    } catch (e) {
+      console.warn('Could not send the sound', e);
+      if (mounted.current) {
+        const code = errorCode(e);
+        Alert.alert(
+          code === FamilyErrors.TooBig
+            ? t.remote.tooBig
+            : code === FamilyErrors.NotAllowed
+            ? t.remote.notEditor(elderName)
+            : familyMessage(e, t),
+        );
+      }
+      return;
+    }
+    if (mounted.current) {
+      navigation.popTo('ElderPills', { elderId: forHer.elderId });
+    }
+  };
 
   // Reload on focus (the list can change while Record is open) and stop any
   // preview on blur.
@@ -75,6 +130,10 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
 
   /** Sets the sound on the card this picker was opened for, then returns to Today. */
   const pick = async (id: string | null) => {
+    if (forHer) {
+      await send(id === null ? 'default' : 'mine', id);
+      return;
+    }
     try {
       if (alarmId) {
         await setCardSound(alarmId, id);
@@ -173,7 +232,7 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
       <View style={styles.buttons}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('Record', { alarmId })}
+          onPress={() => navigation.navigate('Record', forHer ?? { alarmId })}
           style={styles.bigButton}
         >
           <Text style={styles.bigButtonText}>{t.sound.record}</Text>
@@ -191,12 +250,26 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
 
-      <Text style={styles.heading}>{t.sound.yourSounds}</Text>
+      {forHer ? null : <Text style={styles.heading}>{t.sound.yourSounds}</Text>}
       <SoundRow
         name={t.common.defaultTone}
         selected={selectedId === null}
         onPress={() => pick(null)}
       />
+      {forHer && herSounds.length > 0 ? (
+        <Text style={styles.heading}>{t.remote.herSounds(elderName)}</Text>
+      ) : null}
+      {forHer
+        ? herSounds.map(sound => (
+            <SoundRow
+              key={`hers-${sound.id}`}
+              name={sound.name}
+              selected={selectedId === sound.id}
+              onPress={() => send('hers', sound.id)}
+            />
+          ))
+        : null}
+      {forHer ? <Text style={styles.heading}>{t.remote.mySounds}</Text> : null}
       {sounds.map(sound => (
         <SoundRow
           key={sound.id}
