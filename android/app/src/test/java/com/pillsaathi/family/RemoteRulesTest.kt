@@ -117,6 +117,14 @@ class RemoteRulesTest {
     assertEquals(ApplyDecision.Reject(RemoteRules.INVALID), decide(ChangeBody.Invalid("bad")))
   }
 
+  @Test fun `only his changes still waiting are revoked when he is switched off`() {
+    val mine = change(ChangeBody.DeletePill("p1"), id = "c1")
+    val claimed = mine.copy(id = "c2", status = RemoteRules.APPLYING)
+    val done = mine.copy(id = "c3", status = RemoteRules.APPLIED)
+    val hers = change(ChangeBody.DeletePill("p1"), id = "c4", by = "S")
+    assertEquals(listOf("c1", "c2"), RemoteRules.revoked(listOf(mine, claimed, done, hers), "R").map { it.id })
+  }
+
   /** [value] with every Int turned into a Long, as Firestore gives numbers back. */
   private fun longs(value: Any?): Any? = when (value) {
     is Int -> value.toLong()

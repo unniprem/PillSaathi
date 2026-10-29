@@ -119,6 +119,13 @@ object RemoteRules {
       },
     )
 
+  /**
+   * [uid]'s changes still waiting, to mark not done when her phone switches him off or removes
+   * him, and to clear before it trusts him again, so none is ever applied later.
+   */
+  fun revoked(changes: List<RemoteChange>, uid: String): List<RemoteChange> =
+    changes.filter { it.by == uid && (it.status == PENDING || it.status == APPLYING) }
+
   /** The day a new pill starts: the one he meant, or [today] once that has passed. */
   fun startDate(requested: LocalDate?, today: LocalDate): LocalDate =
     if (requested == null || requested < today) today else requested

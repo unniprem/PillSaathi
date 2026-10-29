@@ -264,6 +264,15 @@ class FamilyCloud private constructor(context: Context) {
     await(batch.commit())
   }
 
+  /** Marks [follower]'s changes still waiting not done ("not allowed"), and deletes their parts. */
+  fun revokeChanges(uid: String, follower: String) {
+    val his = await(elder(uid).collection(CHANGES).whereEqualTo("by", follower).get(Source.SERVER)).documents.map(::changeOf)
+    RemoteRules.revoked(his, follower).forEach {
+      finish(uid, it.id, RemoteRules.NOT_ALLOWED)
+      if (it.parts > 0) deleteParts(uid, it.id, it.parts)
+    }
+  }
+
   /** Deletes done changes, and parts no change waits for, from before [before]. */
   fun cleanUp(uid: String, before: Long) {
     val cutoff = Timestamp(Date(before))

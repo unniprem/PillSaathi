@@ -158,6 +158,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
           store.locked { store.saveFamily(store.loadFamily().copy(sharing = true)) }
           FamilyWork.requestUpload(reactApplicationContext)
           FamilyWork.ensureHeartbeat(reactApplicationContext)
+          // Anything of his from an earlier link is never applied now.
+          cloud.revokeChanges(elder, request.uid)
           cloud.answerRequest(elder, request, true)
           store.locked { store.saveFamily(store.loadFamily().let { it.copy(editors = (it.editors + uid).distinct()) }) }
           FamilyWork.ensureCheckIn(reactApplicationContext)
@@ -193,7 +195,14 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
   override fun setCanChange(uid: String, on: Boolean, promise: Promise) =
     onWorker(promise) {
       val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
-      val editors = cloud.setEditor(elder, uid, on)
+      // Under the upload lock, so a check-in can't apply his change halfway through. Switched
+      // off, what he sent is not done; switched on, nothing he sent before is applied now.
+      val editors = synchronized(ElderSync.lock) {
+        if (on) cloud.revokeChanges(elder, uid)
+        val editors = cloud.setEditor(elder, uid, on)
+        if (!on) cloud.revokeChanges(elder, uid)
+        editors
+      }
       store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
       if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext) else FamilyWork.ensureCheckIn(reactApplicationContext)
       null
@@ -248,6 +257,7 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       // After any upload still running, so nothing it writes outlives the copy.
       synchronized(ElderSync.lock) {
         val left = cloud.removeFollower(elder, uid)
+        if (left.isNotEmpty()) cloud.revokeChanges(elder, uid)
         val editors = store.locked { store.loadFamily().editors - uid }
         store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
         if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext)
