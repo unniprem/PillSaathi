@@ -8,6 +8,7 @@ import com.pillsaathi.alarm.AlarmStore
 import com.pillsaathi.family.ElderSync
 import com.pillsaathi.family.FamilyChecks
 import com.pillsaathi.family.FamilyJson
+import com.pillsaathi.family.FamilyWork
 import kotlin.concurrent.thread
 
 /**
@@ -31,6 +32,11 @@ class DebugFamilyReceiver : BroadcastReceiver() {
             pending.finish()
           }
         }
+      }
+      // Queues an upload as a change of hers would: as background work, once there is internet.
+      "com.pillsaathi.DEBUG_FAMILY_CHANGED" -> {
+        FamilyWork.requestUpload(app)
+        Log.i(TAG, "DEBUG_FAMILY_CHANGED queued an upload")
       }
       // Runs the due checks now, on a thread, as the wake-up would.
       "com.pillsaathi.DEBUG_FAMILY_CHECK" -> {
