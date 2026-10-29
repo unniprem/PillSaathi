@@ -159,6 +159,7 @@ Last run: 2026-10-28, emulator API 34 (`Medium_Phone_API_34`, arm64), **without 
 - [ ] The upload after a ring with the app swiped away (MIUI).
 - [ ] The missed ping at +30 min, with the elder on the Redmi.
 - [ ] The relative's checks with his app swiped away (Xiaomi).
+- [ ] Scan code on a sideloaded phone that lacks Google's scanner module (the Redmi on 2026-10-29): "Opening the scanner…", then the camera once Play services fetches it, or "The scanner isn't ready yet…" after a minute. On the emulator, which has the module, Scan code opens the camera at once and Close returns to the code step.
 
 ### History and refills
 

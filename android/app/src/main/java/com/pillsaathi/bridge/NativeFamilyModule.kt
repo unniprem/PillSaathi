@@ -11,15 +11,13 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.firebase.firestore.ListenerRegistration
 import com.pillsaathi.alarm.AlarmStore
 import com.pillsaathi.alarm.DoseRules
 import com.pillsaathi.alarm.History
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.family.CodeImage
+import com.pillsaathi.family.CodeScanner
 import com.pillsaathi.family.ElderSync
 import com.pillsaathi.family.FamilyChecks
 import com.pillsaathi.family.FamilyCloud
@@ -176,14 +174,12 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
         promise.reject(FamilyCloud.NO_ACTIVITY, "There is no screen to scan on")
         return@runOnUiThread
       }
-      val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
-      GmsBarcodeScanning.getClient(activity, options).startScan()
-        .addOnSuccessListener { promise.resolve(it.rawValue?.let(FamilyRules::parseCode)) }
-        .addOnCanceledListener { promise.resolve(null) }
-        .addOnFailureListener {
-          Log.w(TAG, "Scanning failed", it)
-          promise.reject(FamilyCloud.OFFLINE, it.message, it)
+      CodeScanner.scan(activity) { result ->
+        result.fold(promise::resolve) { e ->
+          val code = (e as? FamilyException)?.code ?: FamilyCloud.NO_SCANNER
+          promise.reject(code, e.message, e)
         }
+      }
     }
   }
 

@@ -36,6 +36,8 @@ export const FamilyErrors = {
   NotFound: 'NOT_FOUND',
   /** The security rules refused. */
   Permission: 'PERMISSION',
+  /** Google's scanner module isn't on the phone yet and didn't download in time. */
+  NoScanner: 'NO_SCANNER',
 } as const;
 
 function native(): Spec {
@@ -91,7 +93,10 @@ export async function signInWithGoogle(): Promise<Relative | null> {
   return native().signInWithGoogle();
 }
 
-/** Scans a family code with the camera; null when cancelled or not a PillSaathi code. */
+/**
+ * Scans a family code with the camera, fetching Google's scanner first when the phone lacks it;
+ * null when cancelled. Rejects `BAD_CODE` for a code that isn't PillSaathi's, or `NO_SCANNER`.
+ */
 export async function scanCode(): Promise<string | null> {
   return native().scanCode();
 }

@@ -175,5 +175,6 @@ test('names the error codes the module rejects with', () => {
     NoActivity: 'NO_ACTIVITY',
     NotFound: 'NOT_FOUND',
     Permission: 'PERMISSION',
+    NoScanner: 'NO_SCANNER',
   });
 });

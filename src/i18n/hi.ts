@@ -311,6 +311,9 @@ export const hi: Strings = {
     shareMessage: (code: string) =>
       `PillSaathi खोलें, Add family पर टैप करें, और ${code} टाइप करें। यह 15 मिनट तक चलेगा।`,
     scanCode: 'स्कैन कोड',
+    opening: 'स्कैनर खुल रहा है…',
+    noScanner:
+      'स्कैनर अभी तैयार नहीं है। एक मिनट बाद फिर कोशिश करें, या 6 अंक टाइप करें।',
     expired: 'इस कोड का समय खत्म हो गया।',
     newCode: 'नया कोड',
     allowTitle: (name: string) => `${name} को आपकी दवाइयाँ देखने दें?`,

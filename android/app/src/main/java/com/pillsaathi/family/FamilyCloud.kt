@@ -337,6 +337,7 @@ class FamilyCloud private constructor(context: Context) {
     const val NO_ACTIVITY = "NO_ACTIVITY"
     const val NOT_FOUND = "NOT_FOUND"
     const val PERMISSION = "PERMISSION"
+    const val NO_SCANNER = "NO_SCANNER"
 
     const val TIMEOUT_S = 20L
     const val FAMILY_APP = "family"
