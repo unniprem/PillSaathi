@@ -1,5 +1,11 @@
 import { Alert, AppState } from 'react-native';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type {
   History,
@@ -8,6 +14,8 @@ import type {
 } from '../../src/native/alarms';
 import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
+import { colors } from '../../src/theme';
+import { ICONS } from '../../src/ui/icons';
 import { mockAlarmsDefaults, mockFamilyDefaults } from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
 
@@ -77,9 +85,7 @@ it('lists the day’s doses with their pills as they were', async () => {
   expect(screen.getAllByText('1 tablet')).toHaveLength(2);
   expect(screen.getAllByTestId('pill-photo')).toHaveLength(2);
   // Only the missed dose can be marked, and the pill rows open nothing.
-  expect(screen.getAllByRole('button', { name: 'Mark as taken' })).toHaveLength(
-    1,
-  );
+  expect(screen.getAllByRole('button', { name: 'I took it' })).toHaveLength(1);
   expect(screen.queryAllByRole('button', { name: /Telma 40/ })).toHaveLength(0);
 });
 
@@ -113,7 +119,7 @@ it('marks an earlier day’s dose taken', async () => {
     );
   await renderApp('HistoryDay', { date: '2026-10-06' });
   await fireEvent.press(
-    await screen.findByRole('button', { name: 'Mark as taken' }),
+    await screen.findByRole('button', { name: 'I took it' }),
   );
   expect(alert).toHaveBeenCalledWith(
     'Mark as taken?',
@@ -126,7 +132,7 @@ it('marks an earlier day’s dose taken', async () => {
   expect(
     await screen.findByText('✓ Taken (marked 26 Oct, 10:15 AM)'),
   ).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Mark as taken' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'I took it' })).toBeNull();
 });
 
 it('says when marking it taken fails', async () => {
@@ -137,7 +143,7 @@ it('says when marking it taken fails', async () => {
     .mockResolvedValue(history([dose(21, 'missed')]));
   await renderApp('HistoryDay', { date: '2026-10-06' });
   await fireEvent.press(
-    await screen.findByRole('button', { name: 'Mark as taken' }),
+    await screen.findByRole('button', { name: 'I took it' }),
   );
   await alert.mock.calls[0][2]!.find(b => b.text === 'Mark as taken')!
     .onPress!();
@@ -180,5 +186,42 @@ it("an elder's dose her phone never reported reads Not reported yet", async () =
   await renderApp('HistoryDay', { date: '2026-10-06', elderId: 'E' });
   expect(await screen.findByText('Not reported yet')).toBeTruthy();
   expect(screen.queryByText('Missed')).toBeNull();
-  expect(screen.queryByText('Mark as taken')).toBeNull();
+  expect(screen.queryByText('I took it')).toBeNull();
+});
+
+it('a missed dose on the day page stands out', async () => {
+  jest
+    .mocked(alarms.getHistory)
+    .mockResolvedValue(history([dose(8, 'taken'), dose(21, 'missed')]));
+  await renderApp('HistoryDay', { date: '2026-10-06' });
+  await screen.findByText('Missed');
+  const [morning, night] = screen.getAllByTestId('dose-card');
+  expect(morning).toHaveStyle({ backgroundColor: colors.card });
+  expect(night).toHaveStyle({ backgroundColor: colors.coralTint });
+  expect(screen.getByRole('button', { name: 'I took it' })).toHaveStyle({
+    backgroundColor: colors.coral,
+  });
+});
+
+it('the day says how many were taken, each dose by its time of day', async () => {
+  jest
+    .mocked(alarms.getHistory)
+    .mockResolvedValue(
+      history([
+        dose(8, 'taken'),
+        dose(13, 'taken', { minute: 30 }),
+        dose(21, 'skipped'),
+      ]),
+    );
+  await renderApp('HistoryDay', { date: '2026-10-06' });
+  expect(await screen.findByText('2 of 3 taken')).toBeTruthy();
+  expect(headerTitles()).toEqual(['Tue 6 Oct']);
+  const [morning, afternoon, night] = screen.getAllByTestId('dose-time');
+  expect(within(morning).getByText(ICONS.wb_twilight)).toBeTruthy();
+  expect(within(afternoon).getByText(ICONS.light_mode)).toBeTruthy();
+  expect(within(night).getByText(ICONS.bedtime)).toBeTruthy();
+  // A skipped dose can still be marked, without the alarm colours.
+  expect(screen.getByRole('button', { name: 'I took it' })).toHaveStyle({
+    backgroundColor: colors.card,
+  });
 });

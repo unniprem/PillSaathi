@@ -296,17 +296,22 @@ export const hi: Strings = {
     previousMonth: 'पिछला महीना',
     nextMonth: 'अगला महीना',
     month: (month: string, year: number) => `${month} ${year}`,
-    percentTaken: (percent: number) => `${percent}% ली गईं`,
-    doseCount: (taken: number, total: number) =>
-      `${total} में से ${taken} खुराकें`,
+    taken: 'ली गईं',
+    since: (taken: number, total: number, day: string) =>
+      `${day} से ${total} में से ${taken} खुराकें`,
     noDoses: 'कोई खुराक दर्ज नहीं',
     allTaken: 'सब ली गईं',
     someNotTaken: 'कुछ नहीं ली गईं',
     noneTaken: 'कोई नहीं ली गई',
+    someMissed: 'कुछ छूटीं',
+    none: 'कोई नहीं',
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'रिपोर्ट शेयर नहीं हो सकी',
     loadFailed: 'इतिहास नहीं दिखा सके।',
     dayEmpty: 'इस दिन कुछ दर्ज नहीं हुआ।',
+    dayTaken: (taken: number, total: number) =>
+      `${total} में से ${taken} ली गईं`,
+    tookIt: 'मैंने ले ली',
     takenMarked: (day: string, time: string) =>
       `✓ ली गई (बाद में दर्ज: ${day}, ${time})`,
   },

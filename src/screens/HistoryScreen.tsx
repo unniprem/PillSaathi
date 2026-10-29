@@ -32,7 +32,10 @@ import type {
 } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
-import { colors, spacing } from '../theme';
+import { colors, font, radius, spacing } from '../theme';
+import Card from '../ui/Card';
+import Icon from '../ui/Icon';
+import type { IconName } from '../ui/icons';
 import SkyBand, { RoundButton } from '../ui/SkyBand';
 
 /** This phone's History, as a tab; or hers, on a relative's phone, as a page of its own. */
@@ -46,12 +49,21 @@ type Props = {
 /** A month on screen and its doses up to today. */
 type Shown = { month: string; history: History };
 
-const FILL: Record<DayState, string | undefined> = {
-  all: colors.success,
-  some: colors.warning,
-  none: colors.danger,
-  empty: undefined,
+/**
+ * How a day is drawn: every dose taken green, none coral, both with white numbers; some missed
+ * an orange ring on cream; nothing recorded plain grey.
+ */
+const LOOK: Record<DayState, { fill?: string; ink: string }> = {
+  all: { fill: colors.green, ink: colors.onFill },
+  some: { fill: colors.amberTint, ink: colors.navy },
+  none: { fill: colors.coral, ink: colors.onFill },
+  empty: { ink: colors.muted },
 };
+
+/** `2026-10-18` → "18 Oct" */
+function dayAndMonth(iso: string, t: Strings): string {
+  return `${Number(iso.slice(8))} ${t.months[Number(iso.slice(5, 7)) - 1]}`;
+}
 
 function stateWord(state: DayState, t: Strings): string | null {
   switch (state) {
@@ -80,8 +92,8 @@ async function loadMonth(month: string, elderId?: string): Promise<History> {
 }
 
 /**
- * A month of doses as a calendar, coloured by how each day went, with the month's share taken.
- * Share sends the month on screen as plain text.
+ * A month at a glance: its share taken, then a calendar coloured by how each day went. Tapping a
+ * day opens its timeline. Share sends the month on screen as plain text.
  */
 export default function HistoryScreen({ navigation, route }: Props) {
   const elderId = route.params?.elderId;
@@ -205,7 +217,7 @@ export default function HistoryScreen({ navigation, route }: Props) {
 
   if (!shown) {
     return (
-      <View style={styles.container}>
+      <View style={styles.page}>
         {band}
         {loadFailed && (
           <Text style={styles.message}>{t.history.loadFailed}</Text>
@@ -221,176 +233,277 @@ export default function HistoryScreen({ navigation, route }: Props) {
   const [year, monthNumber] = shown.month.split('-').map(Number);
   const { taken, total, percent } = summarize(history.doses);
   const days = byDate(history.doses);
+  // The month's first day with a dose recorded, which the count runs from.
+  const firstDay = history.doses.reduce<string | null>(
+    (first, d) => (first === null || d.date < first ? d.date : first),
+    null,
+  );
 
   const renderDay = (date: string) => {
     const future = date > today;
-    const word = future ? null : stateWord(dayState(days.get(date) ?? []), t);
-    const fill = future ? undefined : FILL[dayState(days.get(date) ?? [])];
+    const state = future ? 'empty' : dayState(days.get(date) ?? []);
+    const word = stateWord(state, t);
+    const look = LOOK[state];
     return (
-      <Pressable
-        key={date}
-        accessibilityRole="button"
-        accessibilityLabel={
-          word
-            ? t.history.dayLabel(formatDay(date, t), word)
-            : formatDay(date, t)
-        }
-        disabled={future}
-        onPress={() => navigation.navigate('HistoryDay', { date, elderId })}
-        style={[
-          styles.cell,
-          fill !== undefined && { backgroundColor: fill },
-          date === today && styles.today,
-        ]}
-      >
-        <Text
-          style={[
-            styles.dayNumber,
-            fill !== undefined && styles.onFill,
-            future && styles.future,
+      <View key={date} style={styles.cell}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            word
+              ? t.history.dayLabel(formatDay(date, t), word)
+              : formatDay(date, t)
+          }
+          disabled={future}
+          onPress={() => navigation.navigate('HistoryDay', { date, elderId })}
+          style={({ pressed }) => [
+            styles.day,
+            look.fill !== undefined && { backgroundColor: look.fill },
+            state === 'some' && styles.some,
+            date === today && styles.today,
+            pressed && styles.pressed,
           ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
         >
-          {Number(date.slice(8))}
-        </Text>
-      </Pressable>
+          <Text
+            style={[
+              styles.dayNumber,
+              { color: look.ink },
+              future && styles.future,
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {Number(date.slice(8))}
+          </Text>
+        </Pressable>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.page}>
       {band}
       <ScrollView contentContainerStyle={styles.content}>
         {loadFailed && (
           <Text style={styles.message}>{t.history.loadFailed}</Text>
         )}
-        <View style={styles.monthRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.history.previousMonth}
-            disabled={!canPrevious}
-            onPress={() => load(addMonths(shown.month, -1))}
-            hitSlop={spacing.sm}
-            style={styles.arrow}
-          >
-            <Text style={[styles.arrowText, !canPrevious && styles.future]}>
-              ‹
-            </Text>
-          </Pressable>
-          <Text style={styles.monthLabel}>
-            {t.history.month(t.months[monthNumber - 1], year)}
+
+        <Card>
+          <Text style={styles.label}>
+            {t.months[monthNumber - 1].toUpperCase()}
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.history.nextMonth}
-            disabled={!canNext}
-            onPress={() => load(addMonths(shown.month, 1))}
-            hitSlop={spacing.sm}
-            style={styles.arrow}
-          >
-            <Text style={[styles.arrowText, !canNext && styles.future]}>›</Text>
-          </Pressable>
-        </View>
+          {percent === null || firstDay === null ? (
+            <Text style={styles.noDoses}>{t.history.noDoses}</Text>
+          ) : (
+            <>
+              <Text style={styles.percent}>
+                {`${percent}%`}
+                <Text style={styles.percentWord}> {t.history.taken}</Text>
+              </Text>
+              <View style={styles.track}>
+                <View
+                  testID="month-bar"
+                  style={[styles.bar, { width: `${percent}%` }]}
+                />
+              </View>
+              <Text style={styles.since}>
+                {t.history.since(taken, total, dayAndMonth(firstDay, t))}
+              </Text>
+            </>
+          )}
+        </Card>
 
-        {percent === null ? (
-          <Text style={styles.noDoses}>{t.history.noDoses}</Text>
-        ) : (
-          <View style={styles.summary}>
-            <Text style={styles.percent}>
-              {t.history.percentTaken(percent)}
+        <Card style={styles.calendar}>
+          <View style={styles.monthRow}>
+            <MonthButton
+              icon="chevron_left"
+              label={t.history.previousMonth}
+              disabled={!canPrevious}
+              onPress={() => load(addMonths(shown.month, -1))}
+            />
+            <Text style={styles.monthLabel}>
+              {t.history.month(t.months[monthNumber - 1], year)}
             </Text>
-            <Text style={styles.count}>
-              {t.history.doseCount(taken, total)}
-            </Text>
+            <MonthButton
+              icon="chevron_right"
+              label={t.history.nextMonth}
+              disabled={!canNext}
+              onPress={() => load(addMonths(shown.month, 1))}
+            />
           </View>
-        )}
 
-        <View style={styles.row}>
-          {weekdays(history.firstDayOfWeek).map(d => (
-            <Text
-              key={d}
-              style={styles.weekday}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {t.days[d]}
-            </Text>
-          ))}
-        </View>
-        {monthGrid(shown.month, history.firstDayOfWeek).map((row, i) => (
-          <View key={i} style={styles.row}>
-            {row.map((date, j) =>
-              date === null ? (
-                <View key={j} style={styles.cell} />
-              ) : (
-                renderDay(date)
-              ),
-            )}
+          <View style={styles.row}>
+            {weekdays(history.firstDayOfWeek).map(d => (
+              <Text
+                key={d}
+                style={styles.weekday}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {t.days[d]}
+              </Text>
+            ))}
           </View>
-        ))}
-
-        <View style={styles.legend}>
-          {(['all', 'some', 'none'] as const).map(state => (
-            <View key={state} style={styles.legendItem}>
-              <View style={[styles.swatch, { backgroundColor: FILL[state] }]} />
-              <Text style={styles.legendText}>{stateWord(state, t)}</Text>
+          {monthGrid(shown.month, history.firstDayOfWeek).map((row, i) => (
+            <View key={i} style={styles.row}>
+              {row.map((date, j) =>
+                date === null ? (
+                  <View key={j} style={styles.cell} />
+                ) : (
+                  renderDay(date)
+                ),
+              )}
             </View>
           ))}
-        </View>
+
+          <View style={styles.legend}>
+            {(
+              [
+                ['all', t.history.allTaken],
+                ['some', t.history.someMissed],
+                ['none', t.history.none],
+              ] as const
+            ).map(([state, word]) => (
+              <View key={state} style={styles.legendItem}>
+                <View
+                  style={[
+                    styles.swatch,
+                    { backgroundColor: LOOK[state].fill },
+                    state === 'some' && styles.some,
+                  ]}
+                />
+                <Text style={styles.legendText}>{word}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
       </ScrollView>
     </View>
   );
 }
 
+type MonthProps = {
+  icon: IconName;
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+};
+
+/** A round arrow to the month before or after, faded where the records end. */
+function MonthButton({ icon, label, disabled, onPress }: MonthProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.arrow,
+        disabled && styles.off,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Icon name={icon} size={28} color={colors.navy} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md },
+  page: { flex: 1, backgroundColor: colors.page },
+  content: { padding: spacing.md, gap: 12 },
   message: {
+    ...font(700),
     padding: 32,
     textAlign: 'center',
     fontSize: 18,
-    color: colors.textMuted,
+    color: colors.muted,
   },
+  label: {
+    ...font(900),
+    fontSize: 13,
+    letterSpacing: 1.2,
+    color: colors.blue,
+  },
+  percent: {
+    ...font(900),
+    fontSize: 36,
+    letterSpacing: -0.8,
+    color: colors.navy,
+    marginTop: 2,
+  },
+  percentWord: { ...font(800), fontSize: 16, letterSpacing: 0 },
+  track: {
+    height: 10,
+    borderRadius: radius.pill,
+    backgroundColor: colors.soft,
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  bar: {
+    height: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.green,
+  },
+  since: { ...font(700), fontSize: 15, color: colors.muted },
+  noDoses: { ...font(700), fontSize: 18, color: colors.muted, marginTop: 6 },
+  // Narrow sides, so seven days fit a 360 dp phone at nearly 48 dp each.
+  calendar: { paddingHorizontal: 6, paddingVertical: 12 },
   monthRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingHorizontal: 6,
+    marginBottom: spacing.sm,
   },
-  arrow: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  arrowText: { fontSize: 36, color: colors.text },
-  monthLabel: { fontSize: 22, fontWeight: '600', color: colors.text },
-  summary: { alignItems: 'center', marginVertical: spacing.md },
-  percent: { fontSize: 32, fontWeight: '700', color: colors.text },
-  count: { fontSize: 18, color: colors.textMuted },
-  noDoses: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: colors.textMuted,
-    marginVertical: spacing.md,
-  },
-  row: { flexDirection: 'row' },
-  weekday: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 14,
-    color: colors.textMuted,
-    paddingVertical: spacing.xs,
-  },
-  cell: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 2,
-    borderRadius: 8,
+  arrow: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.soft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  today: { borderWidth: 2, borderColor: colors.text },
-  dayNumber: { fontSize: 18, color: colors.text },
-  onFill: { color: colors.onPrimary, fontWeight: '600' },
-  future: { color: colors.textMuted },
-  legend: { marginTop: spacing.md, gap: spacing.sm },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  swatch: { width: 20, height: 20, borderRadius: 4 },
-  legendText: { fontSize: 16, color: colors.text },
+  off: { opacity: 0.35 },
+  pressed: { opacity: 0.7 },
+  monthLabel: {
+    ...font(900),
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 19,
+    color: colors.navy,
+  },
+  row: { flexDirection: 'row' },
+  weekday: {
+    ...font(800),
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 13,
+    color: colors.muted,
+    paddingVertical: spacing.xs,
+  },
+  cell: { flex: 1, alignItems: 'center', paddingVertical: 2 },
+  day: {
+    width: '100%',
+    maxWidth: 48,
+    aspectRatio: 1,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  some: { borderWidth: 3, borderColor: colors.amber },
+  today: { borderWidth: 2.5, borderColor: colors.navy },
+  // 18 sp bold: the size white needs on green and coral.
+  dayNumber: { ...font(800), fontSize: 18 },
+  future: { opacity: 0.45 },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    columnGap: spacing.md,
+    rowGap: spacing.xs,
+    marginTop: 10,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  swatch: { width: 14, height: 14, borderRadius: 7 },
+  legendText: { ...font(700), fontSize: 14, color: colors.muted },
 });

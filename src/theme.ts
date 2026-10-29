@@ -20,6 +20,7 @@ const sky = {
   coralText: '#C2412D',
   amberTint: '#FFF3D6',
   amberText: '#8A5A00',
+  amber: '#F0A030', // a ring round a day with some missed: a picture, never words
   blueText: '#1C5D8C', // blue words on the blue tint, which plain blue misses at 4.5:1
   onFill: '#FFFFFF',
   shade: 'rgba(0,0,0,0.18)', // a tablet's score line, a pill symbol's edge
@@ -81,6 +82,13 @@ export const skyColors = {
   moonGlow: 'rgba(255,244,199,0.55)',
   moonShade: '#13224C', // the night sky's colour behind the moon, which cuts it to a crescent
   star: '#FFFFFF',
+};
+
+/** The tile behind a dose's symbol for its part of the day, as `greetingFor` names it. */
+export const timeTiles = {
+  morning: { fill: '#FFF4D6', ink: '#D08A00' }, // a low sun
+  afternoon: { fill: sky.blueTint, ink: sky.blue }, // the sun
+  evening: { fill: '#ECEEFB', ink: '#4B4FA6' }, // the moon
 };
 
 /**

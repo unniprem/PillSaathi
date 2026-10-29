@@ -296,17 +296,22 @@ export const ml: Strings = {
     previousMonth: 'മുൻ മാസം',
     nextMonth: 'അടുത്ത മാസം',
     month: (month: string, year: number) => `${month} ${year}`,
-    percentTaken: (percent: number) => `${percent}% കഴിച്ചു`,
-    doseCount: (taken: number, total: number) =>
-      `${total} ഡോസിൽ ${taken} എണ്ണം`,
+    taken: 'കഴിച്ചു',
+    since: (taken: number, total: number, day: string) =>
+      `${day} മുതൽ ${total} ഡോസിൽ ${taken} എണ്ണം`,
     noDoses: 'ഡോസുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല',
     allTaken: 'എല്ലാം കഴിച്ചു',
     someNotTaken: 'ചിലത് കഴിച്ചില്ല',
     noneTaken: 'ഒന്നും കഴിച്ചില്ല',
+    someMissed: 'ചിലത് മുടങ്ങി',
+    none: 'ഒന്നുമില്ല',
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'റിപ്പോർട്ട് പങ്കിടാനായില്ല',
     loadFailed: 'ചരിത്രം കാണിക്കാനായില്ല.',
     dayEmpty: 'ഈ ദിവസം ഒന്നും രേഖപ്പെടുത്തിയിട്ടില്ല.',
+    dayTaken: (taken: number, total: number) =>
+      `${total} ഡോസിൽ ${taken} എണ്ണം കഴിച്ചു`,
+    tookIt: 'ഞാൻ കഴിച്ചു',
     takenMarked: (day: string, time: string) =>
       `✓ കഴിച്ചു (പിന്നീട് രേഖപ്പെടുത്തി: ${day}, ${time})`,
   },

@@ -60,6 +60,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - ShareCode: Close (not Back) in the band; the 6 digit boxes are one group labelled "4 8 2 9 1 3" (tests use `findByLabelText`); the countdown rounds up and never shows 0; the amber chip is local to the screen.
 - For Task 16: `remote.notEditor` still says "Settings → Family → …" (Family is a tab now; reword it). Opening `Elder` in tests needs both `getFamily` and `refreshFamily` to include her. Check on the phone (Task 18): the "Can change my pills" switch's off state may be faint on a white card.
 
+### Task 13: History and one day
+**Status**: ✓ Done (parallel, branch `ui/task-13`)
+**Notes**:
+- Deviation: the day page's "Mark as taken" button is now "I took it" (`t.history.tookIt`; coral on missed, secondary on skipped); its confirm alert still uses `t.today.markTakenTitle` / `markTaken`, so Day tests press "Mark as taken" in the alert. Strings: `history.percentTaken`/`doseCount` replaced by `taken`, `since`, `dayTaken`, `tookIt`, `someMissed`, `none`; month names stay short ("OCT").
+- Theme additions: `colors.amber '#F0A030'` (shapes only, never words) and `timeTiles` (morning/afternoon/evening `{ fill, ink }`), which Task 10's time cards can reuse. `PART_ICON` is local to `HistoryDayScreen.tsx`; move it to `src/ui` if Task 10 needs it.
+- Day circles are ~45 dp on a 360 dp phone (seven columns allow no more). Test IDs: `month-bar`, `dose-card`, `dose-time`. A PillEdit test ("scrolls the count into view from the refill banner") failed once under machine load and passed alone; watch for flakiness.
+
 ---
 
 ## Blockers / Deferred Items

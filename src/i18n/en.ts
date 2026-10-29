@@ -293,16 +293,23 @@ export const en = {
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     month: (month: string, year: number) => `${month} ${year}`,
-    percentTaken: (percent: number) => `${percent}% taken`,
-    doseCount: (taken: number, total: number) => `${taken} of ${total} doses`,
+    // The word beside the month's percent: "89% taken".
+    taken: 'taken',
+    since: (taken: number, total: number, day: string) =>
+      `${taken} of ${total} doses since ${day}`,
     noDoses: 'No doses recorded',
     allTaken: 'All taken',
     someNotTaken: 'Some not taken',
     noneTaken: 'None taken',
+    // The calendar's legend, beside "All taken".
+    someMissed: 'Some missed',
+    none: 'None',
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'Could not share the report',
     loadFailed: "Couldn't load the history.",
     dayEmpty: 'Nothing was recorded on this day.',
+    dayTaken: (taken: number, total: number) => `${taken} of ${total} taken`,
+    tookIt: 'I took it',
     takenMarked: (day: string, time: string) =>
       `✓ Taken (marked ${day}, ${time})`,
   },
