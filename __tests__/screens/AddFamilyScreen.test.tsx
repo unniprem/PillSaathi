@@ -1,4 +1,10 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { mockAlarmsDefaults, mockFamilyDefaults } from '../helpers/nativeMocks';
@@ -34,21 +40,53 @@ async function typeCode(code: string) {
   await fireEvent.press(screen.getByText('Next'));
 }
 
-test('signed out: Sign in with Google comes first', async () => {
+/** What the six boxes show, an empty string for a box not yet filled. */
+const boxes = () =>
+  screen
+    .getAllByTestId('digit-box')
+    .map(box => within(box).queryByText(/\d/)?.props.children ?? '');
+
+test('logged out: Continue with Google comes first', async () => {
   jest.mocked(family.signedInRelative).mockResolvedValue(null);
   jest.mocked(family.signInWithGoogle).mockResolvedValue(ravi);
   await renderApp('AddFamily');
   expect(headerTitles()).toEqual(['Add family']);
-  expect(await screen.findByText('Sign in with Google')).toBeTruthy();
-  expect(screen.queryByText('Scan code')).toBeNull();
-  await fireEvent.press(screen.getByText('Sign in with Google'));
+  expect(await screen.findByText('Continue with Google')).toBeTruthy();
+  expect(screen.queryByText('Scan their code')).toBeNull();
+  await fireEvent.press(screen.getByText('Continue with Google'));
   expect(family.signInWithGoogle).toHaveBeenCalled();
-  expect(await screen.findByText('Scan code')).toBeTruthy();
+  expect(await screen.findByText('Scan their code')).toBeTruthy();
   expect(screen.getByLabelText('or type the 6 digits')).toBeTruthy();
+});
+
+test('a not-logged-in phone asks to continue with Google first', async () => {
+  jest.mocked(family.signedInRelative).mockResolvedValue(null);
+  jest.mocked(family.signInWithGoogle).mockResolvedValueOnce(null);
+  await renderApp('AddFamily');
+  expect(
+    await screen.findByText('To add family, log in with Google first.'),
+  ).toBeTruthy();
+  // Cancelled: still asked.
+  await fireEvent.press(screen.getByText('Continue with Google'));
+  expect(screen.getByText('Continue with Google')).toBeTruthy();
+  expect(screen.queryByText('Scan their code')).toBeNull();
+
+  jest.mocked(family.signInWithGoogle).mockResolvedValueOnce(ravi);
+  await fireEvent.press(screen.getByText('Continue with Google'));
+  expect(await screen.findByText('Logged in as ravi@gmail.com')).toBeTruthy();
+  expect(
+    screen.getByText(
+      'On their phone: open PillSaathi, tap Family, then Show my code.',
+    ),
+  ).toBeTruthy();
 });
 
 test('typing 6 digits and Next asks to follow', async () => {
   await renderApp('AddFamily');
+  expect(await screen.findByText('Logged in as ravi@gmail.com')).toBeTruthy();
+  // Not straight after the login: Back leaves, and there is no Skip for now.
+  expect(screen.getByLabelText('Back')).toBeTruthy();
+  expect(screen.queryByText('Skip for now')).toBeNull();
   await typeCode('482 913');
   expect(family.requestFollow).toHaveBeenCalledWith('482913');
   expect(
@@ -56,23 +94,45 @@ test('typing 6 digits and Next asks to follow', async () => {
   ).toBeTruthy();
 });
 
-test('Scan code fills the code and asks to follow', async () => {
+test('typing six digits fills the boxes and enables Next', async () => {
+  await renderApp('AddFamily');
+  const input = await screen.findByLabelText('or type the 6 digits');
+  expect(input.props.keyboardType).toBe('number-pad');
+  expect(input.props.maxLength).toBe(6);
+  expect(boxes()).toEqual(['', '', '', '', '', '']);
+  const next = () => screen.getByRole('button', { name: 'Next' });
+  expect(next().props.accessibilityState).toEqual(
+    expect.objectContaining({ disabled: true }),
+  );
+  await fireEvent.changeText(input, '482');
+  expect(boxes()).toEqual(['4', '8', '2', '', '', '']);
+  expect(next().props.accessibilityState).toEqual(
+    expect.objectContaining({ disabled: true }),
+  );
+  await fireEvent.changeText(input, '482913');
+  expect(boxes()).toEqual(['4', '8', '2', '9', '1', '3']);
+  expect(next().props.accessibilityState).toEqual(
+    expect.objectContaining({ disabled: false }),
+  );
+});
+
+test('Scan their code fills the code and asks to follow', async () => {
   jest.mocked(family.scanCode).mockResolvedValue('482913');
   await renderApp('AddFamily');
-  await fireEvent.press(await screen.findByText('Scan code'));
+  await fireEvent.press(await screen.findByText('Scan their code'));
   expect(family.requestFollow).toHaveBeenCalledWith('482913');
   expect(
     await screen.findByText('Waiting for them to tap Allow on their phone…'),
   ).toBeTruthy();
 });
 
-test('Scan code says so while the scanner opens', async () => {
+test('Scan their code says so while the scanner opens', async () => {
   let open: (code: string | null) => void = () => {};
   jest
     .mocked(family.scanCode)
     .mockReturnValue(new Promise(resolve => (open = resolve)));
   await renderApp('AddFamily');
-  const pressed = fireEvent.press(await screen.findByText('Scan code'));
+  const pressed = fireEvent.press(await screen.findByText('Scan their code'));
   expect(await screen.findByText('Opening the scanner…')).toBeTruthy();
   await act(async () => open(null));
   await pressed;
@@ -86,13 +146,13 @@ test('a scanner that is not ready, or a code that is not ours, says so', async (
     .mockRejectedValueOnce(failing(family.FamilyErrors.NoScanner))
     .mockRejectedValueOnce(failing(family.FamilyErrors.BadCode));
   await renderApp('AddFamily');
-  await fireEvent.press(await screen.findByText('Scan code'));
+  await fireEvent.press(await screen.findByText('Scan their code'));
   expect(
     await screen.findByText(
       "The scanner isn't ready yet. Try again in a minute, or type the 6 digits.",
     ),
   ).toBeTruthy();
-  await fireEvent.press(screen.getByText('Scan code'));
+  await fireEvent.press(screen.getByText('Scan their code'));
   expect(
     await screen.findByText(
       "That code didn't work. Check the 6 digits, or ask for a new code.",
@@ -109,9 +169,13 @@ test('waits for Allow, then shows the form; Done saves the follow', async () => 
   expect(
     await screen.findByText('Waiting for them to tap Allow on their phone…'),
   ).toBeTruthy();
+  expect(
+    screen.getByText('Keep this open. It moves on by itself.'),
+  ).toBeTruthy();
   jest.mocked(family.followState).mockResolvedValue('allowed');
   await act(async () => jest.advanceTimersByTime(2000));
   expect(await screen.findByText('What do you call them?')).toBeTruthy();
+  expect(headerTitles()).toContain('Almost done');
   expect(family.followState).toHaveBeenCalledWith('E');
   expect(
     screen.getByRole('button', { name: 'After 30 min' }).props
@@ -204,4 +268,28 @@ test('Next waits for all 6 digits', async () => {
   await renderApp('AddFamily');
   await typeCode('48291');
   expect(family.requestFollow).not.toHaveBeenCalled();
+});
+
+test('from the login, Skip for now opens Today', async () => {
+  await renderApp('AddFamily', { fromLogin: true });
+  expect(await screen.findByText('Scan their code')).toBeTruthy();
+  // There is no page behind this one to go back to.
+  expect(screen.queryByLabelText('Back')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Skip for now' }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('tab', { name: 'Today' }).props.accessibilityState,
+    ).toEqual(expect.objectContaining({ selected: true })),
+  );
+  expect(headerTitles()).not.toContain('Add family');
+});
+
+test('from the login, a phone not logged in can still skip', async () => {
+  jest.mocked(family.signedInRelative).mockResolvedValue(null);
+  await renderApp('AddFamily', { fromLogin: true });
+  expect(await screen.findByText('Continue with Google')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Skip for now' }));
+  await waitFor(() =>
+    expect(screen.getByRole('tab', { name: 'Today' })).toBeTruthy(),
+  );
 });

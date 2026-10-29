@@ -14,14 +14,14 @@ import { familyMessage } from '../lib/family';
 import { getFamily, saveFollow, unfollow } from '../native/family';
 import type { FamilyCard, Follow } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { colors, spacing } from '../theme';
+import { colors, font, radius, spacing } from '../theme';
 import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FollowEdit'>;
 
 /**
- * What the relative calls an elder, her number and his ping delay, and Stop following, which asks
- * first and, for a copy silent for 30 days, whether to delete it too.
+ * The gear on her page: what the relative calls an elder, her number and his ping delay, and
+ * Stop following, which asks first and, for a copy silent for 30 days, whether to delete it too.
  */
 export default function FollowEditScreen({ navigation, route }: Props) {
   const { elderId } = route.params;
@@ -88,7 +88,7 @@ export default function FollowEditScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.page}>
       <SkyBand title={card?.name ?? ''} onBack={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -109,7 +109,7 @@ export default function FollowEditScreen({ navigation, route }: Props) {
             <Pressable
               accessibilityRole="button"
               onPress={askStop}
-              style={styles.stop}
+              style={({ pressed }) => [styles.stop, pressed && styles.pressed]}
             >
               <Text style={styles.stopText}>{t.family.stopFollowing}</Text>
             </Pressable>
@@ -121,8 +121,31 @@ export default function FollowEditScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, paddingBottom: spacing.lg * 2 },
-  stop: { marginTop: spacing.lg, padding: spacing.md, alignItems: 'center' },
-  stopText: { fontSize: 18, color: colors.danger, fontWeight: '600' },
+  page: { flex: 1, backgroundColor: colors.page },
+  content: {
+    padding: spacing.md,
+    paddingTop: 14,
+    paddingBottom: spacing.lg,
+    gap: 12,
+  },
+  // Coral words on white, set apart below the form and its Save.
+  stop: {
+    marginTop: spacing.md,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.button,
+    borderWidth: 2,
+    borderColor: colors.coralTint,
+    backgroundColor: colors.card,
+  },
+  pressed: { opacity: 0.7 },
+  stopText: {
+    ...font(900),
+    flexShrink: 1,
+    fontSize: 17,
+    color: colors.coralText,
+    textAlign: 'center',
+  },
 });

@@ -123,6 +123,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Deviations: a `PhotoSheet` (Camera, Gallery, Remove); `components/pill/TimeTile.tsx` duplicates HistoryDay's `PART_ICON` (Task 18 may dedupe); `sheetLook.ts` for shared sheet styles; `SkyBand` gained `children`; the whole page scrolls (sky and hero too); her phone has no band title (`headerTitles()` is `[]`), his is "Amma's pill"; the default tone reads `t.common.defaultTone`; a time with no card today isn't tappable in the sound sheet. PillEditScreen and its test are gone; no "PillEdit" left in `src` or `__tests__`.
 - The PillScreen sound-row tests now cover ElderPills' "Alarm sounds" section ("a time opens the sound list for her dose at that time" proves `{ elderId, hour, minute }` and `selectedSoundId`), so that section's test and the "8:00 AM · Ravi's sound" expectation can go with it. Phone checks (Task 18): sheet fields and Save stay above the keyboard; the camera returns to the summary with the new photo; the sound sheet is gone before SoundPicker slides in; 60-char name at font scale 2.0; hero readable on the night sky.
 
+### Task 16: The relative's family pages
+**Status**: ✓ Done (parallel, branch `ui/task-16`; ElderPills' pill-row link repointed to `Pill` during the merge, "Alarm sounds" removed in the next commit)
+**Notes**:
+- AddFamily with `fromLogin`: no Back in the band (C4); "Skip for now" on the login and code steps resets to Main; the waiting step has ×; the phone's Back from the login leaves the app (as first-run Setup does). The code is six `digit-box`es over one nearly invisible `TextInput` (`number-pad`, `maxLength={6}`, digits only). "Logged in as …" sits beside his letter avatar.
+- Kit: `SkyBand` takes `picture` and `action` (her avatar before the title, which moves under the buttons, and Call after it) alongside Task 11's `children`. Her page keeps her low pills ("About N days.") in the amber card under her alarm problem; dose chips "✓ 8:04 AM", Missed, Later, Not reported yet, Skipped; Call is a 52 dp round button labelled "Call"; "Change pills" → "Her pills". `DoseCard.tsx` and `RefillBanner.tsx` deleted (`daysText` stays, ElderScreen uses it).
+- Words: `remote.problem` ends "…tap Fix now."; `remote.notEditor` "On her phone: open PillSaathi, tap Family, then turn on Can change my pills on your card."; `remote.done` "✓ Done at …"; `recentHeading` "Recent changes". Removed `family.signIn/next/phoneHint`, `remote.changePills/addPill/waitingHeading`. Phone checks (Task 18): the hidden code field opens the number pad, pastes, and TalkBack reads it; her page at font scale 2.0; the night band's white words; the Almost done form above the keyboard.
+
 ---
 
 ## Blockers / Deferred Items

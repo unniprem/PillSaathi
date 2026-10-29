@@ -846,7 +846,7 @@ describe('family on Today', () => {
     });
     await renderApp('Today');
     const problem =
-      "Amma's phone may not ring alarms: battery setup not done. On her phone, open PillSaathi and tap the yellow banner.";
+      "Amma's phone may not ring alarms: battery setup not done. On her phone, open PillSaathi and tap Fix now.";
     expect(await screen.findByText(problem)).toBeTruthy();
     expect(family.getElderSetup).toHaveBeenCalledWith('E');
     // Then her pills running low, then when she was last heard from.

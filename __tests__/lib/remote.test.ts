@@ -57,7 +57,7 @@ test('changeState says waiting, done or not done, and why', () => {
       false,
       'Amma',
     ),
-  ).toBe('Done at 3:05 PM');
+  ).toBe('✓ Done at 3:05 PM');
   const reasons: Record<string, string> = {
     notAllowed: "you're not allowed to change her pills now",
     invalid: "her phone couldn't use it",
@@ -103,7 +103,7 @@ test('problemText names the first problem, or nothing', () => {
   };
   for (const [problem, text] of Object.entries(texts)) {
     expect(problemText(problem, en, 'Amma')).toBe(
-      `Amma's phone may not ring alarms: ${text}. On her phone, open PillSaathi and tap the yellow banner.`,
+      `Amma's phone may not ring alarms: ${text}. On her phone, open PillSaathi and tap Fix now.`,
     );
   }
 });

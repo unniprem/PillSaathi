@@ -1,5 +1,10 @@
 import { Alert } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import {
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import * as family from '../../src/native/family';
 import type {
   ChangeView,
@@ -102,7 +107,8 @@ test('lists her pills and times, waiting first, and Cancel cancels', async () =>
   expect(screen.getByText('Azee 500')).toBeTruthy();
   expect(screen.getByText("8:00 AM · Ravi's sound")).toBeTruthy();
   expect(screen.getByText('Delete Dolo')).toBeTruthy();
-  expect(screen.getByText('Done at 3:05 PM')).toBeTruthy();
+  expect(screen.getByText('Recent changes')).toBeTruthy();
+  expect(screen.getByText('✓ Done at 3:05 PM')).toBeTruthy();
   expect(
     screen.getByText(
       "Amma's phone checks in about once an hour, and when an alarm rings. To send it now, ask her to open PillSaathi.",
@@ -140,10 +146,10 @@ test('not an editor sees how to be allowed, and no Add pill', async () => {
   await renderApp('ElderPills', { elderId: 'E' });
   expect(
     await screen.findByText(
-      "Amma's phone hasn't allowed you to change her pills. On her phone: Settings → Family → turn on Can change my pills next to your name.",
+      "Amma's phone hasn't allowed you to change her pills. On her phone: open PillSaathi, tap Family, then turn on Can change my pills on your card.",
     ),
   ).toBeTruthy();
-  expect(screen.queryByText('+ Add pill')).toBeNull();
+  expect(screen.queryByText('Add a pill for Amma')).toBeNull();
   expect(screen.queryByText('Telma 40')).toBeNull();
 });
 
@@ -154,7 +160,7 @@ test('the health warning shows the first problem', async () => {
   await renderApp('ElderPills', { elderId: 'E' });
   expect(
     await screen.findByText(
-      "Amma's phone may not ring alarms: battery setup not done. On her phone, open PillSaathi and tap the yellow banner.",
+      "Amma's phone may not ring alarms: battery setup not done. On her phone, open PillSaathi and tap Fix now.",
     ),
   ).toBeTruthy();
 });
@@ -169,10 +175,12 @@ test('a pill opens the pill page for her', async () => {
   expect(screen.getByText('Azee 500')).toBeTruthy();
 });
 
-test('+ Add pill opens the pill page', async () => {
+test('Add a pill for Amma opens the five steps for her', async () => {
   await renderApp('ElderPills', { elderId: 'E' });
-  await fireEvent.press(await screen.findByText('+ Add pill'));
-  await waitFor(() => expect(headerTitles()).toHaveLength(2));
+  await fireEvent.press(await screen.findByText('Add a pill for Amma'));
+  await waitFor(() =>
+    expect(headerTitles()).toEqual(["Amma's pills", 'Add a pill for Amma']),
+  );
 });
 
 test('a time opens the sound picker', async () => {
@@ -195,4 +203,49 @@ test('says when her phone was last heard from', async () => {
     .mockResolvedValue({ ...setup, heardAt: heard.getTime() });
   await renderApp('ElderPills', { elderId: 'E' });
   expect(await screen.findByText('Last heard from at 1:12 PM')).toBeTruthy();
+});
+
+test('the waiting card cancels a change', async () => {
+  jest
+    .mocked(family.listChanges)
+    .mockResolvedValue([
+      change({}),
+      change({ id: 'c2', mine: false, byName: 'Priya', pillName: 'Azee 500' }),
+    ]);
+  await renderApp('ElderPills', { elderId: 'E' });
+  const card = within(await screen.findByTestId('waiting-card'));
+  expect(card.getByText("Waiting for Amma's phone")).toBeTruthy();
+  expect(card.getByText('Change Telma 40')).toBeTruthy();
+  expect(card.getByText('Change Azee 500')).toBeTruthy();
+  expect(
+    card.getByText(
+      "Amma's phone checks in about once an hour, and when an alarm rings. To send it now, ask her to open PillSaathi.",
+    ),
+  ).toBeTruthy();
+  // Only what this phone sent can be taken back.
+  expect(card.getAllByRole('button', { name: /^Cancel/ })).toHaveLength(1);
+  jest.mocked(family.listChanges).mockResolvedValue([]);
+  await fireEvent.press(
+    card.getByRole('button', { name: 'Cancel Change Telma 40' }),
+  );
+  expect(family.cancelChange).toHaveBeenCalledWith('E', 'c1');
+  await waitFor(() => expect(screen.queryByTestId('waiting-card')).toBeNull());
+});
+
+test('each pill row says how much and when', async () => {
+  jest.mocked(family.getElderSetup).mockResolvedValue({
+    ...setup,
+    pills: [
+      {
+        ...telma,
+        times: [
+          { hour: 8, minute: 0 },
+          { hour: 21, minute: 0 },
+        ],
+      },
+    ],
+  });
+  await renderApp('ElderPills', { elderId: 'E' });
+  expect(await screen.findByText('1 tablet · 8:00 AM, 9:00 PM')).toBeTruthy();
+  expect(screen.queryByTestId('waiting-card')).toBeNull();
 });

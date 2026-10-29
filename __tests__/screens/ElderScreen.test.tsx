@@ -122,7 +122,7 @@ test('her own time zone is named', async () => {
 test('Call shows only with a number', async () => {
   await renderApp('Elder', { elderId: 'E' });
   expect(await screen.findByText('Not reported yet')).toBeTruthy();
-  expect(screen.queryByText('Call')).toBeNull();
+  expect(screen.queryByLabelText('Call')).toBeNull();
 });
 
 test('Call dials her number', async () => {
@@ -131,16 +131,16 @@ test('Call dials her number', async () => {
   jest.mocked(family.getFamily).mockResolvedValue([withPhone]);
   jest.mocked(family.refreshFamily).mockResolvedValue([withPhone]);
   await renderApp('Elder', { elderId: 'E' });
-  await fireEvent.press(await screen.findByText('Call'));
+  await fireEvent.press(await screen.findByLabelText('Call'));
   expect(open).toHaveBeenCalledWith('tel:+919800000000');
 });
 
-test('Change pills opens her pills page', async () => {
+test('Her pills opens her pills page', async () => {
   jest.mocked(family.getFamily).mockResolvedValue([amma]);
   jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
   jest.mocked(family.getElderToday).mockResolvedValue(herToday);
   await renderApp('Elder', { elderId: 'E' });
-  await fireEvent.press(await screen.findByText('Change pills'));
+  await fireEvent.press(await screen.findByText('Her pills'));
   await waitFor(() => expect(headerTitles()).toEqual(['Amma', "Amma's pills"]));
 });
 
@@ -160,7 +160,42 @@ test('her page warns when her phone may not ring alarms', async () => {
   await renderApp('Elder', { elderId: 'E' });
   expect(
     await screen.findByText(
-      "Amma's phone may not ring alarms: notifications are off. On her phone, open PillSaathi and tap the yellow banner.",
+      "Amma's phone may not ring alarms: notifications are off. On her phone, open PillSaathi and tap Fix now.",
     ),
   ).toBeTruthy();
+});
+
+test("her page's gear opens the alert settings", async () => {
+  await renderApp('Elder', { elderId: 'E' });
+  await waitFor(() => expect(headerTitles()).toEqual(['Amma']));
+  await fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+  expect(
+    (await screen.findByLabelText('What do you call them?')).props.value,
+  ).toBe('Amma');
+  expect(screen.getByText('Tell me if a dose is missed')).toBeTruthy();
+  expect(screen.getByText('Stop following')).toBeTruthy();
+});
+
+test('her day is one line per dose, with what happened', async () => {
+  jest.mocked(family.getElderToday).mockResolvedValue({
+    ...herToday,
+    cards: [
+      {
+        ...herToday.cards[0],
+        status: 'taken',
+        statusAt: at(28, 8, 4),
+        pills: [
+          herToday.cards[0].pills[0],
+          { ...herToday.cards[0].pills[0], pillId: 'p3', name: 'Telma 40' },
+        ],
+      },
+      { ...herToday.cards[1], hour: 21, status: 'upcoming' },
+    ],
+  });
+  await renderApp('Elder', { elderId: 'E' });
+  expect(await screen.findByText('✓ 8:04 AM')).toBeTruthy();
+  expect(screen.getByText('Azee 500, Telma 40')).toBeTruthy();
+  expect(screen.getByText('8:00 AM')).toBeTruthy();
+  expect(screen.getByText('9:00 PM')).toBeTruthy();
+  expect(screen.getByText('Later')).toBeTruthy();
 });

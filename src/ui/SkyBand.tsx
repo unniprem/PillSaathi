@@ -21,6 +21,12 @@ type Props = {
   hour?: number;
   /** What sits on the sky under the row, such as a pill's picture and name. */
   children?: ReactNode;
+  /**
+   * A person's page: her avatar, before the title, which then moves under the buttons, with
+   * [action] (such as Call) after it.
+   */
+  picture?: ReactNode;
+  action?: ReactNode;
 };
 
 /**
@@ -38,6 +44,8 @@ export default function SkyBand({
   progress,
   hour,
   children,
+  picture,
+  action,
 }: Props) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -71,6 +79,18 @@ export default function SkyBand({
       ) : null}
     </View>
   ) : null;
+  const heading = title ? (
+    <View style={styles.titles}>
+      <Text
+        testID="sky-title"
+        accessibilityRole="header"
+        style={[styles.title, { color: ink }]}
+      >
+        {title}
+      </Text>
+      {sub ? <Text style={[styles.sub, { color: ink }]}>{sub}</Text> : null}
+    </View>
+  ) : null;
   return (
     <View
       testID="sky-band"
@@ -97,24 +117,17 @@ export default function SkyBand({
         {onClose ? (
           <RoundButton icon="close" label={t.common.close} onPress={onClose} />
         ) : null}
-        {title ? (
-          <View style={styles.titles}>
-            <Text
-              testID="sky-title"
-              accessibilityRole="header"
-              style={[styles.title, { color: ink }]}
-            >
-              {title}
-            </Text>
-            {sub ? (
-              <Text style={[styles.sub, { color: ink }]}>{sub}</Text>
-            ) : null}
-          </View>
-        ) : (
-          bar ?? <View style={styles.titles} />
-        )}
+        {/* With nothing here, the space keeps [right] on the right. */}
+        {(picture ? null : heading ?? bar) ?? <View style={styles.titles} />}
         {right}
       </View>
+      {picture ? (
+        <View style={styles.row}>
+          {picture}
+          {heading}
+          {action}
+        </View>
+      ) : null}
       {title && bar ? <View style={styles.row}>{bar}</View> : null}
       {progress?.label != null ? (
         <Text style={[styles.stepText, { color: ink }]}>{progress.label}</Text>

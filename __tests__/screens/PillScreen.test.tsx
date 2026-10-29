@@ -884,7 +884,7 @@ describe('for her, on a relative’s phone', () => {
     await saveSheet();
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        "Amma's phone hasn't allowed you to change her pills. On her phone: Settings → Family → turn on Can change my pills next to your name.",
+        "Amma's phone hasn't allowed you to change her pills. On her phone: open PillSaathi, tap Family, then turn on Can change my pills on your card.",
       ),
     );
     expect(screen.getByTestId('sheet')).toBeTruthy();
