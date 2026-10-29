@@ -28,10 +28,11 @@ object ElderSync {
     val store = AlarmStore(context)
     if (!FamilyRules.uploads(store.locked { store.loadFamily() })) return
     // Changes her family sent go in first, so this upload already shows them.
+    // Any failure: the upload (her heartbeat for her relatives) still runs.
     try {
       CheckIn.apply(context)
-    } catch (e: FamilyException) {
-      Log.w(FAMILY_TAG, "Check-in before the upload failed (${e.code})", e)
+    } catch (e: Exception) {
+      Log.w(FAMILY_TAG, "Check-in before the upload failed", e)
     }
     val cloud = FamilyCloud.get(context)
     val uid = cloud.elderUid()

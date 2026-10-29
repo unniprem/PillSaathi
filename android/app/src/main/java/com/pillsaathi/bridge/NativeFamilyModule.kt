@@ -170,6 +170,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       answered.add(key(request))
       pending = pending.filterNot { it.uid == uid }
+      // He may change her pills now; the son standing next to her shouldn't wait for the hour.
+      if (allow) listenForChanges()
       null
     }
 
@@ -205,6 +207,10 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
       if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext) else FamilyWork.ensureCheckIn(reactApplicationContext)
+      // Listen now if someone may change her pills, and stop when no one may.
+      changesListener?.remove()
+      changesListener = null
+      listenForChanges()
       null
     }
 
@@ -240,11 +246,13 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
         }
       },
     ) {
+      // Outside onWorker: anything thrown here would crash the app on every open while the
+      // change waits, so every failure is caught and left to the background check-in.
       try {
         synchronized(ElderSync.lock) { CheckIn.apply(reactApplicationContext) }
         Unit
-      } catch (e: FamilyException) {
-        Log.w(TAG, "Live check-in failed (${e.code})", e)
+      } catch (e: Exception) {
+        Log.w(TAG, "Live check-in failed", e)
         FamilyWork.requestCheckIn(reactApplicationContext)
       }
     }
