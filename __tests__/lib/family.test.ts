@@ -1,5 +1,6 @@
 import {
   familyMessage,
+  firstName,
   formatCode,
   heardText,
   shareMessage,
@@ -49,4 +50,11 @@ test('tallyText and heardText', () => {
   expect(heardText(at, '2026-10-28', false, en)).toBe('1:12 PM');
   expect(heardText(at, '2026-10-29', false, en)).toBe('Wed 28 Oct, 1:12 PM');
   expect(heardText(at, '2026-10-29', true, en)).toBe('Wed 28 Oct, 13:12');
+});
+
+test('firstName is the first word of the Google name', () => {
+  expect(firstName('Ravi Kumar')).toBe('Ravi');
+  expect(firstName('  Ravi  ')).toBe('Ravi');
+  expect(firstName('')).toBeNull();
+  expect(firstName('   ')).toBeNull();
 });

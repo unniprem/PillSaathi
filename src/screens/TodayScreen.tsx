@@ -11,14 +11,15 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import FamilySection from '../components/FamilySection';
 import DoseLine from '../components/today/DoseLine';
 import EmptyToday from '../components/today/EmptyToday';
 import MissedCard from '../components/today/MissedCard';
 import NextDoseCard from '../components/today/NextDoseCard';
+import PersonCard from '../components/today/PersonCard';
 import RefillCard from '../components/today/RefillCard';
 import WarningCard from '../components/today/WarningCard';
 import { formatDay } from '../lib/course';
+import { firstName } from '../lib/family';
 import { healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
 import { formatTime } from '../lib/time';
@@ -34,7 +35,12 @@ import {
   reconcileOnAppOpen,
 } from '../native/alarms';
 import type { MissedAlarm, Today, TodayCard } from '../native/alarms';
-import { getFamily, refreshFamily } from '../native/family';
+import {
+  getElderSetup,
+  getFamily,
+  refreshFamily,
+  signedInRelative,
+} from '../native/family';
 import type { FamilyCard } from '../native/family';
 import type { TabProps } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
@@ -53,6 +59,24 @@ const FAMILY_REFRESH_MS = 120_000;
 /** And the clock, for the greeting, the sky and the time left. */
 const CLOCK_MS = 60_000;
 
+/** Each elder's alarm problem, from her setup as last read; a failed read shows none. */
+async function problemsOf(
+  cards: FamilyCard[],
+): Promise<Record<string, string | null>> {
+  const problems = await Promise.all(
+    cards.map(card =>
+      getElderSetup(card.elderId).then(
+        setup => setup.problem,
+        e => {
+          console.warn("Could not read her phone's setup", e);
+          return null;
+        },
+      ),
+    ),
+  );
+  return Object.fromEntries(cards.map((c, i) => [c.elderId, problems[i]]));
+}
+
 /** One line per missed dose: "8:00 AM: Azithromycin 500, Telma 40". */
 function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
   const is24h = is24HourFormat();
@@ -69,7 +93,8 @@ function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
 /**
  * Her day: the sky with how many doses are done, any warning, the next dose, anything missed,
  * then the rest of the day as short lines. It all scrolls, the sky too, so large text never
- * pushes a button out of reach.
+ * pushes a button out of reach. On a phone that looks after someone, their cards come first and
+ * this phone's own day follows under My pills.
  */
 export default function TodayScreen({ navigation }: Props) {
   const { t } = useI18n();
@@ -81,23 +106,32 @@ export default function TodayScreen({ navigation }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [family, setFamily] = useState<FamilyCard[]>([]);
+  // By elder id; read with her card.
+  const [problems, setProblems] = useState<Record<string, string | null>>({});
+  // The Google account's first name, for the greeting.
+  const [me, setMe] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const mounted = useRef(true);
   const familyRequest = useRef(0);
   const latest = useRef(0);
   const firstFocus = useRef(true);
 
-  /** The family cards as last read, then as read again now; offline keeps the last ones. */
+  /**
+   * The family cards and their alarm problems as last read, then as read again now; offline keeps
+   * the last ones.
+   */
   const loadFamily = useCallback(async () => {
     const request = ++familyRequest.current;
-    const show = (cards: FamilyCard[]) => {
+    const show = async (cards: FamilyCard[]) => {
+      const found = await problemsOf(cards);
       if (mounted.current && request === familyRequest.current) {
         setFamily(cards);
+        setProblems(found);
       }
     };
     try {
-      show(await getFamily());
-      show(await refreshFamily());
+      await show(await getFamily());
+      await show(await refreshFamily());
     } catch (e) {
       console.warn('Could not load family', e);
     }
@@ -107,6 +141,9 @@ export default function TodayScreen({ navigation }: Props) {
     async (reconcile: boolean) => {
       const request = ++latest.current;
       loadFamily();
+      signedInRelative()
+        .then(r => mounted.current && setMe(r ? firstName(r.name) : null))
+        .catch(e => console.warn('Could not check the Google login', e));
       if (reconcile) {
         try {
           // Each reconcile result is reported once, here; focus refreshes
@@ -248,8 +285,9 @@ export default function TodayScreen({ navigation }: Props) {
   const { next, missed, later, done } = arrangeToday(cards);
   const counts = doseCounts(cards);
   const total = counts.taken + counts.missed + counts.rest;
-  const empty =
-    cards.length === 0 && loaded && !loadFailed && family.length === 0;
+  const noPills = cards.length === 0 && loaded && !loadFailed;
+  const looksAfter = family.length > 0;
+  const greeting = t.today.greeting[greetingFor(hour)];
   const key = (card: TodayCard) => `${card.hour}:${card.minute}`;
 
   return (
@@ -257,7 +295,7 @@ export default function TodayScreen({ navigation }: Props) {
       <ScrollView testID="today-scroll" contentContainerStyle={styles.scroll}>
         <SkyTop
           hour={hour}
-          title={t.today.greeting[greetingFor(hour)]}
+          title={looksAfter && me ? t.today.greetingTo(greeting, me) : greeting}
           sub={date ? formatDay(date, t) : undefined}
         >
           {total > 0 ? (
@@ -273,6 +311,20 @@ export default function TodayScreen({ navigation }: Props) {
         </SkyTop>
         {/* The first card lifts into the foot of the sky. */}
         <View style={styles.body}>
+          {family.map(card => (
+            <PersonCard
+              key={card.elderId}
+              card={card}
+              problem={problems[card.elderId] ?? null}
+              is24h={is24h}
+              onOpen={() =>
+                navigation.navigate('Elder', { elderId: card.elderId })
+              }
+            />
+          ))}
+          {looksAfter ? (
+            <Text style={[styles.label, styles.mine]}>{t.today.myPills}</Text>
+          ) : null}
           <WarningCard issues={issues} onFix={runAction} />
           {today?.refills.map(r => (
             <RefillCard
@@ -286,16 +338,6 @@ export default function TodayScreen({ navigation }: Props) {
               }
             />
           ))}
-          {family.length > 0 ? (
-            <Card style={styles.family}>
-              <FamilySection
-                cards={family}
-                is24h={is24h}
-                onOpen={elderId => navigation.navigate('Elder', { elderId })}
-                onAdd={() => navigation.navigate('AddFamily')}
-              />
-            </Card>
-          ) : null}
           {date && cards.length > 0 ? (
             <>
               <NextDoseCard
@@ -350,7 +392,23 @@ export default function TodayScreen({ navigation }: Props) {
               <Text style={styles.failed}>{t.today.loadFailed}</Text>
             </Card>
           ) : null}
-          {empty ? (
+          {noPills && looksAfter ? (
+            <View style={styles.noPills}>
+              <Text style={styles.noPillsText}>{t.today.noOwnPills}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t.today.addPill}
+                onPress={addPill}
+                style={({ pressed }) => [
+                  styles.link,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Icon name="add" size={20} color={colors.blue} />
+                <Text style={styles.addText}>{t.today.addPill}</Text>
+              </Pressable>
+            </View>
+          ) : noPills ? (
             <EmptyToday
               onAdd={addPill}
               onShowCode={() => navigation.navigate('ShareCode')}
@@ -393,7 +451,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     gap: 12,
   },
-  family: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
   label: {
     ...font(900),
     fontSize: 12.5,
@@ -403,6 +460,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     marginBottom: 2,
   },
+  // A little apart from the cards of the people above.
+  mine: { marginTop: 6 },
   failed: {
     ...font(700),
     fontSize: 17,
@@ -421,6 +480,25 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: colors.edge,
+  },
+  noPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: 6,
+    marginLeft: 4,
+  },
+  noPillsText: {
+    ...font(700),
+    fontSize: 15,
+    color: colors.muted,
+    flexShrink: 1,
+  },
+  link: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   pressed: { opacity: 0.7 },
   addText: {

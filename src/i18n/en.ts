@@ -74,6 +74,8 @@ export const en = {
       afternoon: 'Good afternoon',
       evening: 'Good evening',
     },
+    // The relative's first name after the greeting, on a phone that looks after someone.
+    greetingTo: (greeting: string, name: string) => `${greeting}, ${name}`,
     progress: (taken: number, total: number) => `${taken} of ${total} done`,
     nextDose: 'Next dose',
     when: {
@@ -93,6 +95,8 @@ export const en = {
     noMore: 'Nothing more today',
     tomorrowAt: (time: string) => `Tomorrow, ${time}`,
     laterToday: 'Later today',
+    myPills: 'My pills',
+    noOwnPills: 'You have no pills of your own.',
     // A string, not the three words, so the other languages can say it their own way.
     allTaken: (pills: number): string =>
       pills <= 1 ? 'taken' : pills === 2 ? 'both taken' : 'all taken',
@@ -444,6 +448,7 @@ export const en = {
     notReported: (n: number) => `${n} not reported`,
     later: (n: number) => `${n} later`,
     nothingDue: 'Nothing due today',
+    missedToday: (n: number) => `${n} missed today`,
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `Not heard from since ${time}`,
     notHeardYet: (name: string) => `Not heard from ${name}'s phone yet`,

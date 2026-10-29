@@ -73,6 +73,7 @@ export const ml: Strings = {
       afternoon: 'ശുഭ ഉച്ച',
       evening: 'ശുഭ സന്ധ്യ',
     },
+    greetingTo: (greeting: string, name: string) => `${greeting}, ${name}`,
     progress: (taken: number, total: number) => `${total}-ൽ ${taken} കഴിഞ്ഞു`,
     nextDose: 'അടുത്ത ഡോസ്',
     when: {
@@ -92,6 +93,8 @@ export const ml: Strings = {
     noMore: 'ഇന്ന് ഇനി ഒന്നുമില്ല',
     tomorrowAt: (time: string) => `നാളെ, ${time}`,
     laterToday: 'ഇന്ന് പിന്നീട്',
+    myPills: 'എന്റെ മരുന്നുകൾ',
+    noOwnPills: 'നിങ്ങൾക്ക് സ്വന്തം മരുന്നുകളൊന്നുമില്ല.',
     allTaken: (pills: number) =>
       pills <= 1
         ? 'കഴിച്ചു'
@@ -446,6 +449,7 @@ export const ml: Strings = {
     notReported: (n: number) => `${n} അറിയിച്ചിട്ടില്ല`,
     later: (n: number) => `${n} പിന്നീട്`,
     nothingDue: 'ഇന്ന് ഒന്നുമില്ല',
+    missedToday: (n: number) => `ഇന്ന് ${n} മുടങ്ങി`,
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `${time} മുതൽ വിവരമില്ല`,
     notHeardYet: (name: string) => `${name}-യുടെ ഫോണിൽ നിന്ന് ഇതുവരെ വിവരമില്ല`,

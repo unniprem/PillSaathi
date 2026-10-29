@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import {
   act,
   fireEvent,
@@ -9,11 +9,12 @@ import {
 import * as alarms from '../../src/native/alarms';
 import type { Today, TodayPill } from '../../src/native/alarms';
 import * as family from '../../src/native/family';
-import type { FamilyCard } from '../../src/native/family';
+import type { ElderSetup, FamilyCard } from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { hi } from '../../src/i18n/hi';
 import { formatDay } from '../../src/lib/course';
 import { pillColor } from '../../src/ui/pillLook';
+import { familyDefaults } from '../helpers/familyDefaults';
 import {
   emptyToday,
   healthy,
@@ -694,25 +695,54 @@ describe('family on Today', () => {
     jest.useRealTimers();
   });
 
-  test('Today shows Family above my pills, with tally and low line', async () => {
+  /** Her card on Today, for looking inside it. */
+  const herCard = () => screen.getByTestId('person-card');
+
+  test('Today shows her card above my pills, with tally, bars and low line', async () => {
     jest.mocked(family.getFamily).mockResolvedValue([amma]);
     jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
     await renderApp('Today');
     expect(await screen.findByText('Amma')).toBeTruthy();
-    // The section's heading, and the tab's word.
-    expect(screen.getAllByText('Family')).toHaveLength(2);
     expect(screen.getByText('2 taken · 1 missed · 1 later')).toBeTruthy();
     expect(screen.getByText('Telma 40: 4 tablets left')).toBeTruthy();
-    expect(screen.getByText('+ Add family')).toBeTruthy();
-    // Above my own pills.
+    // Two taken, one missed, one later.
+    expect(within(herCard()).getAllByTestId('dose-bar')).toHaveLength(4);
+    // No number saved, so no Call; + Add family is on the Family tab now.
+    expect(screen.queryByRole('button', { name: 'Call' })).toBeNull();
+    expect(screen.queryByText('+ Add family')).toBeNull();
+    // Above my own pills, under their own label.
     const texts = screen
-      .getAllByText(/^Amma$|^Telma 40$/)
+      .getAllByText(/^Amma$|^My pills$|^Telma 40$/)
       .map(n => n.props.children);
-    expect(texts.indexOf('Amma')).toBeLessThan(texts.indexOf('Telma 40'));
+    expect(texts.slice(0, 3)).toEqual(['Amma', 'My pills', 'Telma 40']);
     await fireEvent.press(screen.getByText('Amma'));
     await waitFor(() =>
       expect(headerTitles()).toEqual([expect.any(String), 'Amma']),
     );
+  });
+
+  test('her missed dose is a line that opens her page', async () => {
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    await renderApp('Today');
+    await fireEvent.press(
+      await screen.findByRole('button', { name: '1 missed today' }),
+    );
+    await waitFor(() =>
+      expect(headerTitles()).toEqual([expect.any(String), 'Amma']),
+    );
+  });
+
+  test('nothing missed, no missed line', async () => {
+    const fine = {
+      ...amma,
+      tally: { taken: 2, skipped: 0, missed: 0, notReported: 0, later: 1 },
+    };
+    jest.mocked(family.getFamily).mockResolvedValue([fine]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([fine]);
+    await renderApp('Today');
+    expect(await screen.findByText('2 taken · 1 later')).toBeTruthy();
+    expect(screen.queryByText(/missed today/)).toBeNull();
   });
 
   // E5 offers Show my code here; + Add family is on the Family tab.
@@ -724,6 +754,23 @@ describe('family on Today', () => {
     // Only the tab's word.
     expect(screen.getAllByText('Family')).toHaveLength(1);
     expect(screen.queryByText('+ Add family')).toBeNull();
+    expect(screen.queryByText('My pills')).toBeNull();
+  });
+
+  test('with family and no pills of its own, it says so and offers Add a pill', async () => {
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
+    await renderApp('Today');
+    expect(
+      await screen.findByText('You have no pills of your own.'),
+    ).toBeTruthy();
+    expect(screen.getByText('My pills')).toBeTruthy();
+    // Not her empty card: Show my code is for an elder's phone.
+    expect(screen.queryByText('No pills yet')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show my code' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add a pill' }));
+    expect(await screen.findByPlaceholderText('Medicine name')).toBeTruthy();
   });
 
   test('a silent elder shows "Not heard from since …"', async () => {
@@ -764,8 +811,13 @@ describe('family on Today', () => {
     await waitFor(() => expect(family.refreshFamily).toHaveBeenCalledTimes(1));
     await act(async () => jest.advanceTimersByTime(119_000));
     expect(family.refreshFamily).toHaveBeenCalledTimes(1);
+    const setupReads = jest.mocked(family.getElderSetup).mock.calls.length;
     await act(async () => jest.advanceTimersByTime(1_000));
     expect(family.refreshFamily).toHaveBeenCalledTimes(2);
+    // Her alarm problem is read again with her card.
+    expect(jest.mocked(family.getElderSetup).mock.calls.length).toBeGreaterThan(
+      setupReads,
+    );
   });
 
   test('before her phone has ever uploaded, the card says so instead of a tally', async () => {
@@ -782,5 +834,92 @@ describe('family on Today', () => {
       await screen.findByText("Not heard from Amma's phone yet"),
     ).toBeTruthy();
     expect(screen.queryByText('Nothing due today')).toBeNull();
+  });
+
+  test('her alarm problem shows on her card first', async () => {
+    const silent = { ...amma, silent: true };
+    jest.mocked(family.getFamily).mockResolvedValue([silent]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([silent]);
+    jest.mocked(family.getElderSetup).mockResolvedValue({
+      ...(familyDefaults.getElderSetup as ElderSetup),
+      problem: 'battery',
+    });
+    await renderApp('Today');
+    const problem =
+      "Amma's phone may not ring alarms: battery setup not done. On her phone, open PillSaathi and tap the yellow banner.";
+    expect(await screen.findByText(problem)).toBeTruthy();
+    expect(family.getElderSetup).toHaveBeenCalledWith('E');
+    // Then her pills running low, then when she was last heard from.
+    const lines = within(herCard())
+      .getAllByText(/may not ring|tablets left|Not heard from/)
+      .map(n => n.props.children);
+    expect(lines).toEqual([
+      problem,
+      'Telma 40: 4 tablets left',
+      'Not heard from since Mon 26 Oct, 1:12 PM',
+    ]);
+  });
+
+  test('a failed setup read shows the card without a problem line', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    jest
+      .mocked(family.getElderSetup)
+      .mockRejectedValue(Object.assign(new Error('x'), { code: 'NOT_FOUND' }));
+    await renderApp('Today');
+    expect(
+      await screen.findByText('2 taken · 1 missed · 1 later'),
+    ).toBeTruthy();
+    expect(screen.getByText('Amma')).toBeTruthy();
+    expect(screen.getByText('Telma 40: 4 tablets left')).toBeTruthy();
+    expect(screen.queryByText(/may not ring/)).toBeNull();
+  });
+
+  test('Call dials her number', async () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    const withPhone = { ...amma, phone: '+919800000000' };
+    jest.mocked(family.getFamily).mockResolvedValue([withPhone]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([withPhone]);
+    await renderApp('Today');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Call' }));
+    expect(open).toHaveBeenCalledWith('tel:+919800000000');
+    // Calling her doesn't open her page.
+    expect(headerTitles()).toHaveLength(1);
+  });
+
+  test("the greeting uses the relative's first name", async () => {
+    clockAt(14, 10);
+    jest
+      .mocked(family.signedInRelative)
+      .mockResolvedValue({ name: 'Ravi Kumar', email: 'ravi@gmail.com' });
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    await renderApp('Today');
+    await screen.findByText('Amma');
+    await waitFor(() => expect(headerTitles()[0]).toBe('Good afternoon, Ravi'));
+  });
+
+  test('logged in but looking after no one, the greeting has no name', async () => {
+    clockAt(14, 10);
+    jest
+      .mocked(family.signedInRelative)
+      .mockResolvedValue({ name: 'Ravi Kumar', email: 'ravi@gmail.com' });
+    await renderApp('Today');
+    await screen.findByText('8:00 AM · both taken');
+    await waitFor(() => expect(family.signedInRelative).toHaveBeenCalled());
+    expect(headerTitles()[0]).toBe('Good afternoon');
+  });
+
+  test('a long elder name wraps and keeps Call', async () => {
+    const long = 'Amma (Kochi), Saraswathi Kunjamma, Thrippunithura';
+    const named = { ...amma, name: long, phone: '+919800000000' };
+    jest.mocked(family.getFamily).mockResolvedValue([named]);
+    jest.mocked(family.refreshFamily).mockResolvedValue([named]);
+    await renderApp('Today');
+    expect((await screen.findByText(long)).props.numberOfLines).toBeUndefined();
+    expect(
+      within(herCard()).getByRole('button', { name: 'Call' }),
+    ).toBeTruthy();
   });
 });

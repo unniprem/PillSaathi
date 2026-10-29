@@ -72,6 +72,7 @@ export const hi: Strings = {
       afternoon: 'शुभ दोपहर',
       evening: 'शुभ संध्या',
     },
+    greetingTo: (greeting: string, name: string) => `${greeting}, ${name}`,
     progress: (taken: number, total: number) =>
       `${total} में से ${taken} हो गईं`,
     nextDose: 'अगली खुराक',
@@ -92,6 +93,8 @@ export const hi: Strings = {
     noMore: 'आज और कुछ नहीं',
     tomorrowAt: (time: string) => `कल, ${time}`,
     laterToday: 'आज बाद में',
+    myPills: 'मेरी दवाएं',
+    noOwnPills: 'आपकी अपनी कोई दवा नहीं है।',
     allTaken: (pills: number) =>
       pills <= 1 ? 'ले ली' : pills === 2 ? 'दोनों ले लीं' : 'सब ले लीं',
     missed: 'छूट गई',
@@ -440,6 +443,7 @@ export const hi: Strings = {
     notReported: (n: number) => `${n} की खबर नहीं`,
     later: (n: number) => `${n} बाद में`,
     nothingDue: 'आज कुछ नहीं',
+    missedToday: (n: number) => `आज ${n} छूटी`,
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `${time} से कोई खबर नहीं`,
     notHeardYet: (name: string) => `${name} के फ़ोन से अभी कोई खबर नहीं`,

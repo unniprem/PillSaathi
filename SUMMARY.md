@@ -102,6 +102,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Deviations: "I took it" uses the app green `#2E9E5B` (white 21 sp on `#34B36A` is 2.7:1, under 3:1); title and time stay in dp (58 sp overflows at font scale 2.0); the capsule is tilted two-tone as in `PillPicture`; snooze gets the `snooze` icon. Fonts load in code inside try/catch (falls back to the phone's bold font, or words without icons). New `RingingLook.kt` (AM/PM split, soft box colour) with `RingingLookTest`. Gradle: 298 unit tests, BUILD SUCCESSFUL.
 - Strings also relabel the ringing notification's buttons ("I took it", "Remind me in 10 min"); ml/hi drafts "ഞാൻ കഴിച്ചു" / "मैंने ले ली" etc. (Task 18: align with the JS drafts).
 
+### Task 9: Today on a relative's phone
+**Status**: ✓ Done (parallel, branch `ui/task-9`)
+**Notes**:
+- Layout: PersonCards come first in the lifted body, then a "My pills" label, then this phone's own Today in her order (WarningCard, RefillCards, NextDose…). With people but no pills of his own: "You have no pills of your own." + an "Add a pill" link (same `addPill`). `FamilySection.tsx` deleted; PersonCard (`testID="person-card"`) holds its own refill and heard lines.
+- Data: `problemsOf` calls `getElderSetup` per person on every family load (and the 2-minute timer); cards and problems show together; a failed read gives no problem line. The greeting's first name comes from `signedInRelative()` via a new `firstName()` in `lib/family.ts`, only when he follows someone. Before her first upload, the tally is hidden and "Not heard from Amma's phone yet" is the last amber line.
+- Deviations: PersonCard takes `is24h`; the real signature is `problemText(problem, t, name)`; the name area and the missed line are separate buttons to her page, with Call a 48 dp round green button beside them. "Family" heading and "+ Add family" gone from Today. For Task 16: `remote.problem` still ends "…tap the yellow banner." (reword: her Today now shows an "Alarms may not ring" card with "Fix now"); her page can reuse the round Call style and `firstName`.
+
 ---
 
 ## Blockers / Deferred Items
