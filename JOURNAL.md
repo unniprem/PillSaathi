@@ -4,6 +4,60 @@ Session log, newest first.
 
 ---
 
+## 2026-10-29 15:44 IST — Session: Scan fix and Remote setup (stage 2)
+
+### Summary
+
+The user said "scan didn't work", asked for stage 2, and asked for a todo to redesign the whole UI. They also said not to wait for their confirmation between stages. PR #8 had already merged without the four findings from the morning's real-Firebase check, so all four went into a new branch, `fix/family-scan` (**PR #9**). Scan code did nothing because a sideloaded APK doesn't get Google's scanner module at install, and the failure was swallowed. Stage 2 was then designed, planned and built inline with no question round, every decision marked as Claude's call in the design. A relative can now add, edit and delete the elder's pills and set each dose time's alarm sound (his recording or one of hers) from his own phone. Her phone, still the only writer of her pills, checks in and applies the change through the same engine calls as her own screens, then tells her. Her upload now reports her alarm health, so he is warned when her phone may not ring. Her side was checked on the emulator with a debug hook, including rings on time with a sent sound. The two-phone checks wait for the rules to be deployed and the Redmi to be unlocked. A fresh review found 0 Critical and 4 Important issues; those and 4 re-graded Minors were fixed. `docs/TODO.md` now leads with the UI redesign.
+
+### Changes Made
+
+| Commit    | Type | Description                                                                        |
+| --------- | ---- | ---------------------------------------------------------------------------------- |
+| `35e805c` | fix  | Fetch Google's scanner (urgent module download) before the first scan; say when it isn't ready (PR #9) |
+| `f7ca2fb` | fix  | "No internet" only for OFFLINE; `familyMessage` everywhere (PR #9)                  |
+| `5fd66d9` | fix  | Restart the follow-request listeners after an error (PR #9)                         |
+| `db74516` | fix  | One upload for changes made offline (`REPLACE`), plus `DEBUG_FAMILY_CHANGED` (PR #9) |
+| `6125b84` | docs | Real-Firebase run and the fixes in the device matrix (PR #9)                        |
+| `3d9cb41` | docs | Remote setup design (stage 2)                                                       |
+| `cfe594d` | docs | Remote setup plan (12 tasks)                                                        |
+| `aa303b4` | feat | Engine: pills and sounds under chosen ids, sound by time                            |
+| `a4ac015` | feat | Rules: editors, change requests, file parts                                         |
+| `ceb36e5` | feat | Pure rules: changes, parts, the apply decision                                      |
+| `92535d6` | feat | Upload her card sounds, sound names, alarm health; read them on his phone           |
+| `43b54fe` | feat | Allow grants changes; "Can change my pills" switch                                  |
+| `55725b8` | feat | Her phone checks in, applies changes, tells her                                     |
+| `2dbecef` | feat | His phone sends, lists and cancels changes                                          |
+| `4070f5f` | feat | Words for changes and her alarm health                                              |
+| `0d43001` | feat | Her pills page on his phone                                                         |
+| `bac91ff` | feat | The pill page "for her"                                                             |
+| `451f4fd` | feat | Choose or record alarm sounds for her                                               |
+| `df532a9` | test | `DEBUG_FAMILY_APPLY`: apply a change on her phone without Firestore                 |
+| `1400bfd` | docs | README and "Remote setup" device matrix                                             |
+| `4f54f1b` | docs | `docs/TODO.md`, UI redesign next                                                    |
+| `ae4e399` | fix  | Review: notice survives a failed check-in; sender named from her own list          |
+| `9716846` | fix  | Review: a switched-off or removed relative's waiting changes are marked not done    |
+| `080289f` | fix  | Review: deleting her copy deletes changes and parts                                 |
+| `9e0ec63` | fix  | Review: listen right after Allow; no check-in can crash the app or stop the upload  |
+| `a14e27c` | fix  | Review: "Amma's time" on the pill page; last heard from on her pills page           |
+
+### Key Decisions
+
+- **Change requests, not a second writer.** Spark has no server code to push anything to her phone. So his phone writes requests and her phone, the only writer of her pills, applies them through `savePill`, `deletePill` and `setSoundAt`, the same paths as her own screens. That keeps every alarm-scheduling path as it was, and `:ringing` still never touches Firebase (no Firebase lines in its log at either test ring).
+- **Idempotent by id, claimed in a transaction.** A new pill or sound takes the change's id, so a check-in that dies halfway re-applies harmlessly. Claiming (pending → applying) in a transaction stops Cancel racing an apply. Sending the change doc in a transaction stops a "No internet" retry leaving two changes queued offline.
+- **Files in parts.** Firestore docs hold 1 MiB and Spark has no Storage, so photos (1024 px) and sounds (up to 5 MB) travel as 700 KB parts, which her phone deletes once used.
+- **Her alarm health goes up with her copy** (from the builder check). A phone set up entirely from afar may never get the battery setup, so "Done" alone could hide a phone that won't ring.
+- **Consent is a switch per person.** Old links can see but not change until her phone allows it.
+
+### Issues Encountered
+
+- PR #8 had merged mid-morning without the four findings; caught by checking the PR state before pushing.
+- The Redmi was locked all session, so Scan code on it and every two-phone stage 2 check are pending. The new rules aren't deployed (Claude Code's auto mode blocks `firebase deploy`).
+- Jest: native screens opened by navigation in a test need their event mocks (`onPreviewEnded`, `stopPreview`), or React throws an AggregateError.
+- One full Jest run showed a failure that didn't repeat in three later runs.
+
+---
+
 ## 2026-10-28 18:46 IST — Session: Family online build
 
 ### Summary
