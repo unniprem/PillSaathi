@@ -138,28 +138,33 @@ Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb 
 
 ### Family online
 
-Last run: 2026-10-28, emulator API 34 (`Medium_Phone_API_34`, arm64), **without a Firebase project** (no `google-services.json`).
+Last run: 2026-10-29, against the real Firebase project `pillsaathi` (Spark): the emulator `Medium_Phone_API_34` as the elder and the Redmi Note 10 (MIUI, wireless adb) as the relative, signed in with Google.
 
-- [x] The alarm is untouched with Family code in place and `family.json` set to sharing: a pill 2 minutes away rang on time, Taken recorded the dose, and `:ringing` logged no Firebase or WorkManager line. The main process got the broadcast and ran the upload, which stopped at "not set up" as it should without a config.
+- [x] Show a code: the code and scan code appear; Send code opens the share sheet with the text.
+- [x] Linked by typing the code; Allow on the elder's phone; the relative's Today shows her card live.
+- [x] A dose taken with the elder's app killed: the relative sees Taken, and no ping.
+- [x] A ring left unanswered: the missed ping on the Redmi.
+- [x] Tablets running low: one refill ping.
+- [x] The elder offline through a dose: "hasn't reported … Last heard from at …".
+- [x] A check due on the dozing Redmi fired and pinged.
+- [x] Remove on the elder's phone: the relative's card goes.
+- [x] Force-stopping the relative's app cancels his checks until he opens it again. That is Android's rule for every app (a force-stopped app's alarms are cancelled), not a bug; swiping the app away does not do this.
+- [x] (2026-10-28, no Firebase) The alarm is untouched with Family code in place: a ring on time, and `:ringing` logged no Firebase or WorkManager line.
 
-**Pending, needs the Firebase project (setup steps above):**
+Fixed after that run (2026-10-29, `fix/family-scan`):
 
-- [ ] Show a code: `codes/<code>` and `elders/<uid>` with `followers: []` appear in the console; Send code opens the share sheet with the text.
-- [ ] Two emulators linked by typing and by scanning; Allow and No; the elder's doc lists the relative; `DEBUG_FAMILY_UPLOAD` writes the pills and months.
-- [ ] A ring left to auto-silence: the relative gets "Amma hasn't taken …" at +15 min, with Call and Open.
-- [ ] A dose taken with the elder's app swiped away: the relative sees Taken within the refresh, and no ping.
-- [ ] The elder in airplane mode through a dose: "hasn't reported … Last heard from at …"; her records arrive when she is back.
-- [ ] 4 tablets at 1 a day: one refill ping, none on the next check.
-- [ ] The elder removes the relative: his next refresh drops her card, and `dumpsys alarm` shows no family check left.
-- [ ] The relative force-stopped: the next check still fires and pings.
+- [x] Three changes made offline, then back online: one upload, not three (`DEBUG_FAMILY_CHANGED` three times in airplane mode).
+- [x] A refused requests listener starts again about every 10 s while the code screen is open, where before it stopped for good (checked by pointing it at a refused path in a throwaway build).
+- [x] On the emulator, which has Google's scanner module, Scan code opens the camera at once and Close returns to the code step.
+- [x] A refusal from the rules says "Something went wrong. Please try again later.", not "No internet" (Jest).
+
+**Pending:**
+
+- [ ] Scan code on the Redmi, a sideloaded phone that lacked Google's scanner module on 2026-10-29: "Opening the scanner…", then the camera once Play services fetches it, or "The scanner isn't ready yet…" after a minute.
+- [ ] Linking by scanning, end to end.
+- [ ] The upload after a ring with the elder's app swiped away (MIUI), with the elder on the Redmi.
+- [ ] The relative's checks with his app swiped away (Xiaomi), over a night.
 - [ ] The alarm checklist with the elder linked and offline, and with Firestore unreachable: every ring on time.
-
-**Pending, needs a real phone (the Redmi Note 10 was not connected):**
-
-- [ ] The upload after a ring with the app swiped away (MIUI).
-- [ ] The missed ping at +30 min, with the elder on the Redmi.
-- [ ] The relative's checks with his app swiped away (Xiaomi).
-- [ ] Scan code on a sideloaded phone that lacks Google's scanner module (the Redmi on 2026-10-29): "Opening the scanner…", then the camera once Play services fetches it, or "The scanner isn't ready yet…" after a minute. On the emulator, which has the module, Scan code opens the camera at once and Close returns to the code step.
 
 ### History and refills
 
