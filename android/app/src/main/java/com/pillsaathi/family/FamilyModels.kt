@@ -17,12 +17,34 @@ data class Uploaded(
   val photos: Map<String, String> = emptyMap(),
 )
 
+/** The sound her card at [hour]:[minute] rings with: [soundName] of sound [soundId], or the default tone when null. */
+data class CardSound(val hour: Int, val minute: Int, val soundId: String?, val soundName: String?)
+
+/** One of her saved sounds, by name only: its audio never goes online. */
+data class SoundRef(val id: String, val name: String)
+
+/**
+ * Whether her phone can ring alarms, from the checks her Today banner uses: notifications and the
+ * alarm channel on, exact and full-screen alarms allowed, battery optimisation off ([battery]),
+ * not restricted in the background ([unrestricted]), and the battery setup opened once ([setupSeen]).
+ */
+data class ElderHealth(
+  val notifications: Boolean,
+  val alarmChannel: Boolean,
+  val exactAlarms: Boolean,
+  val fullScreen: Boolean,
+  val battery: Boolean,
+  val unrestricted: Boolean,
+  val setupSeen: Boolean,
+)
+
 /**
  * An elder this phone looks after. [name], [phone] and [delayMinutes] (null = Off) are the
  * relative's own and never go online. The rest is her last read copy: her [zone], when her phone
  * was last heard from, her oldest record, her pills, her [recent] records (her today and
  * yesterday), and the cached photo file name by pill id. [since] is when the link was saved, so
- * no ping is ever sent for a dose before it.
+ * no ping is ever sent for a dose before it. [editor] is whether her phone lets this one change her
+ * pills; [cards], [sounds] and [health] are her alarm sounds and whether her phone can ring.
  */
 data class Follow(
   val elderId: String,
@@ -36,13 +58,17 @@ data class Follow(
   val recent: List<DoseRecord> = emptyList(),
   val photos: Map<String, String> = emptyMap(),
   val since: Long? = null,
+  val editor: Boolean = false,
+  val cards: List<CardSound> = emptyList(),
+  val sounds: List<SoundRef> = emptyList(),
+  val health: ElderHealth? = null,
 )
 
 /**
  * Everything Family keeps on this phone (`family.json`). [sharing] is true once someone can see
  * this phone's pills. As a relative: the [follows], how far the checks have run, the pings
  * already sent ([pinged] by ping key, [refillPinged] by "elderId|pillId"), and the heard-from
- * time each silent elder was warned about.
+ * time each silent elder was warned about. As an elder: the [editors], who may change her pills.
  */
 data class FamilyLocal(
   val sharing: Boolean = false,
@@ -52,6 +78,7 @@ data class FamilyLocal(
   val pinged: Set<String> = emptySet(),
   val refillPinged: Map<String, RefillLevel> = emptyMap(),
   val silentWarned: Map<String, Long> = emptyMap(),
+  val editors: List<String> = emptyList(),
 )
 
 /** A relative who can see an elder's pills, as their Google account names them. */
@@ -65,6 +92,10 @@ data class ElderDoc(
   val pills: List<Pill>,
   val followers: List<String>,
   val people: Map<String, Person>,
+  val editors: List<String> = emptyList(),
+  val cards: List<CardSound> = emptyList(),
+  val sounds: List<SoundRef> = emptyList(),
+  val health: ElderHealth? = null,
 )
 
 /** One check of an elder's dose at [date] [hour]:[minute], her time, due to run at [checkAt]. */

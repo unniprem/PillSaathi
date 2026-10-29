@@ -57,11 +57,22 @@ class FamilyCloud private constructor(context: Context) {
   }
 
   /** Her zone, oldest record and pills, and the "last heard from" time, which every upload sets. */
-  fun writeElder(uid: String, zone: String, oldest: String?, pills: List<Pill>) {
+  fun writeElder(
+    uid: String,
+    zone: String,
+    oldest: String?,
+    pills: List<Pill>,
+    cards: List<CardSound>,
+    sounds: List<SoundRef>,
+    health: ElderHealth,
+  ) {
     val data = mapOf(
       "zone" to zone,
       "oldest" to oldest,
       "pills" to pills.map(FamilyJson::pillToMap),
+      "cards" to FamilyJson.cardsToMap(cards),
+      "sounds" to FamilyJson.soundsToMap(sounds),
+      "health" to FamilyJson.healthToMap(health),
       "heardAt" to FieldValue.serverTimestamp(),
     )
     await(elder(uid).set(data, SetOptions.merge()))

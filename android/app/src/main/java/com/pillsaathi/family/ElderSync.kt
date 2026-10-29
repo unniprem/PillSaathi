@@ -2,7 +2,10 @@ package com.pillsaathi.family
 
 import android.content.Context
 import android.util.Log
+import com.pillsaathi.alarm.Alarm
 import com.pillsaathi.alarm.AlarmStore
+import com.pillsaathi.alarm.Sound
+import com.pillsaathi.bridge.HealthChecker
 import java.io.File
 import java.time.ZoneId
 
@@ -33,7 +36,11 @@ object ElderSync {
       stopSharing(context, uid)
       return
     }
-    cloud.writeElder(uid, ZoneId.systemDefault().id, records.minOfOrNull { it.date }?.toString(), pills)
+    store.locked { store.saveFamily(store.loadFamily().copy(editors = elder.editors)) }
+    val (cards, sounds) = store.locked { cardSounds(store.loadAlarms(), store.loadSounds()) }
+    cloud.writeElder(
+      uid, ZoneId.systemDefault().id, records.minOfOrNull { it.date }?.toString(), pills, cards, sounds, health(context, store),
+    )
     val last = store.locked { store.loadFamily() }.uploaded
     var done = if (last.elder == uid) last else Uploaded(uid)
     try {
@@ -64,6 +71,30 @@ object ElderSync {
       store.locked { store.saveFamily(store.loadFamily().copy(uploaded = uploaded)) }
     }
     Log.i(FAMILY_TAG, "Uploaded ${pills.size} pills and ${done.months.size} months")
+  }
+
+  /** Her enabled cards with their sounds' names, and her sounds by name. */
+  private fun cardSounds(alarms: List<Alarm>, sounds: List<Sound>): Pair<List<CardSound>, List<SoundRef>> {
+    val byId = sounds.associateBy { it.id }
+    val cards = alarms.filter { it.enabled }.sortedWith(compareBy({ it.hour }, { it.minute })).map {
+      val sound = it.soundId?.let(byId::get)
+      CardSound(it.hour, it.minute, sound?.id, sound?.name)
+    }
+    return cards to sounds.map { SoundRef(it.id, it.name) }
+  }
+
+  /** Whether this phone can ring alarms, as her Today banner checks it. */
+  private fun health(context: Context, store: AlarmStore): ElderHealth {
+    val h = HealthChecker(context).check()
+    return ElderHealth(
+      notifications = h.notificationsEnabled,
+      alarmChannel = h.alarmChannelEnabled,
+      exactAlarms = h.exactAlarmAllowed,
+      fullScreen = h.fullScreenAllowed,
+      battery = h.ignoringBatteryOptimizations,
+      unrestricted = !h.backgroundRestricted,
+      setupSeen = store.locked { store.loadSetup() }.seen,
+    )
   }
 
   /** Deletes this phone's online copy and stops uploading, as when its last follower goes. */

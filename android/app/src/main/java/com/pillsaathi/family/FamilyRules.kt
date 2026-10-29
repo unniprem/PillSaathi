@@ -246,9 +246,12 @@ object FamilyRules {
    * [follow] after reading her doc and [recent] records: his own name, number and delay stay, the
    * copy of hers is replaced. Null when the read was refused or the doc is gone, so the follow goes.
    */
-  fun afterRefresh(follow: Follow, elder: ElderDoc?, recent: List<DoseRecord>): Follow? =
+  fun afterRefresh(follow: Follow, elder: ElderDoc?, recent: List<DoseRecord>, me: String? = null): Follow? =
     elder?.let {
-      follow.copy(zone = it.zone, heardAt = it.heardAt, oldest = it.oldest, pills = it.pills, recent = recent)
+      follow.copy(
+        zone = it.zone, heardAt = it.heardAt, oldest = it.oldest, pills = it.pills, recent = recent,
+        editor = me != null && me in it.editors, cards = it.cards, sounds = it.sounds, health = it.health,
+      )
     }
 
   /**

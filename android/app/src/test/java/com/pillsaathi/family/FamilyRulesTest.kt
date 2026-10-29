@@ -272,6 +272,19 @@ class FamilyRulesTest {
     )
   }
 
+  @Test fun afterRefresh_setsEditorAndCopiesHerSetup() {
+    val doc = elder().copy(
+      editors = listOf("R"), cards = listOf(CardSound(14, 0, null, null)), sounds = listOf(SoundRef("s1", "Bell")),
+      health = ElderHealth(true, true, true, true, true, true, true),
+    )
+    val mine = FamilyRules.afterRefresh(amma, doc, emptyList(), "R")!!
+    assertTrue(mine.editor)
+    assertEquals(doc.cards, mine.cards)
+    assertEquals(doc.sounds, mine.sounds)
+    assertEquals(doc.health, mine.health)
+    assertFalse(FamilyRules.afterRefresh(amma, doc, emptyList(), "S")!!.editor)
+  }
+
   @Test fun wallClock_showsElderTime() {
     val london = ZoneId.of("Europe/London")
     val shifted = FamilyRules.wallClock(Instant.parse("2026-11-10T08:30:00Z").toEpochMilli(), kolkata, london)
