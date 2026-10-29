@@ -1,7 +1,8 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 7
+**Next task**: 7, 8, 12, 13, 15, 17 (running in parallel, one worktree and branch `ui/task-N` each)
+**Waves**: A = 7, 8, 12, 13, 15, 17 · B = 9, 10, 14 · C = 11 · D = 16 · then 18. Parallel agents don't edit this file; the orchestrator merges their branches and adds their notes here.
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
