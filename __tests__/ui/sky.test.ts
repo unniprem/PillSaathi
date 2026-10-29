@@ -26,5 +26,10 @@ test('greetings', () => {
 });
 
 test('a dose after midnight is tonight', () => {
-  expect([8, 13, 21, 0].map(whenChip)).toEqual(['morning', 'afternoon', 'tonight', 'tonight']);
+  expect([8, 13, 21, 0].map(whenChip)).toEqual([
+    'morning',
+    'afternoon',
+    'tonight',
+    'tonight',
+  ]);
 });
