@@ -282,8 +282,8 @@ test('opens the pill page from a pill row', async () => {
   ]);
   await renderApp();
   await fireEvent.press(await screen.findByText('Telma 40'));
-  expect(await screen.findByDisplayValue('Telma 40')).toBeTruthy();
-  expect(screen.getByText('Delete')).toBeTruthy();
+  expect(await screen.findByText('Delete this pill')).toBeTruthy();
+  expect(screen.getByText('8:00 AM and 9:00 PM')).toBeTruthy();
 });
 
 test('does not open a pill deleted since', async () => {
@@ -626,7 +626,7 @@ describe('running low', () => {
     await fireEvent.press(screen.getByText('Add tablets'));
     expect(await screen.findByDisplayValue('9')).toBeTruthy();
     expect(screen.getByLabelText('Tablets left').props.autoFocus).toBe(true);
-    expect(headerTitles()).toEqual([expect.any(String), 'Edit pill']);
+    expect(screen.getByText('Delete this pill')).toBeTruthy();
   });
 
   test('says none left', async () => {

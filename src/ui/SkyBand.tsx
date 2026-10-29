@@ -19,13 +19,15 @@ type Props = {
   progress?: { step: number; total: number; label?: string };
   /** The hour whose sky to draw; now when left out. */
   hour?: number;
+  /** What sits on the sky under the row, such as a pill's picture and name. */
+  children?: ReactNode;
 };
 
 /**
  * An inner page's header: a short band of the sky at this hour, with a round back or close
  * button, the title, and a step bar on a page that is one of several steps. With no title the
- * step bar takes the title's place. The app draws edge to edge, so the band runs up under the
- * status bar.
+ * step bar takes the title's place, and with neither the buttons sit at the two ends. The app
+ * draws edge to edge, so the band runs up under the status bar.
  */
 export default function SkyBand({
   title,
@@ -35,6 +37,7 @@ export default function SkyBand({
   right,
   progress,
   hour,
+  children,
 }: Props) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -108,7 +111,7 @@ export default function SkyBand({
             ) : null}
           </View>
         ) : (
-          bar
+          bar ?? <View style={styles.titles} />
         )}
         {right}
       </View>
@@ -116,6 +119,7 @@ export default function SkyBand({
       {progress?.label != null ? (
         <Text style={[styles.stepText, { color: ink }]}>{progress.label}</Text>
       ) : null}
+      {children}
     </View>
   );
 }

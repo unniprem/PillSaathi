@@ -275,8 +275,7 @@ export default function TodayScreen({ navigation }: Props) {
     }
   };
 
-  const openPill = (pillId: string) =>
-    navigation.navigate('PillEdit', { pillId });
+  const openPill = (pillId: string) => navigation.navigate('Pill', { pillId });
   const addPill = () => navigation.navigate('AddPill');
 
   const is24h = is24HourFormat();
@@ -331,7 +330,7 @@ export default function TodayScreen({ navigation }: Props) {
               key={r.pillId}
               refill={r}
               onAdd={() =>
-                navigation.navigate('PillEdit', {
+                navigation.navigate('Pill', {
                   pillId: r.pillId,
                   focusCount: true,
                 })

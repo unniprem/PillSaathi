@@ -149,24 +149,18 @@ export const en = {
       `${start} · last dose ${last}`,
   },
   pill: {
-    editTitle: 'Edit pill',
     name: 'Name',
     namePlaceholder: 'Medicine name',
     loadFailed: "Couldn't load this pill.",
     photo: 'Photo',
-    takePhoto: 'Take a photo',
-    chooseGallery: 'Choose from gallery',
-    retake: 'Retake',
     removePhoto: 'Remove',
     photoFailed: "Couldn't add the photo",
     type: 'Type',
     howMuch: 'How much each time',
     less: 'Less',
     more: 'More',
-    when: 'When to remind',
     change: 'Change',
     removeTime: (time: string) => `Remove ${time}`,
-    addTime: '+ Add a time',
     timeTaken: 'That time is already added.',
     howLong: 'For how long',
     nDays: (days: number) => `${days} days`,
@@ -186,6 +180,20 @@ export const en = {
     tabletsLeft: 'Tablets left',
     capsulesLeft: 'Capsules left',
     countNote: 'Optional. It goes down by the amount at each Taken.',
+    ringsAt: 'Rings at',
+    soundShared: 'Every pill at the same time rings with the same sound.',
+    deletePill: 'Delete this pill',
+    changePhoto: 'Change the photo',
+    basics: 'Name, type and amount',
+    daysLeft: (days: number) =>
+      days === 0
+        ? 'less than a day'
+        : days === 1
+        ? 'about 1 day'
+        : `about ${days} days`,
+    noneLeft: 'None left',
+    waitingChange: (name: string, change: string) =>
+      `Waiting for ${name}'s phone: ${change}`,
   },
   /** Adding a pill: one question to a page, five pages. */
   addPill: {

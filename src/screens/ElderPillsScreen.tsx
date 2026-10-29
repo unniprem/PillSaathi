@@ -165,7 +165,7 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
                   key={pill.id}
                   accessibilityRole="button"
                   onPress={() =>
-                    navigation.navigate('PillEdit', {
+                    navigation.navigate('Pill', {
                       elderId,
                       pillId: pill.id,
                     })

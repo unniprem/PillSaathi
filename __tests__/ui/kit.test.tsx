@@ -56,6 +56,16 @@ test('with no title the step bar takes its place', async () => {
   expect(screen.getByText('1 of 5')).toBeTruthy();
 });
 
+test('the sky band holds what sits on the sky under its row', async () => {
+  await renderWithI18n(
+    <SkyBand title="" onBack={() => {}}>
+      <Text>Iron</Text>
+    </SkyBand>,
+  );
+  expect(screen.queryByTestId('sky-title')).toBeNull();
+  expect(screen.getByTestId('sky-band')).toHaveTextContent(/Iron/);
+});
+
 test('the sky band follows the clock, with white words at night', async () => {
   await renderWithI18n(<SkyBand title="Iron" hour={21} />);
   const { backgroundImage } = StyleSheet.flatten(

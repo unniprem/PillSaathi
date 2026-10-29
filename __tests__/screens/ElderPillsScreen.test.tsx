@@ -165,7 +165,8 @@ test('a pill opens the pill page for her', async () => {
   await waitFor(() =>
     expect(headerTitles()).toEqual(["Amma's pills", "Amma's pill"]),
   );
-  expect(await screen.findByDisplayValue('Azee 500')).toBeTruthy();
+  expect(await screen.findByText('Delete this pill')).toBeTruthy();
+  expect(screen.getByText('Azee 500')).toBeTruthy();
 });
 
 test('+ Add pill opens the pill page', async () => {
