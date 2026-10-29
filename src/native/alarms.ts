@@ -1,6 +1,6 @@
 import NativeAlarms from '../../specs/NativeAlarms';
 import type {
-  AppSettings,
+  AppSettings as NativeAppSettings,
   DoseTime,
   Health,
   LanguageOption,
@@ -21,7 +21,6 @@ import type {
 import type { PillForm } from '../lib/amount';
 
 export type {
-  AppSettings,
   DoseTime,
   Health,
   LanguageOption,
@@ -57,6 +56,13 @@ export type Refill = Omit<NativeRefill, 'form' | 'level'> & {
 };
 export type Today = { date: string; cards: TodayCard[]; refills: Refill[] };
 
+/** Who the phone is for: the person who takes the pills, or a relative who looks after someone. */
+export type Role = 'elder' | 'carer';
+/** `role` is null until the phone has been asked who it is for. */
+export type AppSettings = Omit<NativeAppSettings, 'role'> & {
+  role: Role | null;
+};
+
 export type HistoryPill = Omit<NativeHistoryPill, 'form'> & { form: PillForm };
 export type HistoryDose = Omit<NativeHistoryDose, 'outcome' | 'pills'> & {
   // notReported only in an elder's History: due, with no record uploaded yet.
@@ -73,6 +79,7 @@ export type SettingTarget =
   | 'batteryOptimization'
   | 'backgroundRestricted'
   | 'alarmVolume'
+  | 'display'
   | 'appInfo'
   | 'oemAutostart'
   | 'oemBattery'
@@ -197,9 +204,17 @@ export async function pickPhoto(
   return native().pickPhoto(source);
 }
 
-/** The language the app speaks, whether it reads pills aloud, and the languages it offers. */
+/**
+ * The language the app speaks, whether it reads pills aloud, the languages it offers, and who the
+ * phone is for (a role it doesn't know reads as not asked yet).
+ */
 export async function getSettings(): Promise<AppSettings> {
-  return native().getSettings();
+  const settings = await native().getSettings();
+  const role =
+    settings.role === 'elder' || settings.role === 'carer'
+      ? settings.role
+      : null;
+  return { ...settings, role };
 }
 
 /** The language the app speaks now, read at once; the ringing screen uses the same one. */
@@ -214,6 +229,10 @@ export async function setLanguage(code: string): Promise<void> {
 
 export async function setReadAloud(on: boolean): Promise<void> {
   return native().setReadAloud(on);
+}
+
+export async function setRole(role: Role): Promise<void> {
+  return native().setRole(role);
 }
 
 /**

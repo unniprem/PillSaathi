@@ -1,7 +1,7 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 5
+**Next task**: 6
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
@@ -38,6 +38,12 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - No `package.json` change (Task 3 installed bottom-tabs). `renderApp('Today' | 'History' | 'Family' | 'Settings', params)` opens `Main` at that tab; `headerTitles()` reads every `sky-title`, bottom page first. Visited tabs stay mounted, so after switching tabs use `toContain`; the tab bar's words are always on screen under `Main`, so `getByText('Family')` etc. can match a tab too (prefer `getByRole('tab', { name })`). Every stack page's band has `onBack={() => navigation.goBack()}`; tabs have none. Added a test that Back on a page opened from a tab returns to it.
 - Tab screens take `TabProps<'Today'>` (exported from `RootNavigator`). `HistoryScreen` serves the History tab and the `ElderHistory` route, so its props are `NavigationProp<RootStackParamList>` + a union of the two `RouteProp`s (a union of the two screen-props types isn't callable). `replace`/`popTo('Today')` became `'Main'`; FollowEdit's `popToTop` lands on Main.
 - Header buttons moved into the band: History's Share is a `RoundButton` (labelled "Share", shown once the month loads); Elder's gear is a `RoundButton` labelled `t.family.edit`; PillEdit's Cancel became the band's × (labelled "Close"), with Delete/Save on a white pill in `right` until Tasks 10–11 replace the page. Today's add button no longer adds `insets.bottom` (the tab bar pads for the gesture bar). Not yet viewed on a device.
+
+### Task 5: The `role` setting and the display-settings target (native)
+**Status**: ✓ Done
+**Notes**:
+- Kotlin `AppSettings.role: String?` (stored as given; JS is the gatekeeper), written to JSON as `"role"` (null when unset); `getSettings()` returns it, `setRole` saves it, `openSetting('display')` → `ACTION_DISPLAY_SETTINGS`. The native `Spec.AppSettings.role` is `string | null`; `src/native/alarms.ts` now defines its own `AppSettings` (role `Role | null`, anything but elder/carer reads as null) and exports `type Role`.
+- `mockAlarmsDefaults()` gives `role: 'elder'` and mocks `setRole`. Tests that build their own `getSettings` value must include `role` (tsc); `FamilyScreen` and `SettingsScreen` tests updated. Jest 37 suites / 311 tests.
 
 ---
 

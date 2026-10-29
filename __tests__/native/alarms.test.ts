@@ -83,6 +83,53 @@ test('passes the photo source to native', async () => {
   expect(alarms.AlarmErrors.PhotoError).toBe('PHOTO_ERROR');
 });
 
+test('getSettings maps an unknown role to null', async () => {
+  const settings = {
+    language: 'en',
+    readAloud: true,
+    languages: [{ code: 'en', label: 'English', draft: false }],
+  };
+  const native = {
+    getSettings: jest
+      .fn()
+      .mockResolvedValueOnce({ ...settings, role: 'boss' })
+      .mockResolvedValueOnce({ ...settings, role: null })
+      .mockResolvedValueOnce({ ...settings, role: 'carer' }),
+  };
+  jest.resetModules();
+  jest.doMock('../../specs/NativeAlarms', () => ({
+    __esModule: true,
+    default: native,
+  }));
+  const alarms: typeof AlarmsModule = require('../../src/native/alarms');
+
+  await expect(alarms.getSettings()).resolves.toEqual({
+    ...settings,
+    role: null,
+  });
+  await expect(alarms.getSettings()).resolves.toEqual({
+    ...settings,
+    role: null,
+  });
+  await expect(alarms.getSettings()).resolves.toEqual({
+    ...settings,
+    role: 'carer',
+  });
+});
+
+test('setRole passes the role through', async () => {
+  const native = { setRole: jest.fn().mockResolvedValue(undefined) };
+  jest.resetModules();
+  jest.doMock('../../specs/NativeAlarms', () => ({
+    __esModule: true,
+    default: native,
+  }));
+  const alarms: typeof AlarmsModule = require('../../src/native/alarms');
+
+  await alarms.setRole('elder');
+  expect(native.setRole).toHaveBeenCalledWith('elder');
+});
+
 test('passes getHistory through', async () => {
   const history = {
     today: '2026-10-26',

@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
+import type { AppSettings } from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
 import { ml } from '../../src/i18n/ml';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
@@ -9,9 +10,10 @@ import { headerTitles, renderApp } from '../helpers/renderApp';
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
 
-const debugLanguages = {
+const debugLanguages: AppSettings = {
   language: 'en',
   readAloud: true,
+  role: 'elder',
   languages: [
     { code: 'en', label: 'English', draft: false },
     { code: 'ml', label: 'മലയാളം', draft: true },

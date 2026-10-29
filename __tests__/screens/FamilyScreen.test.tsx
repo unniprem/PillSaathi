@@ -161,6 +161,7 @@ test('Family is a tab of its own, no longer a Settings row', async () => {
   jest.mocked(alarms.getSettings).mockResolvedValue({
     language: 'en',
     readAloud: true,
+    role: 'elder',
     languages: [{ code: 'en', label: 'English', draft: false }],
   });
   await renderApp('Settings');
