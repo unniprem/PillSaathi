@@ -176,5 +176,52 @@ test('names the error codes the module rejects with', () => {
     NotFound: 'NOT_FOUND',
     Permission: 'PERMISSION',
     NoScanner: 'NO_SCANNER',
+    NotAllowed: 'NOT_ALLOWED',
+    TooBig: 'TOO_BIG',
+    AlreadyTaken: 'ALREADY_TAKEN',
   });
+});
+
+test('passes the remote setup calls through to the native module', async () => {
+  const setup = {
+    editor: true,
+    otherZone: false,
+    heardAt: null,
+    pills: [],
+    times: [{ hour: 8, minute: 0, soundId: null, soundName: null }],
+    sounds: [],
+    problem: null,
+  };
+  const input = {
+    id: null,
+    name: 'Telma 40',
+    form: 'tablet',
+    amount: 1,
+    times: [{ hour: 8, minute: 0 }],
+    startsTomorrow: false,
+    days: null,
+    photo: null,
+    remaining: null,
+    remainingChanged: false,
+    photoChoice: 'none',
+  };
+  const native = {
+    getElderSetup: jest.fn().mockResolvedValue(setup),
+    sendPill: jest.fn().mockResolvedValue('c1'),
+    sendDeletePill: jest.fn().mockResolvedValue('c2'),
+    sendSound: jest.fn().mockResolvedValue('c3'),
+    listChanges: jest.fn().mockResolvedValue([]),
+    cancelChange: jest.fn().mockResolvedValue(undefined),
+  };
+  const family = load(native);
+  await expect(family.getElderSetup('E')).resolves.toEqual(setup);
+  await expect(family.sendPill('E', input)).resolves.toBe('c1');
+  expect(native.sendPill).toHaveBeenCalledWith('E', input);
+  await expect(family.sendDeletePill('E', 'p1')).resolves.toBe('c2');
+  expect(native.sendDeletePill).toHaveBeenCalledWith('E', 'p1');
+  await expect(family.sendSound('E', 8, 0, 'mine', 's1')).resolves.toBe('c3');
+  expect(native.sendSound).toHaveBeenCalledWith('E', 8, 0, 'mine', 's1');
+  await expect(family.listChanges('E')).resolves.toEqual([]);
+  await family.cancelChange('E', 'c1');
+  expect(native.cancelChange).toHaveBeenCalledWith('E', 'c1');
 });

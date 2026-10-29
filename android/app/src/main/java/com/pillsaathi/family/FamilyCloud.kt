@@ -428,6 +428,57 @@ class FamilyCloud private constructor(context: Context) {
   }
 
   /** Followed elder [elderId]'s doc from the server; PERMISSION once she removed him or her copy went. */
+  /**
+   * Sends change [changeId] to elder [elderId]: its file [parts] first, then the change, in a
+   * transaction, which fails offline instead of being queued and sent later (a second try would
+   * then add a second pill). Parts written before a failure are deleted, best effort.
+   */
+  fun sendChange(elderId: String, changeId: String, data: Map<String, Any?>, parts: List<ByteArray>) {
+    val elder = familyDb().collection(ELDERS).document(elderId)
+    val me = relativeUid()
+    val written = mutableListOf<DocumentReference>()
+    try {
+      parts.forEachIndexed { i, bytes ->
+        val ref = elder.collection(PARTS).document(FileParts.partId(changeId, i))
+        val part = mapOf("change" to changeId, "index" to i, "by" to me, "at" to FieldValue.serverTimestamp(), "data" to Blob.fromBytes(bytes))
+        await(ref.set(part))
+        written += ref
+      }
+      val ref = elder.collection(CHANGES).document(changeId)
+      await(familyDb().runTransaction { tx -> tx.set(ref, data + ("at" to FieldValue.serverTimestamp())) })
+    } catch (e: FamilyException) {
+      written.forEach { ref -> ref.delete().addOnFailureListener { Log.w(FAMILY_TAG, "Could not delete part ${ref.id}", it) } }
+      throw e
+    }
+  }
+
+  /** Elder [elderId]'s changes, as the server has them. */
+  fun readChanges(elderId: String): List<RemoteChange> =
+    await(familyDb().collection(ELDERS).document(elderId).collection(CHANGES).get(Source.SERVER)).documents.map(::changeOf)
+
+  /**
+   * Takes back this relative's change [changeId] while it still waits, then its parts. Throws
+   * [FamilyException] ALREADY_TAKEN once her phone has claimed it.
+   */
+  fun cancelChange(elderId: String, changeId: String) {
+    val elder = familyDb().collection(ELDERS).document(elderId)
+    val ref = elder.collection(CHANGES).document(changeId)
+    // -1: her phone has it already.
+    val parts = await(
+      familyDb().runTransaction { tx ->
+        val snap = tx.get(ref)
+        if (snap.exists() && snap.getString("status") != RemoteRules.PENDING) return@runTransaction -1
+        if (snap.exists()) tx.delete(ref)
+        (snap.getLong("parts") ?: 0L).toInt()
+      },
+    )
+    if (parts < 0) throw FamilyException(ALREADY_TAKEN, "Change $changeId is already on her phone")
+    (0 until parts).forEach { i ->
+      elder.collection(PARTS).document(FileParts.partId(changeId, i)).delete()
+        .addOnFailureListener { Log.w(FAMILY_TAG, "Could not delete part $i of $changeId", it) }
+    }
+  }
+
   fun readFollowedElder(elderId: String): ElderDoc? =
     elderOf(await(familyDb().collection(ELDERS).document(elderId).get(Source.SERVER)))
 
@@ -469,6 +520,9 @@ class FamilyCloud private constructor(context: Context) {
     const val NOT_FOUND = "NOT_FOUND"
     const val PERMISSION = "PERMISSION"
     const val NO_SCANNER = "NO_SCANNER"
+    const val NOT_ALLOWED = "NOT_ALLOWED"
+    const val TOO_BIG = "TOO_BIG"
+    const val ALREADY_TAKEN = "ALREADY_TAKEN"
 
     const val TIMEOUT_S = 20L
     const val FAMILY_APP = "family"

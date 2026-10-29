@@ -40,4 +40,18 @@ export const familyDefaults: Record<string, unknown> = {
     doses: [],
   },
   listElderPills: [],
+  getElderSetup: {
+    editor: true,
+    otherZone: false,
+    heardAt: null,
+    pills: [],
+    times: [],
+    sounds: [],
+    problem: null,
+  },
+  sendPill: 'c1',
+  sendDeletePill: 'c1',
+  sendSound: 'c1',
+  listChanges: [],
+  cancelChange: undefined,
 };
