@@ -76,7 +76,9 @@ export default function SoundPickerScreen({ navigation, route }: Props) {
   /** Sets the sound on the card this picker was opened for, then returns to Today. */
   const pick = async (id: string | null) => {
     try {
-      await setCardSound(alarmId, id);
+      if (alarmId) {
+        await setCardSound(alarmId, id);
+      }
     } catch (e) {
       console.warn('Could not change the sound', e);
       if (mounted.current) {

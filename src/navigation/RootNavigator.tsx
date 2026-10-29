@@ -14,15 +14,29 @@ import ShareCodeScreen from '../screens/ShareCodeScreen';
 import AddFamilyScreen from '../screens/AddFamilyScreen';
 import ElderScreen from '../screens/ElderScreen';
 import FollowEditScreen from '../screens/FollowEditScreen';
+import ElderPillsScreen from '../screens/ElderPillsScreen';
 import { formatDay } from '../lib/course';
 
 export type RootStackParamList = {
   Today: undefined;
-  // focusCount opens at Tablets left, from the running-low banner.
-  PillEdit: { pillId?: string; focusCount?: boolean };
-  // The sound chosen here is set on card alarmId.
-  SoundPicker: { alarmId: string; selectedSoundId: string | null };
-  Record: { alarmId: string };
+  // focusCount opens at Tablets left, from the running-low banner. elderId edits her pill, on a
+  // relative's phone: Save sends the change to her phone.
+  PillEdit: { pillId?: string; focusCount?: boolean; elderId?: string };
+  // The sound chosen here is set on card alarmId, or, with elderId, sent for her dose at
+  // hour:minute.
+  SoundPicker: {
+    alarmId?: string;
+    selectedSoundId: string | null;
+    elderId?: string;
+    hour?: number;
+    minute?: number;
+  };
+  Record: {
+    alarmId?: string;
+    elderId?: string;
+    hour?: number;
+    minute?: number;
+  };
   Setup: undefined;
   Settings: undefined;
   // elderId shows an elder's History, read-only, on a relative's phone.
@@ -32,6 +46,7 @@ export type RootStackParamList = {
   ShareCode: undefined;
   AddFamily: undefined;
   Elder: { elderId: string };
+  ElderPills: { elderId: string };
   FollowEdit: { elderId: string };
 };
 
@@ -126,6 +141,11 @@ function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
         name="FollowEdit"
         component={FollowEditScreen}
         initialParams={paramsFor('FollowEdit')}
+      />
+      <Stack.Screen
+        name="ElderPills"
+        component={ElderPillsScreen}
+        initialParams={paramsFor('ElderPills')}
       />
     </Stack.Navigator>
   );

@@ -248,7 +248,9 @@ export default function RecordScreen({ navigation, route }: Props) {
       );
       saved.current = true;
       try {
-        await setCardSound(alarmId, sound.id);
+        if (alarmId) {
+          await setCardSound(alarmId, sound.id);
+        }
       } catch (e) {
         // The recording is kept and listed in the picker; only the card's sound didn't change.
         console.warn('Could not set the recording on the card', e);
