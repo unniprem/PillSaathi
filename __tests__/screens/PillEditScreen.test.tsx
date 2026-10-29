@@ -8,10 +8,11 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { ml } from '../../src/i18n/ml';
 import { courseSummary, toISODate } from '../../src/lib/course';
 import * as alarms from '../../src/native/alarms';
+import * as family from '../../src/native/family';
 import type { Pill } from '../../src/native/alarms';
 import * as sounds from '../../src/native/sounds';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
-import { renderApp } from '../helpers/renderApp';
+import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
@@ -600,5 +601,147 @@ describe('tablets left', () => {
     await renderApp('PillEdit', { pillId: 'p1' });
     await screen.findByDisplayValue('Telma 40');
     expect(screen.getByLabelText('Tablets left').props.autoFocus).toBeFalsy();
+  });
+});
+
+describe('for her, on a relative’s phone', () => {
+  const herTelma = { ...telma, photo: 'a.jpg', photoUri: 'file:///her/a.jpg' };
+  const amma = {
+    elderId: 'E',
+    name: 'Amma',
+    phone: null,
+    delayMinutes: 30,
+    heardAt: null,
+    silent: false,
+    abandoned: false,
+    otherZone: false,
+    tally: { taken: 0, skipped: 0, missed: 0, notReported: 0, later: 0 },
+    refills: [],
+  };
+
+  beforeEach(() => {
+    jest.mocked(family.getFamily).mockResolvedValue([amma]);
+    jest.mocked(family.getElderSetup).mockResolvedValue({
+      editor: true,
+      otherZone: false,
+      heardAt: null,
+      pills: [herTelma],
+      times: [],
+      sounds: [],
+      problem: null,
+    });
+    jest.mocked(family.sendPill).mockResolvedValue('c1');
+    jest.mocked(family.sendDeletePill).mockResolvedValue('c2');
+  });
+
+  test('loads her pill, Save sends it with photoChoice keep, and returns', async () => {
+    await renderApp('PillEdit', { elderId: 'E', pillId: 'p1' });
+    expect(await screen.findByDisplayValue('Telma 40')).toBeTruthy();
+    await waitFor(() => expect(headerTitles()).toEqual(["Amma's pill"]));
+    expect(alarms.listPills).not.toHaveBeenCalled();
+    await save();
+    expect(family.sendPill).toHaveBeenCalledWith('E', {
+      id: 'p1',
+      name: 'Telma 40',
+      form: 'tablet',
+      amount: 0.5,
+      times: [{ hour: 21, minute: 0 }],
+      startsTomorrow: false,
+      days: 12,
+      photo: null,
+      remaining: null,
+      remainingChanged: false,
+      photoChoice: 'keep',
+    });
+    expect(alarms.savePill).not.toHaveBeenCalled();
+    await waitFor(() => expect(headerTitles()).not.toContain("Amma's pill"));
+  });
+
+  test('a new pill with Start tomorrow sends startsTomorrow true and photoChoice none', async () => {
+    await renderApp('PillEdit', { elderId: 'E' });
+    await fireEvent.changeText(
+      await screen.findByPlaceholderText('Medicine name'),
+      'Azee 500',
+    );
+    await fireEvent.press(screen.getByText('+ Add a time'));
+    await screen.findByText('8:00 AM');
+    await fireEvent.press(screen.getByText('No end'));
+    await fireEvent.press(screen.getByText('Tomorrow'));
+    await save();
+    expect(family.sendPill).toHaveBeenCalledWith(
+      'E',
+      expect.objectContaining({
+        id: null,
+        name: 'Azee 500',
+        startsTomorrow: true,
+        photo: null,
+        photoChoice: 'none',
+      }),
+    );
+  });
+
+  test('a photo picked here is sent as new', async () => {
+    jest
+      .mocked(alarms.pickPhoto)
+      .mockResolvedValue({ name: 'b.jpg', uri: 'file:///mine/b.jpg' });
+    await renderApp('PillEdit', { elderId: 'E', pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    await fireEvent.press(screen.getByText('Retake'));
+    await save();
+    expect(family.sendPill).toHaveBeenCalledWith(
+      'E',
+      expect.objectContaining({ photo: 'b.jpg', photoChoice: 'new' }),
+    );
+  });
+
+  test('Delete confirms and sends a delete', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    await renderApp('PillEdit', { elderId: 'E', pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    await fireEvent.press(screen.getByText('Delete'));
+    expect(family.sendDeletePill).not.toHaveBeenCalled();
+    const buttons = alert.mock.calls[0][2]!;
+    await act(async () => buttons[1].onPress!());
+    expect(family.sendDeletePill).toHaveBeenCalledWith('E', 'p1');
+    expect(alarms.deletePill).not.toHaveBeenCalled();
+  });
+
+  test('NOT_ALLOWED says how to be allowed', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest
+      .mocked(family.sendPill)
+      .mockRejectedValue(
+        Object.assign(new Error('NOT_ALLOWED'), { code: 'NOT_ALLOWED' }),
+      );
+    await renderApp('PillEdit', { elderId: 'E', pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    await save();
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        "Amma's phone hasn't allowed you to change her pills. On her phone: Settings → Family → turn on Can change my pills next to your name.",
+      ),
+    );
+  });
+
+  test('never opens setup or the exact-alarm prompt', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest
+      .mocked(alarms.getSetupState)
+      .mockResolvedValue({ seen: false, doneSteps: [] });
+    jest.mocked(alarms.getHealth).mockResolvedValue({
+      notificationsEnabled: true,
+      alarmChannelEnabled: true,
+      exactAlarmAllowed: false,
+      fullScreenAllowed: true,
+      ignoringBatteryOptimizations: true,
+      backgroundRestricted: false,
+      alarmVolumeLow: false,
+    });
+    await renderApp('PillEdit', { elderId: 'E', pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    await save();
+    await waitFor(() => expect(family.sendPill).toHaveBeenCalled());
+    expect(alarms.markSetupSeen).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
   });
 });

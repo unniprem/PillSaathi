@@ -159,6 +159,15 @@ test('the health warning shows the first problem', async () => {
   ).toBeTruthy();
 });
 
+test('a pill opens the pill page for her', async () => {
+  await renderApp('ElderPills', { elderId: 'E' });
+  await fireEvent.press(await screen.findByText('Azee 500'));
+  await waitFor(() =>
+    expect(headerTitles()).toEqual(["Amma's pills", "Amma's pill"]),
+  );
+  expect(await screen.findByDisplayValue('Azee 500')).toBeTruthy();
+});
+
 test('+ Add pill opens the pill page', async () => {
   await renderApp('ElderPills', { elderId: 'E' });
   await fireEvent.press(await screen.findByText('+ Add pill'));
