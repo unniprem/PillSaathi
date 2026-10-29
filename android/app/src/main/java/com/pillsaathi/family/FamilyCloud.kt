@@ -144,11 +144,20 @@ class FamilyCloud private constructor(context: Context) {
     throw last ?: FamilyException(PERMISSION, "No free link code after 5 tries")
   }
 
-  /** Calls [onChange] on [executor] with elder [uid]'s pending follow requests, until removed. */
-  fun listenRequests(uid: String, executor: Executor, onChange: (List<FollowRequest>) -> Unit): ListenerRegistration =
+  /**
+   * Calls [onChange] on [executor] with elder [uid]'s pending follow requests, until removed.
+   * Firestore ends a listener on its first error, so [onError] means it has stopped.
+   */
+  fun listenRequests(
+    uid: String,
+    executor: Executor,
+    onError: () -> Unit,
+    onChange: (List<FollowRequest>) -> Unit,
+  ): ListenerRegistration =
     elder(uid).collection(REQUESTS).whereEqualTo("status", PENDING).addSnapshotListener(executor) { snap, e ->
       if (e != null) {
         Log.w(FAMILY_TAG, "Listening for follow requests failed", e)
+        onError()
         return@addSnapshotListener
       }
       onChange(
@@ -260,12 +269,21 @@ class FamilyCloud private constructor(context: Context) {
     await(familyDb().collection(ELDERS).document(elderId).collection(REQUESTS).document(relativeUid()).set(request))
   }
 
-  /** Calls [onChange] on [executor] with this relative's request to [elderId]: its status, or null when gone. */
-  fun listenRequest(elderId: String, executor: Executor, onChange: (String?) -> Unit): ListenerRegistration =
+  /**
+   * Calls [onChange] on [executor] with this relative's request to [elderId]: its status, or null
+   * when gone. As with [listenRequests], [onError] means the listener has stopped.
+   */
+  fun listenRequest(
+    elderId: String,
+    executor: Executor,
+    onError: () -> Unit,
+    onChange: (String?) -> Unit,
+  ): ListenerRegistration =
     familyDb().collection(ELDERS).document(elderId).collection(REQUESTS).document(relativeUid())
       .addSnapshotListener(executor) { snap, e ->
         if (e != null) {
           Log.w(FAMILY_TAG, "Listening for an answer failed", e)
+          onError()
           return@addSnapshotListener
         }
         onChange(snap?.getString("status"))

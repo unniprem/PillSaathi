@@ -58,7 +58,9 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     get() = AlarmStore(reactApplicationContext)
 
   // Worker thread only.
+  private var watching = false
   private var requestsListener: ListenerRegistration? = null
+  private var requestsRetryAt = 0L
   private var pending: List<FollowRequest> = emptyList()
   private val answered = mutableSetOf<String>()
   private var currentCode: String? = null
@@ -90,21 +92,43 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
 
   override fun watchRequests(on: Boolean, promise: Promise) =
     onWorker(promise) {
+      watching = on
       requestsListener?.remove()
       requestsListener = null
+      requestsRetryAt = 0L
       pending = emptyList()
-      // Only a phone that has made a code can have requests.
-      val uid = if (on) cloud.signedInElder() else null
-      if (uid != null) {
-        requestsListener = cloud.listenRequests(uid, worker) { requests ->
-          pending = requests.filter { key(it) !in answered }
-        }
-      }
+      listenForRequests()
       null
     }
 
+  /**
+   * Starts listening for follow requests while the page watches and no listener runs. Only a phone
+   * that has made a code can have requests, and the first code signs in after the page started
+   * watching; and Firestore stops a listener for good on its first error. So the page's polls call
+   * this again, at most every [RETRY_MS] after an error.
+   */
+  private fun listenForRequests() {
+    if (!watching || requestsListener != null || System.currentTimeMillis() < requestsRetryAt) return
+    val uid = cloud.signedInElder() ?: return
+    lateinit var listener: ListenerRegistration
+    listener = cloud.listenRequests(
+      uid,
+      worker,
+      onError = {
+        if (requestsListener === listener) {
+          requestsListener = null
+          requestsRetryAt = System.currentTimeMillis() + RETRY_MS
+        }
+      },
+    ) { requests -> pending = requests.filter { key(it) !in answered } }
+    requestsListener = listener
+  }
+
   override fun pendingRequests(promise: Promise) =
-    onWorker(promise) { people(pending.map { it.uid to Person(it.name, it.email) }) }
+    onWorker(promise) {
+      listenForRequests()
+      people(pending.map { it.uid to Person(it.name, it.email) })
+    }
 
   override fun answerRequest(uid: String, allow: Boolean, promise: Promise) =
     onWorker(promise) {
@@ -197,14 +221,32 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       }
       asks.remove(elderId)?.listener?.remove()
       val ask = Ask(expiresAt)
-      ask.listener = cloud.listenRequest(elderId, worker) { ask.status = it }
       asks[elderId] = ask
+      listenForAnswer(elderId, ask)
       elderId
     }
+
+  /** Listens for [elderId]'s answer to [ask]; again from [followState]'s polls when an error stopped it. */
+  private fun listenForAnswer(elderId: String, ask: Ask) {
+    if (ask.listener != null || System.currentTimeMillis() < ask.retryAt) return
+    lateinit var listener: ListenerRegistration
+    listener = cloud.listenRequest(
+      elderId,
+      worker,
+      onError = {
+        if (ask.listener === listener) {
+          ask.listener = null
+          ask.retryAt = System.currentTimeMillis() + RETRY_MS
+        }
+      },
+    ) { ask.status = it }
+    ask.listener = listener
+  }
 
   override fun followState(elderId: String, promise: Promise) =
     onWorker(promise) {
       val ask = asks[elderId] ?: throw FamilyException(FamilyCloud.NOT_FOUND, "No request to $elderId")
+      listenForAnswer(elderId, ask)
       when (ask.status) {
         FamilyCloud.ALLOWED -> "allowed"
         FamilyCloud.DENIED -> "denied"
@@ -382,6 +424,7 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
   /** A request to follow an elder, waiting for her answer: its last [status], from a listener. */
   private class Ask(val expiresAt: Long) {
     var listener: ListenerRegistration? = null
+    var retryAt = 0L
     @Volatile var status: String? = FamilyCloud.PENDING
   }
 
@@ -447,5 +490,6 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     const val NAME = "NativeFamily"
     private const val TAG = "PillSaathiFamily"
     private const val STORAGE_ERROR = "STORAGE_ERROR"
+    private const val RETRY_MS = 10_000L
   }
 }
