@@ -9,6 +9,16 @@ import com.pillsaathi.family.ElderSync
 import com.pillsaathi.family.FamilyChecks
 import com.pillsaathi.family.FamilyJson
 import com.pillsaathi.family.FamilyWork
+import com.pillsaathi.alarm.DoseTime
+import com.pillsaathi.alarm.PillDraft
+import com.pillsaathi.alarm.PillForm
+import com.pillsaathi.family.ChangeBody
+import com.pillsaathi.family.CheckIn
+import com.pillsaathi.family.PhotoChoice
+import com.pillsaathi.family.RemoteChange
+import com.pillsaathi.family.RemoteRules
+import com.pillsaathi.family.SoundChoice
+import java.time.LocalDate
 import kotlin.concurrent.thread
 
 /**
@@ -37,6 +47,39 @@ class DebugFamilyReceiver : BroadcastReceiver() {
       "com.pillsaathi.DEBUG_FAMILY_CHANGED" -> {
         FamilyWork.requestUpload(app)
         Log.i(TAG, "DEBUG_FAMILY_CHANGED queued an upload")
+      }
+      // Applies a change as her check-in would, without Firestore: a pill at --ei hour/minute
+      // named --es name, or with --es kind sound the file --es file (in the app's files) as the
+      // sound at that time. --es id makes it the same change again.
+      "com.pillsaathi.DEBUG_FAMILY_APPLY" -> {
+        val pending = goAsync()
+        thread(name = "debug-family-apply") {
+          try {
+            val id = intent.getStringExtra("id") ?: java.util.UUID.randomUUID().toString()
+            val hour = intent.getIntExtra("hour", 8)
+            val minute = intent.getIntExtra("minute", 0)
+            val name = intent.getStringExtra("name") ?: "Remote test"
+            val (body, file) = when (intent.getStringExtra("kind")) {
+              "sound" -> {
+                val f = java.io.File(app.filesDir, intent.getStringExtra("file") ?: "debug.m4a")
+                ChangeBody.SetSound(hour, minute, SoundChoice.New(name, 1_000, f.extension)) to f.readBytes()
+              }
+              "delete" -> ChangeBody.DeletePill(intent.getStringExtra("pillId") ?: id) to null
+              else -> ChangeBody.SavePill(
+                PillDraft(null, name, PillForm.TABLET, 1.0, listOf(DoseTime(hour, minute)), false, null),
+                LocalDate.now(),
+                PhotoChoice.NONE,
+              ) to null
+            }
+            val change = RemoteChange(id, "debug", "Ravi", null, RemoteRules.APPLYING, null, null, if (file == null) 0 else 1, body)
+            val reason = synchronized(ElderSync.lock) { CheckIn.applyLocally(app, change, file) }
+            Log.i(TAG, "DEBUG_FAMILY_APPLY $id: ${reason ?: "applied"}")
+          } catch (e: Exception) {
+            Log.e(TAG, "DEBUG_FAMILY_APPLY failed", e)
+          } finally {
+            pending.finish()
+          }
+        }
       }
       // Runs the due checks now, on a thread, as the wake-up would.
       "com.pillsaathi.DEBUG_FAMILY_CHECK" -> {

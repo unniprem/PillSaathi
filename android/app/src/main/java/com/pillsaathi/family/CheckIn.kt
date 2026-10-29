@@ -50,7 +50,7 @@ object CheckIn {
       if (!cloud.claim(uid, change.id)) continue
       val reason =
         try {
-          applyOne(context, engine, cloud, uid, change, editors, applied)
+          applyOne(context, engine, change, editors, applied) { file(cloud, uid, change) }
         } catch (e: FamilyException) {
           throw e
         } catch (e: Exception) {
@@ -74,15 +74,28 @@ object CheckIn {
       NoticeKind.SOUND -> listOf(a.who, a.time?.let(clock).orEmpty(), a.sound ?: defaultTone)
     }
 
-  /** Applies [change]; null when done, else why not. Adds what her notice should say to [applied]. */
+  /**
+   * Debug builds: applies [change] as a check-in would, with [file] as its photo or sound, and
+   * tells her; gives null when done, else why not. Firestore isn't touched.
+   */
+  fun applyLocally(context: Context, change: RemoteChange, file: ByteArray?): String? {
+    val applied = mutableListOf<AppliedChange>()
+    val reason = applyOne(context, AlarmEngine.get(context), change, listOf(change.by), applied) { file }
+    if (applied.isNotEmpty()) FamilyNotifications.postChanges(context, applied)
+    return reason
+  }
+
+  /**
+   * Applies [change]; null when done, else why not. Adds what her notice should say to [applied].
+   * [file] gives the photo or sound sent with it, null when a part is missing.
+   */
   private fun applyOne(
     context: Context,
     engine: AlarmEngine,
-    cloud: FamilyCloud,
-    uid: String,
     change: RemoteChange,
     editors: List<String>,
     applied: MutableList<AppliedChange>,
+    file: () -> ByteArray?,
   ): String? {
     val store = engine.store
     val pills = engine.pills()
@@ -92,7 +105,7 @@ object CheckIn {
     val body = change.body
     val newPhoto =
       if (body is ChangeBody.SavePill && body.photo == PhotoChoice.NEW) {
-        file(cloud, uid, change)?.let { bytes ->
+        file()?.let { bytes ->
           try {
             photos.importBytes(bytes)
           } catch (e: java.io.IOException) {
@@ -123,7 +136,7 @@ object CheckIn {
         val new = decision.newSound
         val sound =
           if (new != null) {
-            val bytes = file(cloud, uid, change) ?: return RemoteRules.FILE_BROKEN
+            val bytes = file() ?: return RemoteRules.FILE_BROKEN
             SoundLibrary(context).addBytes(change.id, new.name, new.ext, bytes) ?: return RemoteRules.FILE_BROKEN
           } else {
             decision.soundId?.let { id -> sounds.firstOrNull { it.id == id } }
