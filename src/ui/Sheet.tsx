@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -26,6 +27,23 @@ type Props = {
 export default function Sheet({ visible, onClose, title, children }: Props) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  // The keyboard covers the sheet instead of shrinking it (edge to edge), so the sheet rises
+  // above it while it is open.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', e =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hidden = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
   return (
     <Modal
       visible={visible}
@@ -43,7 +61,13 @@ export default function Sheet({ visible, onClose, title, children }: Props) {
           onPress={onClose}
           style={styles.backdrop}
         />
-        <View style={[styles.sheet, { paddingBottom: 22 + insets.bottom }]}>
+        <View
+          testID="sheet"
+          style={[
+            styles.sheet,
+            { paddingBottom: 22 + insets.bottom + keyboardHeight },
+          ]}
+        >
           <View style={styles.grab} />
           <ScrollView
             style={styles.scroll}

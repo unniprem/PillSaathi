@@ -171,12 +171,20 @@ export const hi: Strings = {
   },
   sound: {
     title: 'आवाज़',
-    record: '● रिकॉर्ड',
-    import: '⇪ इंपोर्ट',
+    titleAt: (time: string) => `${time} की आवाज़`,
+    ringTogether: (names: string[]) =>
+      names.length === 1
+        ? `इस समय ${names[0]} बजती है`
+        : `${names.slice(0, -1).join(', ')} और ${
+            names[names.length - 1]
+          } साथ बजती हैं`,
+    record: 'आवाज़ रिकॉर्ड करें',
+    import: 'गाना या फ़ाइल चुनें',
     importing: 'इंपोर्ट हो रहा है…',
-    yourSounds: 'आपकी आवाज़ें',
     recorded: 'रिकॉर्ड की गई',
-    imported: 'इंपोर्ट की गई',
+    imported: 'गाना',
+    phoneAlarm: 'फ़ोन का अलार्म',
+    hint: 'इस्तेमाल करने के लिए आवाज़ दबाएं। हटाने के लिए दबाकर रखें।',
     play: (name: string) => `${name} चलाएं`,
     stop: (name: string) => `${name} रोकें`,
     changeFailed: 'आवाज़ नहीं बदल सकी',
@@ -189,14 +197,15 @@ export const hi: Strings = {
     deleteFailed: 'आवाज़ नहीं हटाई जा सकी',
   },
   record: {
-    title: 'रिकॉर्ड',
+    title: 'आवाज़ रिकॉर्ड करें',
+    recording: 'रिकॉर्ड हो रहा है…',
     upTo: '2:00 तक',
     start: 'रिकॉर्डिंग शुरू करें',
     stop: 'रिकॉर्डिंग रोकें',
     tapToStop: 'रोकने के लिए दबाएं',
-    listen: '▶ सुनें',
-    stopListening: '■ रोकें',
-    redo: '↺ फिर से',
+    listen: 'सुनें',
+    stopListening: 'रोकें',
+    redo: 'फिर से रिकॉर्ड करें',
     name: 'नाम',
     defaultName: 'मेरी रिकॉर्डिंग',
     use: 'यह आवाज़ इस्तेमाल करें',
@@ -209,7 +218,6 @@ export const hi: Strings = {
     tooShort: 'वह रिकॉर्डिंग बहुत छोटी थी। फिर से कोशिश करें।',
     saveFailed: 'रिकॉर्डिंग सेव नहीं हो सकी',
     playFailed: 'रिकॉर्डिंग नहीं चल सकी',
-    changeFailed: 'आवाज़ नहीं बदल सकी',
   },
   setup: {
     title: 'अलार्म हर बार बजें',

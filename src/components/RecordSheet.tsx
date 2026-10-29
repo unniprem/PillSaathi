@@ -1,20 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Alert,
   Linking,
   PermissionsAndroid,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatDuration } from '../lib/time';
-import { setCardSound } from '../native/alarms';
-import { errorCode, familyMessage } from '../lib/family';
-import { FamilyErrors, sendSound } from '../native/family';
 import {
   discardRecording,
   onPreviewEnded,
@@ -27,24 +23,40 @@ import {
   stopPreview,
   stopRecording,
 } from '../native/sounds';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { Sound } from '../native/sounds';
 import { useI18n } from '../i18n';
-import { colors, spacing } from '../theme';
-import SkyBand from '../ui/SkyBand';
+import { colors, font, radius, shadow } from '../theme';
+import Button from '../ui/Button';
+import Icon from '../ui/Icon';
+import Sheet from '../ui/Sheet';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Record'>;
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  /** The take, saved under its name: the sheet is done with it. */
+  onSaved: (sound: Sound) => void;
+};
 type Phase = 'idle' | 'recording' | 'recorded';
 
 const BAR_COUNT = 24;
-const MAX_BAR_HEIGHT = 60;
+const MAX_BAR_HEIGHT = 56;
+const MIN_BAR_HEIGHT = 4;
 
-export default function RecordScreen({ navigation, route }: Props) {
-  const { alarmId, elderId, hour, minute } = route.params;
-  // On a relative's phone: the recording is sent for her dose at hour:minute.
-  const forHer =
-    elderId !== undefined && hour !== undefined && minute !== undefined
-      ? { elderId, hour, minute }
-      : null;
+/**
+ * Records a voice for an alarm in a pop-up over the sound list. Ready: a big microphone button.
+ * Recording: the timer, the voice drawn as bars, and a big stop button. Done: Listen, Record
+ * again, a name, and "Use this sound". Closing it throws away a take that wasn't saved.
+ */
+export default function RecordSheet({ visible, onClose, onSaved }: Props) {
+  return (
+    <Sheet visible={visible} onClose={onClose}>
+      {/* Only while open, so closing the sheet ends the recorder as leaving a page would. */}
+      {visible ? <Recorder onSaved={onSaved} /> : null}
+    </Sheet>
+  );
+}
+
+function Recorder({ onSaved }: Pick<Props, 'onSaved'>) {
   const { t } = useI18n();
   // For the native event callbacks, which subscribe once.
   const words = useRef(t);
@@ -168,7 +180,7 @@ export default function RecordScreen({ navigation, route }: Props) {
         setLevels([]);
         setPhase('recording');
       } else {
-        // The user left while the start was pending; release the microphone.
+        // The sheet was closed while the start was pending; release the microphone.
         discard();
       }
     } catch (e) {
@@ -246,50 +258,9 @@ export default function RecordScreen({ navigation, route }: Props) {
     }
     savingRef.current = true;
     setSaving(true);
+    let sound: Sound;
     try {
-      const sound = await saveRecording(name.trim() || t.record.defaultName);
-      saved.current = true;
-      try {
-        if (forHer) {
-          // Kept in this phone's sounds too, so it can go to her other times.
-          await sendSound(
-            forHer.elderId,
-            forHer.hour,
-            forHer.minute,
-            'mine',
-            sound.id,
-          );
-        } else if (alarmId) {
-          await setCardSound(alarmId, sound.id);
-        }
-      } catch (e) {
-        // The recording is kept and listed in the picker; only the card's sound didn't change.
-        console.warn('Could not set the recording on the card', e);
-        if (mounted.current) {
-          const code = errorCode(e);
-          Alert.alert(
-            forHer
-              ? code === FamilyErrors.TooBig
-                ? t.remote.tooBig
-                : familyMessage(e, t)
-              : t.record.changeFailed,
-            forHer ? undefined : t.common.tryAgain,
-          );
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          } else {
-            navigation.replace('Main');
-          }
-        }
-        return;
-      }
-      if (mounted.current) {
-        if (forHer) {
-          navigation.popTo('ElderPills', { elderId: forHer.elderId });
-        } else {
-          navigation.popTo('Main');
-        }
-      }
+      sound = await saveRecording(name.trim() || t.record.defaultName);
     } catch (e) {
       console.warn('Could not save the recording', e);
       savingRef.current = false;
@@ -297,123 +268,199 @@ export default function RecordScreen({ navigation, route }: Props) {
         Alert.alert(t.record.saveFailed, t.common.tryAgain);
         setSaving(false);
       } else {
-        // The user left mid-save and it failed: the take is still unsaved.
+        // The sheet was closed mid-save and it failed: the take is still unsaved.
         discard();
       }
+      return;
     }
+    saved.current = true;
+    // Handed over even if the sheet was closed meanwhile: "Use this sound" was tapped.
+    onSaved(sound);
   };
 
+  // The newest level is on the right; bars with nothing heard yet stay low and faint.
   const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
-    const level = levels[i - (BAR_COUNT - levels.length)] ?? 0;
-    return Math.max(4, level * MAX_BAR_HEIGHT);
+    const level = levels[i - (BAR_COUNT - levels.length)];
+    return {
+      height: Math.max(MIN_BAR_HEIGHT, (level ?? 0) * MAX_BAR_HEIGHT),
+      heard: level !== undefined,
+    };
   });
 
   return (
-    <View style={styles.container}>
-      <SkyBand title={t.record.title} onBack={() => navigation.goBack()} />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.timer}>{formatDuration(elapsedMs)}</Text>
+    <>
+      <Text accessibilityRole="header" style={styles.title}>
+        {phase === 'recording' ? t.record.recording : t.record.title}
+      </Text>
 
-        {phase === 'idle' ? (
-          <>
-            <Text style={styles.hint}>{t.record.upTo}</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.record.start}
-              onPress={() => {
-                start();
-              }}
-              style={styles.recordButton}
-            >
-              <View style={styles.recordDot} />
-            </Pressable>
-          </>
-        ) : null}
+      {phase === 'idle' ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.record.start}
+            onPress={() => {
+              start();
+            }}
+            style={({ pressed }) => [styles.big, pressed && styles.pressed]}
+          >
+            <CoralButton>
+              <Icon name="mic" size={44} color={colors.onFill} />
+            </CoralButton>
+            <Text style={styles.bigWords}>{t.record.start}</Text>
+          </Pressable>
+          <Text style={styles.limit}>{t.record.upTo}</Text>
+        </>
+      ) : null}
 
-        {phase === 'recording' ? (
-          <>
-            <View style={styles.bars}>
-              {bars.map((h, i) => (
-                <View key={i} style={[styles.bar, { height: h }]} />
-              ))}
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.record.stop}
-              onPress={() => {
-                stop();
-              }}
-              style={styles.recordButton}
-            >
+      {phase === 'recording' ? (
+        <>
+          <View>
+            <Text maxFontSizeMultiplier={1.5} style={styles.timer}>
+              {formatDuration(elapsedMs)}
+            </Text>
+            <Text style={styles.limit}>{t.record.upTo}</Text>
+          </View>
+          <View style={styles.bars}>
+            {bars.map((bar, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.bar,
+                  { height: bar.height },
+                  !bar.heard && styles.quiet,
+                ]}
+              />
+            ))}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.record.stop}
+            onPress={() => {
+              stop();
+            }}
+            style={({ pressed }) => [styles.big, pressed && styles.pressed]}
+          >
+            <CoralButton>
               <View style={styles.stopSquare} />
-            </Pressable>
-            <Text style={styles.hint}>{t.record.tapToStop}</Text>
-          </>
-        ) : null}
+            </CoralButton>
+            <Text style={styles.bigWords}>{t.record.tapToStop}</Text>
+          </Pressable>
+        </>
+      ) : null}
 
-        {phase === 'recorded' ? (
-          <>
-            <View style={styles.actions}>
-              <Pressable
-                accessibilityRole="button"
+      {phase === 'recorded' ? (
+        <>
+          <Text maxFontSizeMultiplier={1.5} style={styles.timer}>
+            {formatDuration(elapsedMs)}
+          </Text>
+          <View style={styles.pair}>
+            <View style={styles.half}>
+              <Button
+                label={listening ? t.record.stopListening : t.record.listen}
+                icon={listening ? 'stop' : 'play_arrow'}
+                variant="secondary"
                 onPress={toggleListen}
-                style={styles.secondary}
-              >
-                <Text style={styles.secondaryText}>
-                  {listening ? t.record.stopListening : t.record.listen}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={redo}
-                style={styles.secondary}
-              >
-                <Text style={styles.secondaryText}>{t.record.redo}</Text>
-              </Pressable>
+              />
             </View>
-            <Text style={styles.label}>{t.record.name}</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder={t.record.defaultName}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-            />
-            <Pressable
-              accessibilityRole="button"
-              disabled={saving}
-              onPress={() => {
-                saveTake();
-              }}
-              style={styles.primary}
-            >
-              <Text style={styles.primaryText}>{t.record.use}</Text>
-            </Pressable>
-          </>
-        ) : null}
-      </ScrollView>
+            <View style={styles.half}>
+              <Button
+                label={t.record.redo}
+                icon="mic"
+                variant="secondary"
+                onPress={redo}
+              />
+            </View>
+          </View>
+          <Text style={styles.label}>{t.record.name}</Text>
+          <TextInput
+            accessibilityLabel={t.record.name}
+            value={name}
+            onChangeText={setName}
+            placeholder={t.record.defaultName}
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+          />
+          <Button
+            label={t.record.use}
+            icon="check"
+            variant="green"
+            disabled={saving}
+            onPress={() => {
+              saveTake();
+            }}
+          />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/** The big round coral face of the start and stop buttons, in two soft coral rings. */
+function CoralButton({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.rings}>
+      <View style={[styles.ring, styles.outer]} />
+      <View style={[styles.ring, styles.inner]} />
+      <View style={styles.face}>{children}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, alignItems: 'stretch' },
-  timer: {
-    fontSize: 64,
-    fontWeight: '300',
-    color: colors.text,
+  title: {
+    ...font(900),
+    fontSize: 20,
+    color: colors.navy,
     textAlign: 'center',
-    marginTop: spacing.lg,
   },
-  hint: {
-    fontSize: 14,
-    color: colors.textMuted,
+  big: { alignItems: 'center', gap: 4 },
+  pressed: { opacity: 0.85 },
+  rings: {
+    width: 136,
+    height: 136,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    borderRadius: radius.pill,
+    backgroundColor: colors.coral,
+  },
+  outer: { width: 136, height: 136, opacity: 0.08 },
+  inner: { width: 112, height: 112, opacity: 0.16 },
+  face: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.coral,
+    boxShadow: shadow.coral,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopSquare: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: colors.onFill,
+  },
+  bigWords: {
+    ...font(900),
+    fontSize: 16,
+    color: colors.navy,
     textAlign: 'center',
-    marginVertical: spacing.md,
+  },
+  limit: {
+    ...font(700),
+    fontSize: 15,
+    color: colors.muted,
+    textAlign: 'center',
+  },
+  timer: {
+    ...font(900),
+    fontSize: 48,
+    letterSpacing: -1,
+    color: colors.navy,
+    textAlign: 'center',
   },
   bars: {
     flexDirection: 'row',
@@ -421,64 +468,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: MAX_BAR_HEIGHT,
     gap: 3,
-    marginVertical: spacing.lg,
   },
-  bar: { width: 6, borderRadius: 3, backgroundColor: colors.primary },
-  recordButton: {
-    alignSelf: 'center',
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    borderWidth: 4,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recordDot: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.danger,
-  },
-  stopSquare: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
-    backgroundColor: colors.danger,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  secondary: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  secondaryText: { fontSize: 18, color: colors.text },
-  label: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
+  bar: { width: 5, borderRadius: 3, backgroundColor: colors.coral },
+  quiet: { opacity: 0.35 },
+  pair: { flexDirection: 'row', gap: 10 },
+  half: { flex: 1 },
+  label: { ...font(800), fontSize: 15, color: colors.muted, marginTop: 4 },
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: spacing.md,
+    ...font(800),
+    minHeight: 52,
+    borderWidth: 2,
+    borderColor: colors.edge,
+    borderRadius: 16,
+    paddingHorizontal: 14,
     fontSize: 18,
-    color: colors.text,
+    color: colors.navy,
+    backgroundColor: colors.card,
   },
-  primary: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  primaryText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
 });

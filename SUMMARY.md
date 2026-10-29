@@ -74,6 +74,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Builder calls: tapping a faded later step opens it instead (only one step open at a time; no dead end); after unticking, the step stays open. An AppState "active" re-read makes the battery step tick itself on return from the phone's settings. `SkyBand` `progress` takes an optional `label` (under the bar). `markSetupSeen` is in `mockAlarmsDefaults`.
 - For Task 14: `oemSteps.ts` exports `setupProgress(steps, doneSteps, autoDone)`, `autoChecked(health | null)`, `stepDone`, `makerName`; steps left = `total - done` of `setupProgress(stepsFor(currentManufacturer()), setup.doneSteps, autoChecked(health))`. Renaming the Settings row "Make alarms reliable" to "Alarm setup" changes two tests (Settings, and SetupScreen's "Finish goes back to where setup was opened from").
 
+### Task 12: Sounds, and recording in a pop-up
+**Status**: ✓ Done (parallel, branch `ui/task-12`)
+**Notes**:
+- RecordScreen's logic lives unchanged in an inner `Recorder` that exists only while `RecordSheet` is open, so closing discards an unsaved take. SoundPicker title "Sound for 9:00 PM" + "Iron and Metformin ring together" (her `getToday` card, or `getElderSetup` pills at hour:minute on his phone); the default tone is the first row ("The phone's alarm"). SoundRow's play button is a sibling control (TalkBack can reach it). Record route/screen/test removed; 3 Record tests moved into `SoundPickerScreen.test.tsx`.
+- Deviation: after a pick or saved recording SoundPicker goes `back` (fallback `replace('Main')`) instead of `popTo('Main'/'ElderPills')`. `Sheet` got keyboard padding (`keyboardDidShow`) and `testID="sheet"`. Phone check (Task 18): the recording name field and Task 11's sheet inputs stay above the keyboard inside the Modal.
+- For Task 11: navigate to `SoundPicker` with `selectedSoundId` (still required); close `SoundTimesSheet` before navigating (a Modal stays above a pushed page); reload the summary on focus so the new sound name shows. Words: no symbols in buttons ("Listen", "Record again"); "Imported" → "Song"; removed `sound.yourSounds`, `record.changeFailed`.
+
 ---
 
 ## Blockers / Deferred Items

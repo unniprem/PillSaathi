@@ -169,12 +169,20 @@ export const en = {
   },
   sound: {
     title: 'Sound',
-    record: '● Record',
-    import: '⇪ Import',
+    titleAt: (time: string) => `Sound for ${time}`,
+    ringTogether: (names: string[]) =>
+      names.length === 1
+        ? `${names[0]} rings at this time`
+        : `${names.slice(0, -1).join(', ')} and ${
+            names[names.length - 1]
+          } ring together`,
+    record: 'Record a voice',
+    import: 'Pick a song or file',
     importing: 'Importing…',
-    yourSounds: 'Your sounds',
     recorded: 'Recorded',
-    imported: 'Imported',
+    imported: 'Song',
+    phoneAlarm: "The phone's alarm",
+    hint: 'Tap a sound to use it. Hold one to delete it.',
     play: (name: string) => `Play ${name}`,
     stop: (name: string) => `Stop ${name}`,
     changeFailed: 'Could not change the sound',
@@ -187,14 +195,15 @@ export const en = {
     deleteFailed: 'Could not delete the sound',
   },
   record: {
-    title: 'Record',
+    title: 'Record a voice',
+    recording: 'Recording…',
     upTo: 'Up to 2:00',
     start: 'Start recording',
     stop: 'Stop recording',
     tapToStop: 'Tap to stop',
-    listen: '▶ Listen',
-    stopListening: '■ Stop',
-    redo: '↺ Redo',
+    listen: 'Listen',
+    stopListening: 'Stop',
+    redo: 'Record again',
     name: 'Name',
     defaultName: 'My recording',
     use: 'Use this sound',
@@ -206,7 +215,6 @@ export const en = {
     tooShort: 'That recording was too short. Try again.',
     saveFailed: 'Could not save the recording',
     playFailed: 'Could not play the recording',
-    changeFailed: 'Could not change the sound',
   },
   setup: {
     title: 'Make alarms ring every time',

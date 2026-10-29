@@ -1,16 +1,34 @@
+import React from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { Alert, Linking, PermissionsAndroid } from 'react-native';
+import {
+  Alert,
+  DeviceEventEmitter,
+  Linking,
+  PermissionsAndroid,
+  StyleSheet,
+} from 'react-native';
 import * as alarms from '../../src/native/alarms';
-import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { hi } from '../../src/i18n/hi';
+import RecordSheet from '../../src/components/RecordSheet';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
-import { headerTitles, renderApp } from '../helpers/renderApp';
+import { renderWithI18n } from '../helpers/renderWithI18n';
 
 jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
 
 let autoStopped: (ms: number) => void;
+const onSaved = jest.fn();
+const onClose = jest.fn();
+
+const savedSound = {
+  id: 's9',
+  name: 'Amma voice',
+  kind: 'recorded' as const,
+  durationMs: 5000,
+  createdAt: 1,
+  usedBy: [],
+};
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -20,20 +38,12 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(PermissionsAndroid, 'request').mockResolvedValue('granted');
   mockAlarmsDefaults();
-  jest.mocked(sounds.listSounds).mockResolvedValue([]);
   jest.mocked(sounds.startRecording).mockResolvedValue();
   jest.mocked(sounds.stopRecording).mockResolvedValue(5000);
   jest.mocked(sounds.discardRecording).mockResolvedValue();
   jest.mocked(sounds.previewRecording).mockResolvedValue();
   jest.mocked(sounds.stopPreview).mockResolvedValue();
-  jest.mocked(sounds.saveRecording).mockResolvedValue({
-    id: 's9',
-    name: 'Amma voice',
-    kind: 'recorded',
-    durationMs: 5000,
-    createdAt: 1,
-    usedBy: [],
-  });
+  jest.mocked(sounds.saveRecording).mockResolvedValue(savedSound);
   const sub = () => ({ remove: jest.fn() } as never);
   jest.mocked(sounds.onRecordingLevel).mockImplementation(() => sub());
   jest.mocked(sounds.onPreviewEnded).mockImplementation(() => sub());
@@ -43,23 +53,48 @@ beforeEach(() => {
   });
 });
 
+function renderSheet() {
+  return renderWithI18n(
+    <RecordSheet visible onClose={onClose} onSaved={onSaved} />,
+  );
+}
+
 async function startRecording() {
-  await renderApp('Record', { alarmId: 'c8' });
+  await renderSheet();
   await fireEvent.press(await screen.findByLabelText('Start recording'));
   await screen.findByText('Tap to stop');
 }
 
-test('the idle screen shows 0:00 and the limit hint', async () => {
-  await renderApp('Record', { alarmId: 'c8' });
-  expect(await screen.findByText('0:00')).toBeTruthy();
+async function recordedSheet() {
+  await startRecording();
+  await fireEvent.press(screen.getByLabelText('Stop recording'));
+  await screen.findByText('Use this sound');
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+test('the ready sheet offers Start recording and says the limit', async () => {
+  await renderSheet();
+  expect(
+    await screen.findByRole('header', { name: 'Record a voice' }),
+  ).toBeTruthy();
+  expect(screen.getByText('Start recording')).toBeTruthy();
   expect(screen.getByText('Up to 2:00')).toBeTruthy();
 });
 
-test('shows the Record screen in Hindi', async () => {
+test('shows the sheet in Hindi', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
-  await renderApp('Record', { alarmId: 'c8' });
+  await renderSheet();
   expect(await screen.findByText(hi.record.upTo)).toBeTruthy();
-  expect(headerTitles()).toEqual([hi.record.title]);
+  expect(screen.getByRole('header', { name: hi.record.title })).toBeTruthy();
   await fireEvent.press(screen.getByLabelText(hi.record.start));
   expect(PermissionsAndroid.request).toHaveBeenCalledWith(
     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
@@ -70,13 +105,17 @@ test('shows the Record screen in Hindi', async () => {
     },
   );
   expect(await screen.findByText(hi.record.tapToStop)).toBeTruthy();
+  expect(
+    screen.getByRole('header', { name: hi.record.recording }),
+  ).toBeTruthy();
   await fireEvent.press(screen.getByLabelText(hi.record.stop));
   expect(await screen.findByText(hi.record.use)).toBeTruthy();
   expect(screen.getByText(hi.record.listen)).toBeTruthy();
+  expect(screen.getByText(hi.record.redo)).toBeTruthy();
   expect(screen.getByDisplayValue(hi.record.defaultName)).toBeTruthy();
 });
 
-test('record then stop shows Listen, Redo and the name field', async () => {
+test('record then stop shows Listen, Record again and the name field', async () => {
   await startRecording();
   expect(PermissionsAndroid.request).toHaveBeenCalledWith(
     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
@@ -87,9 +126,10 @@ test('record then stop shows Listen, Redo and the name field', async () => {
     },
   );
   expect(sounds.startRecording).toHaveBeenCalled();
+  expect(screen.getByRole('header', { name: 'Recording…' })).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Stop recording'));
-  expect(await screen.findByText('▶ Listen')).toBeTruthy();
-  expect(screen.getByText('↺ Redo')).toBeTruthy();
+  expect(await screen.findByText('Listen')).toBeTruthy();
+  expect(screen.getByText('Record again')).toBeTruthy();
   expect(screen.getByDisplayValue('My recording')).toBeTruthy();
   expect(screen.getByText('0:05')).toBeTruthy();
 });
@@ -98,7 +138,7 @@ test('a denied microphone offers the settings page', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
   jest.mocked(PermissionsAndroid.request).mockResolvedValue('denied');
-  await renderApp('Record', { alarmId: 'c8' });
+  await renderSheet();
   await fireEvent.press(await screen.findByLabelText('Start recording'));
   expect(alert).toHaveBeenCalledWith(
     'Microphone access is off',
@@ -113,7 +153,7 @@ test('a denied microphone offers the settings page', async () => {
   expect(open).toHaveBeenCalled();
 });
 
-test('a too-short recording shows the retry alert and returns to idle', async () => {
+test('a too-short recording shows the retry alert and returns to ready', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.mocked(sounds.stopRecording).mockRejectedValue({
     code: 'RECORDING_TOO_SHORT',
@@ -123,8 +163,8 @@ test('a too-short recording shows the retry alert and returns to idle', async ()
   expect(alert).toHaveBeenCalledWith(
     'That recording was too short. Try again.',
   );
-  expect(await screen.findByText('Up to 2:00')).toBeTruthy();
-  expect(screen.queryByText('▶ Listen')).toBeNull();
+  expect(await screen.findByText('Start recording')).toBeTruthy();
+  expect(screen.queryByText('Listen')).toBeNull();
 });
 
 test('leaving while recording discards the take', async () => {
@@ -135,9 +175,8 @@ test('leaving while recording discards the take', async () => {
 });
 
 test('leaving after a save does not discard the take', async () => {
-  await startRecording();
-  await fireEvent.press(screen.getByLabelText('Stop recording'));
-  await fireEvent.press(await screen.findByText('Use this sound'));
+  await recordedSheet();
+  await fireEvent.press(screen.getByText('Use this sound'));
   await screen.unmount();
   expect(sounds.discardRecording).not.toHaveBeenCalled();
 });
@@ -145,96 +184,50 @@ test('leaving after a save does not discard the take', async () => {
 test('auto-stop at the limit moves to the recorded state', async () => {
   await startRecording();
   await act(async () => autoStopped(120000));
-  expect(await screen.findByText('▶ Listen')).toBeTruthy();
+  expect(await screen.findByText('Listen')).toBeTruthy();
   expect(screen.getByText('2:00')).toBeTruthy();
 });
 
-test('auto-stop with 0 shows the lost-take alert and returns to idle', async () => {
+test('auto-stop with 0 shows the lost-take alert and returns to ready', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await startRecording();
   await act(async () => autoStopped(0));
   expect(alert).toHaveBeenCalledWith(
     "That recording couldn't be saved. Try again.",
   );
-  expect(await screen.findByText('Up to 2:00')).toBeTruthy();
+  expect(await screen.findByText('Start recording')).toBeTruthy();
 });
 
-test('Redo discards the take and returns to idle', async () => {
-  await startRecording();
-  await fireEvent.press(screen.getByLabelText('Stop recording'));
-  await fireEvent.press(await screen.findByText('↺ Redo'));
+test('Record again discards the take and returns to ready', async () => {
+  await recordedSheet();
+  await fireEvent.press(screen.getByText('Record again'));
   expect(sounds.discardRecording).toHaveBeenCalled();
-  expect(await screen.findByText('Up to 2:00')).toBeTruthy();
+  expect(await screen.findByText('Start recording')).toBeTruthy();
 });
 
 test('Listen plays the take and toggles to Stop', async () => {
-  await startRecording();
-  await fireEvent.press(screen.getByLabelText('Stop recording'));
-  await fireEvent.press(await screen.findByText('▶ Listen'));
+  await recordedSheet();
+  await fireEvent.press(screen.getByText('Listen'));
   expect(sounds.previewRecording).toHaveBeenCalled();
-  await fireEvent.press(await screen.findByText('■ Stop'));
+  await fireEvent.press(await screen.findByText('Stop'));
   expect(sounds.stopPreview).toHaveBeenCalled();
 });
 
-test('Use this sound saves with the typed name', async () => {
-  await startRecording();
-  await fireEvent.press(screen.getByLabelText('Stop recording'));
+test('Use this sound saves with the typed name and hands the sound over', async () => {
+  await recordedSheet();
   await fireEvent.changeText(
-    await screen.findByDisplayValue('My recording'),
+    screen.getByDisplayValue('My recording'),
     'Amma voice',
   );
   await fireEvent.press(screen.getByText('Use this sound'));
   expect(sounds.saveRecording).toHaveBeenCalledWith('Amma voice');
-  await waitFor(() =>
-    expect(alarms.setCardSound).toHaveBeenCalledWith('c8', 's9'),
-  );
-  expect(await screen.findByText('+ Add pill')).toBeTruthy();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledWith(savedSound));
 });
-
-test('a saved recording that cannot be set on the card says so', async () => {
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.mocked(alarms.setCardSound).mockRejectedValueOnce(new Error('gone'));
-  await recordedScreen();
-  await fireEvent.press(screen.getByText('Use this sound'));
-  await waitFor(() =>
-    expect(alert).toHaveBeenCalledWith(
-      'Could not change the sound',
-      'Please try again.',
-    ),
-  );
-  expect(sounds.discardRecording).not.toHaveBeenCalled();
-});
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
-const savedSound = {
-  id: 's9',
-  name: 'Amma voice',
-  kind: 'recorded' as const,
-  durationMs: 5000,
-  createdAt: 1,
-  usedBy: [],
-};
-
-async function recordedScreen() {
-  await startRecording();
-  await fireEvent.press(screen.getByLabelText('Stop recording'));
-  await screen.findByText('Use this sound');
-}
 
 test('leaving while start is pending discards once start resolves', async () => {
   const start = deferred<void>();
   jest.mocked(sounds.startRecording).mockReturnValue(start.promise);
-  await renderApp('Record', { alarmId: 'c8' });
+  await renderSheet();
   await fireEvent.press(await screen.findByLabelText('Start recording'));
   await waitFor(() => expect(sounds.startRecording).toHaveBeenCalled());
   await screen.unmount();
@@ -246,7 +239,7 @@ test('leaving while start is pending discards once start resolves', async () => 
 test('leaving while save is pending does not discard the saved take', async () => {
   const save = deferred<typeof savedSound>();
   jest.mocked(sounds.saveRecording).mockReturnValue(save.promise);
-  await recordedScreen();
+  await recordedSheet();
   await fireEvent.press(screen.getByText('Use this sound'));
   await screen.unmount();
   await act(async () => save.resolve(savedSound));
@@ -257,25 +250,27 @@ test('leaving while save is pending then save fails discards the take', async ()
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   const save = deferred<typeof savedSound>();
   jest.mocked(sounds.saveRecording).mockReturnValue(save.promise);
-  await recordedScreen();
+  await recordedSheet();
   await fireEvent.press(screen.getByText('Use this sound'));
   await screen.unmount();
   expect(sounds.discardRecording).not.toHaveBeenCalled();
   await act(async () => save.reject(new Error('disk full')));
   expect(sounds.discardRecording).toHaveBeenCalledTimes(1);
+  expect(onSaved).not.toHaveBeenCalled();
 });
 
 test('a second tap on Use this sound saves only once', async () => {
   const save = deferred<typeof savedSound>();
   jest.mocked(sounds.saveRecording).mockReturnValue(save.promise);
-  await recordedScreen();
+  await recordedSheet();
   await fireEvent.press(screen.getByText('Use this sound'));
   await fireEvent.press(screen.getByText('Use this sound'));
   expect(sounds.saveRecording).toHaveBeenCalledTimes(1);
   await act(async () => save.resolve(savedSound));
+  expect(onSaved).toHaveBeenCalledTimes(1);
 });
 
-test('an unexpected stop failure discards the take and returns to idle', async () => {
+test('an unexpected stop failure discards the take and returns to ready', async () => {
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.mocked(sounds.stopRecording).mockRejectedValue(new Error('boom'));
@@ -286,18 +281,21 @@ test('an unexpected stop failure discards the take and returns to idle', async (
     'Please try again.',
   );
   expect(sounds.discardRecording).toHaveBeenCalledTimes(1);
-  expect(await screen.findByText('Up to 2:00')).toBeTruthy();
+  expect(await screen.findByText('Start recording')).toBeTruthy();
 });
 
-test('for her: Use this sound sends the recording as mine', async () => {
-  jest.mocked(family.sendSound).mockResolvedValue('c1');
-  await renderApp('Record', { elderId: 'E', hour: 8, minute: 0 });
-  await fireEvent.press(await screen.findByLabelText('Start recording'));
-  await screen.findByText('Tap to stop');
-  await fireEvent.press(screen.getByLabelText('Stop recording'));
-  await fireEvent.press(await screen.findByText('Use this sound'));
-  await waitFor(() =>
-    expect(family.sendSound).toHaveBeenCalledWith('E', 8, 0, 'mine', 's9'),
+// The keyboard covers the sheet rather than shrinking the page, so the sheet rises above it.
+test('the sheet rises above the keyboard while the name is typed', async () => {
+  await recordedSheet();
+  const bottom = () =>
+    StyleSheet.flatten(screen.getByTestId('sheet').props.style).paddingBottom;
+  const closed = bottom();
+  await act(() =>
+    DeviceEventEmitter.emit('keyboardDidShow', {
+      endCoordinates: { height: 300, width: 411, screenX: 0, screenY: 534 },
+    }),
   );
-  expect(alarms.setCardSound).not.toHaveBeenCalled();
+  expect(bottom()).toBe(closed + 300);
+  await act(() => DeviceEventEmitter.emit('keyboardDidHide', null));
+  expect(bottom()).toBe(closed);
 });

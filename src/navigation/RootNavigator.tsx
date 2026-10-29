@@ -16,7 +16,6 @@ import WhoScreen from '../screens/WhoScreen';
 import TodayScreen from '../screens/TodayScreen';
 import PillEditScreen from '../screens/PillEditScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
-import RecordScreen from '../screens/RecordScreen';
 import SetupScreen from '../screens/SetupScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
@@ -58,12 +57,6 @@ export type RootStackParamList = {
   SoundPicker: {
     alarmId?: string;
     selectedSoundId: string | null;
-    elderId?: string;
-    hour?: number;
-    minute?: number;
-  };
-  Record: {
-    alarmId?: string;
     elderId?: string;
     hour?: number;
     minute?: number;
@@ -151,11 +144,6 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
         name="SoundPicker"
         component={SoundPickerScreen}
         initialParams={paramsFor('SoundPicker')}
-      />
-      <Stack.Screen
-        name="Record"
-        component={RecordScreen}
-        initialParams={paramsFor('Record')}
       />
       <Stack.Screen
         name="Setup"

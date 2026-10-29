@@ -268,7 +268,9 @@ test('does not open a pill deleted since', async () => {
 test('opens the sound picker for the card', async () => {
   await renderApp();
   await fireEvent.press(await screen.findByText('♪ My voice'));
-  expect(await screen.findByText('Your sounds')).toBeTruthy();
+  expect(
+    await screen.findByText('Tap a sound to use it. Hold one to delete it.'),
+  ).toBeTruthy();
 });
 
 test('+ Add pill opens a new pill page', async () => {
