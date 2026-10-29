@@ -1,0 +1,155 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{font-family:system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;padding:24px;--text-secondary:#6e6e73;--bg-tertiary:#e5e5e7;--selected-border:#0071e3}.subtitle{color:#6e6e73}</style>
+<link rel="stylesheet" href="phone.css">
+<link rel="stylesheet" href="sky.css">
+<style>
+  .sky .sw { width: 48px; height: 28px; border-radius: 99px; background: var(--green); position: relative; flex: none; }
+  .sky .sw::after { content: ''; position: absolute; right: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .sky .lang { display: flex; gap: 6px; }
+  .sky .lang div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; border-radius: 16px; background: var(--soft); font-size: 17px; font-weight: 800; }
+  .sky .lang div.on { background: var(--navy); color: #fff; }
+  .sky .lang em { font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: var(--amber-t); color: var(--amber); }
+  .sky .mini-b { font-size: 13px; font-weight: 900; color: var(--blue); background: var(--blue-t); padding: 7px 12px; border-radius: 99px; display: flex; align-items: center; gap: 5px; flex: none; }
+  .sky .mini-b svg.i { width: 12px; height: 12px; }
+  .sky .num { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex: none; background: var(--soft); color: var(--mut); }
+  .sky .num.ok { background: var(--green); color: #fff; } .sky .num.ok svg.i { width: 17px; stroke-width: 3.2; }
+  .sky .num.cur { background: var(--blue); color: #fff; }
+  .sky .step { background: #fff; border-radius: 20px; padding: 12px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .step .grow { flex: 1; font-size: 15px; font-weight: 900; line-height: 1.3; padding-top: 6px; }
+  .sky .step.done .grow { color: var(--mut); }
+  .sky .step.cur { border: 2.5px solid var(--blue); }
+  .sky .step.later { opacity: .55; box-shadow: none; }
+  .sky .step p { margin: 6px 0 10px; font-size: 13.5px; font-weight: 600; color: var(--mut); line-height: 1.45; text-decoration: none; }
+  .sky .pbar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.6); margin-top: 12px; overflow: hidden; }
+  .sky .pbar i { display: block; width: 50%; height: 100%; background: var(--navy); border-radius: 99px; }
+  /* Today header, from the Sky pick */
+  .sky .top { position: relative; height: 200px; flex: none; padding: 0 20px; overflow: hidden; background: linear-gradient(180deg, #6DBBEA 0%, #A9D9F2 52%, #FBE2C4 100%); }
+  .sky .top .sb { padding: 6px 0 0; }
+  .sky .sun { position: absolute; right: -14px; top: 18px; width: 66px; height: 66px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #FFF2B0, #FFC93C 70%); box-shadow: 0 0 0 12px rgba(255,214,102,.30), 0 0 0 26px rgba(255,214,102,.14); }
+  .sky .hi { margin-top: 30px; font-size: 27px; font-weight: 900; letter-spacing: -.3px; }
+  .sky .dt { font-size: 14px; font-weight: 700; opacity: .75; }
+  .sky .warn { margin-top: -50px; position: relative; background: #fff; border-radius: 24px; padding: 14px; box-shadow: 0 14px 34px rgba(21,50,74,.16); border-top: 5px solid #F0A030; }
+  .sky .warn .t { display: flex; gap: 10px; align-items: center; font-size: 17px; font-weight: 900; }
+  .sky .warn .t .ico { background: var(--amber-t); color: var(--amber); }
+  .sky .warn p { margin: 8px 0 12px; font-size: 13.5px; font-weight: 600; color: var(--mut); line-height: 1.45; }
+  .sky .refill { background: #fff; border-radius: 18px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .refill .grow { flex: 1; font-size: 14.5px; font-weight: 900; }
+  .sky .refill small { color: var(--amber); font-weight: 800; }
+  .sky .peek { background: #fff; border-radius: 24px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .peek .k { font-size: 11.5px; font-weight: 900; letter-spacing: .1em; color: var(--blue); }
+  .sky .peek .n { font-size: 34px; font-weight: 900; letter-spacing: -1px; }
+</style>
+
+<h2>5 · Settings, alarm setup, and warnings</h2>
+<p class="subtitle">One design each. Tell me in the terminal what to change. Family moves out of Settings to its own tab.</p>
+
+<div class="pg-row">
+
+  <!-- Settings -->
+  <div class="pg-col pg-ref">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow"><h1>Settings</h1></div>
+      </div>
+      <div class="body">
+        <div class="cardw">
+          <div class="lbl">Language</div>
+          <div class="lang">
+            <div class="on">English</div>
+            <div>മലയാളം <em>draft</em></div>
+            <div>हिन्दी <em>draft</em></div>
+          </div>
+        </div>
+        <div class="cardw" style="padding:6px 14px">
+          <div class="row"><span class="ico"><svg class="i"><use href="icons.svg#i-volume"/></svg></span><div class="grow">Read pill names aloud<small>When an alarm rings</small></div><span class="sw"></span></div>
+          <div class="row"><span class="ico"><svg class="i"><use href="icons.svg#i-play"/></svg></span><div class="grow">Hear how it sounds</div><span class="mini-b"><svg class="i f"><use href="icons.svg#i-play"/></svg>Try it</span></div>
+          <div class="row"><span class="ico"><svg class="i"><use href="icons.svg#i-text"/></svg></span><div class="grow">Text size<small>Follows the phone's text size</small></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+        </div>
+        <div class="cardw" style="padding:6px 14px">
+          <div class="row"><span class="ico" style="background:var(--amber-t);color:var(--amber)"><svg class="i"><use href="icons.svg#i-shield"/></svg></span><div class="grow">Alarm setup<small style="color:var(--amber);font-weight:800">2 steps left</small></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+        </div>
+      </div>
+      <div class="floatnav">
+        <div><svg class="i"><use href="icons.svg#i-home"/></svg>Today</div>
+        <div><svg class="i"><use href="icons.svg#i-cal"/></svg>History</div>
+        <div><svg class="i"><use href="icons.svg#i-users"/></svg>Family</div>
+        <div class="on"><svg class="i"><use href="icons.svg#i-gear"/></svg>Settings</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">SETTINGS</span>
+      <h3>Short and plain</h3>
+      <ul>
+        <li>Each language is written in its own script, so she can find hers.</li>
+        <li>Read aloud is a switch, with "Try it" beside it.</li>
+        <li>Alarm setup shows how many steps are left.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div class="pg-col pg-ref">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow">
+          <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+          <div style="flex:1"><h1>Make alarms ring every time</h1></div>
+        </div>
+        <div class="pbar"><i></i></div>
+        <div class="sub" style="margin-top:6px">2 of 4 done · Xiaomi phone</div>
+      </div>
+      <div class="body">
+        <div class="step done"><span class="num ok"><svg class="i"><use href="icons.svg#i-check"/></svg></span><div class="grow">Lock PillSaathi in recent apps</div></div>
+        <div class="step done"><span class="num ok"><svg class="i"><use href="icons.svg#i-check"/></svg></span><div class="grow">Turn on Autostart</div></div>
+        <div class="step cur"><span class="num cur">3</span><div class="grow">Set Battery saver to No restrictions
+          <p>Tap PillSaathi, then choose No restrictions.</p>
+          <div class="primary" style="padding:12px;font-size:15px">Open battery settings</div></div></div>
+        <div class="step later"><span class="num">4</span><div class="grow">Allow alarms on the lock screen</div></div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">ALARM SETUP</span>
+      <h3>One step at a time</h3>
+      <ul>
+        <li>A progress bar, and the phone's brand, so the steps match her phone.</li>
+        <li>Finished steps get a tick. Only the current step is open, with one big button.</li>
+        <li>The steps themselves stay exactly as they are now.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Today with warnings -->
+  <div class="pg-col pg-ref">
+    <div class="phone sky">
+      <div class="top">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="sun"></div>
+        <div class="hi">Good afternoon</div>
+        <div class="dt">Thursday, 29 October</div>
+      </div>
+      <div class="body" style="padding-top:0;overflow:visible;z-index:1">
+        <div class="warn">
+          <div class="t"><span class="ico"><svg class="i"><use href="icons.svg#i-shield"/></svg></span>Alarms may not ring</div>
+          <p>Battery saving can stop PillSaathi. It takes a minute to fix.</p>
+          <div class="primary" style="padding:12px;font-size:15px;background:#C98410;box-shadow:none">Fix now</div>
+        </div>
+        <div class="refill"><span class="ico" style="background:var(--amber-t);color:var(--amber)"><svg class="i"><use href="icons.svg#i-box"/></svg></span><div class="grow">Iron: 4 left<small>About 4 days</small></div><span class="mini-b">+ Add</span></div>
+        <div class="peek"><div class="k">NEXT DOSE</div><div class="n">9:00 PM</div></div>
+      </div>
+      <div class="floatnav">
+        <div class="on"><svg class="i"><use href="icons.svg#i-home"/></svg>Today</div>
+        <div><svg class="i"><use href="icons.svg#i-cal"/></svg>History</div>
+        <div><svg class="i"><use href="icons.svg#i-users"/></svg>Family</div>
+        <div><svg class="i"><use href="icons.svg#i-gear"/></svg>Settings</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">TODAY, WITH A WARNING</span>
+      <h3>Problems come first</h3>
+      <ul>
+        <li>If alarms might not ring, that card takes the top spot, above the next dose, with one "Fix now" button.</li>
+        <li>Running low sits just below it as a small card with "+ Add".</li>
+        <li>With nothing wrong, Today looks like the Sky design you picked.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>

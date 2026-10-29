@@ -1,0 +1,147 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{font-family:system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;padding:24px;--text-secondary:#6e6e73;--bg-tertiary:#e5e5e7;--selected-border:#0071e3}.subtitle{color:#6e6e73}</style>
+<link rel="stylesheet" href="phone.css">
+<link rel="stylesheet" href="sky.css">
+<style>
+  .sky .tiles { display: flex; gap: 10px; }
+  .sky .tile { flex: 1; border-radius: 22px; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; font-weight: 900; line-height: 1.2; }
+  .sky .tile .ci { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
+  .sky .tile.rec { background: var(--coral-t); color: #8E2A1B; } .sky .tile.rec .ci { background: var(--coral); }
+  .sky .tile.imp { background: var(--blue-t); color: #1C5D8C; } .sky .tile.imp .ci { background: var(--blue); }
+  .sky .playb { width: 40px; height: 40px; border-radius: 50%; background: var(--blue-t); color: var(--blue); display: flex; align-items: center; justify-content: center; flex: none; }
+  .sky .playb svg.i { width: 15px; height: 15px; margin-left: 2px; }
+  .sky .playb.on { background: var(--blue); color: #fff; box-shadow: 0 0 0 5px rgba(42,123,184,.18); }
+  .sky .pause { width: 13px; height: 14px; border-left: 4px solid #fff; border-right: 4px solid #fff; }
+  .sky .radio { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid #CFDCE6; flex: none; display: flex; align-items: center; justify-content: center; }
+  .sky .radio.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .sky .radio svg.i { width: 14px; height: 14px; stroke-width: 3.4; }
+  .sky .row.sel { background: #F3F9FE; margin: 0 -14px; padding: 10px 14px; }
+  .sky .wave { display: flex; align-items: center; justify-content: center; gap: 3px; height: 64px; }
+  .sky .wave span { width: 4px; border-radius: 4px; background: var(--coral); opacity: .85; }
+  .sky .wave span.f { background: #F2C4BA; }
+  .sky .timer { text-align: center; font-size: 58px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; }
+  .sky .timer small { font-size: 15px; letter-spacing: 0; margin-top: 6px; }
+  .sky .stopb { width: 108px; height: 108px; border-radius: 50%; background: var(--coral); margin: 0 auto; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 14px rgba(224,83,61,.16), 0 0 0 30px rgba(224,83,61,.08), 0 10px 24px rgba(224,83,61,.35); }
+  .sky .stopb i { width: 34px; height: 34px; border-radius: 8px; background: #fff; display: block; }
+  .sky .stopb.sm { width: 84px; height: 84px; box-shadow: 0 0 0 10px rgba(224,83,61,.16), 0 8px 18px rgba(224,83,61,.3); }
+  .sky .stopb.sm i { width: 26px; height: 26px; }
+  .sky .hint { background: #fff; border-radius: 18px; padding: 12px 14px; font-size: 14px; font-weight: 700; color: var(--mut); line-height: 1.4; }
+  .sky .hint b { color: var(--navy); }
+  .sky .dim { position: absolute; inset: 0; background: rgba(21,50,74,.45); }
+  .sky .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 30px 30px 0 0; padding: 10px 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+  .sky .grab { width: 44px; height: 5px; border-radius: 9px; background: #D6DEE5; margin: 0 auto 4px; }
+  .sky .sheet h4 { margin: 0; font-size: 19px; font-weight: 900; text-align: center; }
+</style>
+
+<h2>3 · Sounds and recording a voice</h2>
+<p class="subtitle">The sound list is the same in both. The difference is where recording happens. Click A or B.</p>
+
+<div class="pg-row">
+
+  <!-- shared list -->
+  <div class="pg-col pg-ref">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow">
+          <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+          <div style="flex:1"><h1>Sound for 9:00 PM</h1><div class="sub" style="margin:0">Iron and Metformin ring together</div></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="tiles">
+          <div class="tile rec"><span class="ci"><svg class="i"><use href="icons.svg#i-mic"/></svg></span>Record a voice</div>
+          <div class="tile imp"><span class="ci"><svg class="i"><use href="icons.svg#i-upload"/></svg></span>Pick a song or file</div>
+        </div>
+        <div class="cardw" style="padding:2px 14px">
+          <div class="row sel"><span class="playb"><svg class="i f"><use href="icons.svg#i-play"/></svg></span><div class="grow">Amma's voice<small>Recorded · 0:12</small></div><span class="radio on"><svg class="i"><use href="icons.svg#i-check"/></svg></span></div>
+          <div class="row"><span class="playb on"><span class="pause"></span></span><div class="grow">Bhajan<small>Song · 1:40 · playing</small></div><span class="radio"></span></div>
+          <div class="row"><span class="playb"><svg class="i f"><use href="icons.svg#i-play"/></svg></span><div class="grow">Morning prayer<small>Recorded · 0:45</small></div><span class="radio"></span></div>
+          <div class="row"><span class="playb"><svg class="i f"><use href="icons.svg#i-play"/></svg></span><div class="grow">Default tone<small>The phone's alarm</small></div><span class="radio"></span></div>
+        </div>
+        <div class="note" style="text-align:center">Tap a sound to use it. Hold one to delete it.</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">BOTH</span>
+      <h3>The sound list</h3>
+      <ul>
+        <li>Two big buttons at the top: record a voice, or pick a song.</li>
+        <li>Each sound has its own play button. The one in use has a blue tick.</li>
+        <li>The title says which pills ring at this time.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- A: record page -->
+  <div class="pg-col card" data-choice="record-page" onclick="toggleSelect(this)">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow">
+          <span class="round"><svg class="i"><use href="icons.svg#i-x"/></svg></span>
+          <h1>Record a voice</h1>
+        </div>
+      </div>
+      <div class="body" style="gap:14px;padding-top:18px">
+        <div class="hint">Try something like: <b>"Amma, it's time for your night tablets."</b></div>
+        <div class="timer">0:08<small>up to 2:00</small></div>
+        <div class="wave">
+          <span style="height:18px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:48px"></span><span style="height:30px"></span><span style="height:56px"></span><span style="height:40px"></span><span style="height:26px"></span><span style="height:44px"></span><span style="height:20px"></span><span style="height:36px"></span><span style="height:52px"></span><span style="height:28px"></span><span style="height:16px"></span><span style="height:38px"></span><span style="height:24px"></span><span class="f" style="height:8px"></span><span class="f" style="height:8px"></span><span class="f" style="height:8px"></span><span class="f" style="height:8px"></span><span class="f" style="height:8px"></span><span class="f" style="height:8px"></span>
+        </div>
+        <div class="stopb"><i></i></div>
+        <div style="text-align:center;font-weight:900;font-size:15px;margin-top:10px">Tap to stop</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">A</span>
+      <h3>Recording on its own page</h3>
+      <ul>
+        <li>A full page: a big timer, the voice drawn as it records, one big stop button.</li>
+        <li>A suggested line, so the person recording knows what to say.</li>
+        <li>After stopping: Listen, Record again, a name, then "Use this sound".</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- B: record sheet -->
+  <div class="pg-col card" data-choice="record-sheet" onclick="toggleSelect(this)">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow">
+          <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+          <div style="flex:1"><h1>Sound for 9:00 PM</h1><div class="sub" style="margin:0">Iron and Metformin ring together</div></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="tiles">
+          <div class="tile rec"><span class="ci"><svg class="i"><use href="icons.svg#i-mic"/></svg></span>Record a voice</div>
+          <div class="tile imp"><span class="ci"><svg class="i"><use href="icons.svg#i-upload"/></svg></span>Pick a song or file</div>
+        </div>
+        <div class="cardw" style="padding:2px 14px">
+          <div class="row"><span class="playb"><svg class="i f"><use href="icons.svg#i-play"/></svg></span><div class="grow">Amma's voice<small>Recorded · 0:12</small></div><span class="radio on"><svg class="i"><use href="icons.svg#i-check"/></svg></span></div>
+          <div class="row"><span class="playb"><svg class="i f"><use href="icons.svg#i-play"/></svg></span><div class="grow">Bhajan<small>Song · 1:40</small></div><span class="radio"></span></div>
+        </div>
+      </div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h4>Recording…</h4>
+        <div class="timer" style="font-size:44px">0:08<small>up to 2:00</small></div>
+        <div class="wave" style="height:50px">
+          <span style="height:14px"></span><span style="height:28px"></span><span style="height:18px"></span><span style="height:40px"></span><span style="height:24px"></span><span style="height:46px"></span><span style="height:32px"></span><span style="height:20px"></span><span style="height:36px"></span><span style="height:16px"></span><span style="height:30px"></span><span style="height:42px"></span><span class="f" style="height:7px"></span><span class="f" style="height:7px"></span><span class="f" style="height:7px"></span><span class="f" style="height:7px"></span><span class="f" style="height:7px"></span><span class="f" style="height:7px"></span>
+        </div>
+        <div class="stopb sm"><i></i></div>
+        <div style="text-align:center;font-weight:900;font-size:14px;margin-top:4px">Tap to stop</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">B</span>
+      <h3>Recording in a pop-up</h3>
+      <ul>
+        <li>A sheet slides up over the sound list, so you never leave the page.</li>
+        <li>Quicker, but smaller, with no room for the suggested line.</li>
+        <li>After stopping, the same sheet shows Listen, Record again, the name and "Use this sound".</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
