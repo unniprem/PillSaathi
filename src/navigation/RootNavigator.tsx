@@ -14,6 +14,7 @@ import { I18nProvider } from '../i18n';
 import LoginScreen from '../screens/LoginScreen';
 import WhoScreen from '../screens/WhoScreen';
 import TodayScreen from '../screens/TodayScreen';
+import AddPillScreen from '../screens/AddPillScreen';
 import PillEditScreen from '../screens/PillEditScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
 import SetupScreen from '../screens/SetupScreen';
@@ -49,9 +50,11 @@ export type RootStackParamList = {
   // first: the Google first name to greet, or null without a login.
   Who: { first: string | null };
   Main: NavigatorScreenParams<TabParamList> | undefined;
+  // elderId adds a pill for her, on a relative's phone: Save sends it to her phone.
+  AddPill: { elderId?: string } | undefined;
   // focusCount opens at Tablets left, from the running-low banner. elderId edits her pill, on a
   // relative's phone: Save sends the change to her phone.
-  PillEdit: { pillId?: string; focusCount?: boolean; elderId?: string };
+  PillEdit: { pillId: string; focusCount?: boolean; elderId?: string };
   // The sound chosen here is set on card alarmId, or, with elderId, sent for her dose at
   // hour:minute.
   SoundPicker: {
@@ -134,6 +137,11 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
         name="Main"
         component={Main}
         initialParams={paramsFor('Main')}
+      />
+      <Stack.Screen
+        name="AddPill"
+        component={AddPillScreen}
+        initialParams={paramsFor('AddPill')}
       />
       <Stack.Screen
         name="PillEdit"

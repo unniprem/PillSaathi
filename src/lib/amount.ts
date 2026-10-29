@@ -1,4 +1,4 @@
-import type { Lang } from '../i18n';
+import type { Lang, Strings } from '../i18n';
 
 /** A pill's type, as the native module stores it. Its label is `t.forms[form]`. */
 export type PillForm = 'tablet' | 'capsule' | 'syrup' | 'drops';
@@ -45,6 +45,23 @@ const PLURAL: Record<Lang, (amount: number) => boolean> = {
   hi: amount => amount >= 2,
 };
 
+/** An amount's number and unit in [lang], such as "½" and "tablet", for a stepper. */
+export function amountParts(
+  form: PillForm,
+  amount: number,
+  lang: Lang = 'en',
+): [string, string] {
+  const whole = Math.floor(amount);
+  const half = amount - whole >= 0.25;
+  let number = String(whole);
+  if (half) {
+    number =
+      form === 'tablet' ? `${whole === 0 ? '' : whole}½` : String(amount);
+  }
+  const [one, many] = UNITS[lang][form];
+  return [number, PLURAL[lang](amount) ? many : one];
+}
+
 /**
  * "½ tablet", "1½ tablets", "7.5 ml", "2 drops" in [lang]: the same text the ringing screen
  * shows. Digits stay Western in every language.
@@ -54,15 +71,24 @@ export function formatAmount(
   amount: number,
   lang: Lang = 'en',
 ): string {
-  const whole = Math.floor(amount);
-  const half = amount - whole >= 0.25;
-  let number = String(whole);
-  if (half) {
-    number =
-      form === 'tablet' ? `${whole === 0 ? '' : whole}½` : String(amount);
-  }
-  const [one, many] = UNITS[lang][form];
-  return `${number} ${PLURAL[lang](amount) ? many : one}`;
+  return amountParts(form, amount, lang).join(' ');
+}
+
+/**
+ * "Tablet · 1 each time", or "Syrup · 7.5 ml each time": the kind names what a tablet, a capsule
+ * or a drop is, but not ml.
+ */
+export function kindAndAmount(
+  form: PillForm,
+  amount: number,
+  t: Strings,
+  lang: Lang = 'en',
+): string {
+  const [number, unit] = amountParts(form, amount, lang);
+  return t.addPill.eachTime(
+    t.forms[form],
+    form === 'syrup' ? `${number} ${unit}` : number,
+  );
 }
 
 /** [amount] one step up (1) or down (−1), kept within the type's range. */

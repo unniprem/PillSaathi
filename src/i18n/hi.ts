@@ -147,7 +147,6 @@ export const hi: Strings = {
       `${start} · आखिरी खुराक ${last}`,
   },
   pill: {
-    addTitle: 'दवा जोड़ें',
     editTitle: 'दवा बदलें',
     name: 'नाम',
     namePlaceholder: 'दवा का नाम',
@@ -186,6 +185,32 @@ export const hi: Strings = {
     tabletsLeft: 'बची गोलियाँ',
     capsulesLeft: 'बचे कैप्सूल',
     countNote: 'ज़रूरी नहीं। हर बार लेने पर उतनी मात्रा घटती है।',
+  },
+  addPill: {
+    titleFor: (name: string) => `${name} के लिए दवा जोड़ें`,
+    nameQuestion: 'दवा का नाम क्या है?',
+    addPhoto: 'पत्ते की फ़ोटो जोड़ें',
+    photoNote: 'ज़रूरी नहीं। दवाओं को पहचानने में मदद करती है।',
+    camera: 'कैमरा',
+    gallery: 'गैलरी',
+    kindQuestion: 'किस तरह की, और कितनी?',
+    eachTimeLabel: 'हर बार',
+    whenQuestion: (name: string) => `${name} कब याद दिलाएं?`,
+    pickSome: 'एक या ज़्यादा चुनें।',
+    morning: 'सुबह',
+    afternoon: 'दोपहर',
+    night: 'रात',
+    changeTime: (time: string) => `${time} बदलें`,
+    anotherTime: 'कोई और समय',
+    howLongQuestion: 'कितने दिन?',
+    checkQuestion: 'क्या यह सही है?',
+    eachTime: (kind: string, amount: string) => `${kind} · हर बार ${amount}`,
+    joinTimes: (times: string[]) =>
+      times.length < 2
+        ? times.join('')
+        : `${times.slice(0, -1).join(', ')} और ${times[times.length - 1]}`,
+    optional: 'ज़रूरी नहीं',
+    addCount: '+ जोड़ें',
   },
   health: {
     notifications:

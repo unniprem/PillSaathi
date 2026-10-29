@@ -196,7 +196,7 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
             })}
             <Pressable
               accessibilityRole="button"
-              onPress={() => navigation.navigate('PillEdit', { elderId })}
+              onPress={() => navigation.navigate('AddPill', { elderId })}
               style={styles.button}
             >
               <Text style={styles.buttonText}>{t.remote.addPill}</Text>

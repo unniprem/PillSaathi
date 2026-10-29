@@ -36,7 +36,12 @@ export default function Stepper({
         onPress={onLess}
         disabled={lessDisabled}
       />
-      <View style={styles.middle}>
+      {/* Read as one, "½ tablet". */}
+      <View
+        accessible
+        accessibilityLabel={sub ? `${value} ${sub}` : value}
+        style={styles.middle}
+      >
         <Text style={styles.value}>{value}</Text>
         {sub ? <Text style={styles.sub}>{sub}</Text> : null}
       </View>

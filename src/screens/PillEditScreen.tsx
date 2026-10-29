@@ -13,31 +13,37 @@ import {
 import type { LayoutChangeEvent, ScrollViewInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AmountStepper from '../components/AmountStepper';
+import { useElder } from '../hooks/useElder';
+import { usePickPhoto } from '../hooks/usePickPhoto';
+import { useSavePill } from '../hooks/useSavePill';
 import { AMOUNT_RULES, FORMS } from '../lib/amount';
 import type { PillForm } from '../lib/amount';
-import { addDays, courseSummary, toISODate } from '../lib/course';
+import { courseSummary, toISODate } from '../lib/course';
+import {
+  MAX_TIMES,
+  PRESETS,
+  QUICK_TIMES,
+  addToCount,
+  byTime,
+  daysOf,
+  draftFromPill,
+  draftReady,
+  emptyDraft,
+  isCountable,
+  sameTime,
+  stepReady,
+} from '../lib/pillDraft';
+import type { PillDraft } from '../lib/pillDraft';
 import { formatTime } from '../lib/time';
 import {
   deletePill,
-  getHealth,
-  getSetupState,
   is24HourFormat,
   listPills,
-  markSetupSeen,
-  openSetting,
-  pickPhoto,
   pickTime,
-  savePill,
 } from '../native/alarms';
-import type { DoseTime, Pill } from '../native/alarms';
-import {
-  FamilyErrors,
-  getElderSetup,
-  getFamily,
-  sendDeletePill,
-  sendPill,
-} from '../native/family';
-import { errorCode, familyMessage } from '../lib/family';
+import type { Pill } from '../native/alarms';
+import { getElderSetup, sendDeletePill } from '../native/family';
+import { familyMessage } from '../lib/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import { colors, radius, spacing } from '../theme';
@@ -45,42 +51,7 @@ import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PillEdit'>;
 
-/** A preset number of days, "Other…" (typed), or "No end". Nothing is chosen for a new pill. */
-type Duration = 5 | 7 | 10 | 20 | 'other' | 'none';
-
-const PRESETS: (5 | 7 | 10 | 20)[] = [5, 7, 10, 20];
-const MAX_TIMES = 6;
-const MAX_DAYS = 365;
-const FIRST_TIME: DoseTime = { hour: 8, minute: 0 };
 const QUICK_COUNTS = [10, 15, 30];
-/** Tablets left: up to 999, in halves. Empty means not counted. */
-const COUNT = /^\d{1,3}(\.[05])?$/;
-
-const sameTime = (a: DoseTime, b: DoseTime) =>
-  a.hour === b.hour && a.minute === b.minute;
-const byTime = (a: DoseTime, b: DoseTime) =>
-  a.hour - b.hour || a.minute - b.minute;
-
-/** Only tablets and capsules are counted. */
-const isCountable = (form: PillForm) => form === 'tablet' || form === 'capsule';
-
-/** The days a duration stands for: a number, null for no end, or undefined when not valid yet. */
-function daysOf(
-  duration: Duration | null,
-  other: string,
-): number | null | undefined {
-  if (duration === null) {
-    return undefined;
-  }
-  if (duration === 'none') {
-    return null;
-  }
-  if (duration === 'other') {
-    const n = /^\d+$/.test(other) ? Number(other) : NaN;
-    return n >= 1 && n <= MAX_DAYS ? n : undefined;
-  }
-  return duration;
-}
 
 function Chip({
   label,
@@ -112,36 +83,22 @@ async function herPills(elderId: string): Promise<Pill[]> {
 }
 
 export default function PillEditScreen({ navigation, route }: Props) {
-  const pillId = route.params?.pillId;
+  const pillId = route.params.pillId;
   // On a relative's phone: her pill, whose Save and Delete are sent to her phone.
-  const elderId = route.params?.elderId;
-  const [elderName, setElderName] = useState('');
+  const elderId = route.params.elderId;
   // Her times are on her clock; said so when she lives in another zone.
-  const [otherZone, setOtherZone] = useState(false);
-  // Her photo as loaded, to tell her phone to keep it, drop it or take a new one.
-  const herPhoto = useRef<string | null>(null);
-  const focusCount = route.params?.focusCount ?? false;
+  const { name: elderName, otherZone } = useElder(elderId);
+  const focusCount = route.params.focusCount ?? false;
   const { t } = useI18n();
   // For the load, which must not run again (and undo edits) when the language changes.
   const words = useRef(t);
   words.current = t;
-  const [name, setName] = useState('');
-  const [form, setForm] = useState<PillForm>('tablet');
-  const [amount, setAmount] = useState(AMOUNT_RULES.tablet.initial);
-  const [times, setTimes] = useState<DoseTime[]>([]);
-  const [duration, setDuration] = useState<Duration | null>(null);
-  const [otherDays, setOtherDays] = useState('');
-  const [startsTomorrow, setStartsTomorrow] = useState(false);
-  // An edit keeps the pill's start date; it is known once the pill has loaded.
-  const [startDate, setStartDate] = useState<string | null>(null);
-  // The photo's file name; saving without it would delete the pill's photo.
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-  // Tablets left as typed; empty means not counted. Sent as changed only once touched, so a count
-  // a Taken lowered while the page was open isn't put back.
-  const [count, setCount] = useState('');
-  const [countChanged, setCountChanged] = useState(false);
-  const picking = useRef(false);
+  // The pill as it is being changed; its start date and photo are known once it has loaded.
+  const [draft, setDraft] = useState<PillDraft>(emptyDraft);
+  const update = (patch: Partial<PillDraft>) =>
+    setDraft(d => ({ ...d, ...patch }));
+  const { name, form, amount, times, duration, otherDays, startDate } = draft;
+  const { photoUri, count } = draft;
   // Opened from the running-low banner: keep the count in view above the keyboard while the page
   // settles, until the page is scrolled by hand.
   const scroll = useRef<ScrollViewInstance>(null);
@@ -150,9 +107,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
   // The keyboard covers the page instead of shrinking it (edge to edge), so the page adds this
   // much room below itself while it is open, and its lower fields can scroll above it.
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  // Editing: Save waits for the pill, or it would overwrite it with the new-pill defaults.
-  const [loaded, setLoaded] = useState(!pillId);
-  const [saving, setSaving] = useState(false);
+  // Save waits for the pill, or it would overwrite it with an empty one.
+  const [loaded, setLoaded] = useState(false);
   const [is24h] = useState(() => is24HourFormat());
   const [today] = useState(() => toISODate(new Date()));
   const mounted = useRef(true);
@@ -186,25 +142,13 @@ export default function PillEditScreen({ navigation, route }: Props) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!elderId) {
-      return;
-    }
-    Promise.all([getFamily(), getElderSetup(elderId)])
-      .then(([cards, setup]) => {
-        const called = cards.find(c => c.elderId === elderId)?.name;
-        if (mounted.current) {
-          setElderName(called ?? '');
-          setOtherZone(setup.otherZone);
-        }
-      })
-      .catch(e => console.warn('Could not read her name', e));
-  }, [elderId]);
+  const { save, saving } = useSavePill(elderId, {
+    elderName,
+    onSaved: leave,
+  });
+  const choosePhoto = usePickPhoto(update);
 
   useEffect(() => {
-    if (!pillId) {
-      return;
-    }
     (elderId ? herPills(elderId) : listPills())
       .then(list => {
         const pill = list.find(p => p.id === pillId);
@@ -215,23 +159,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
           leave();
           return;
         }
-        setName(pill.name);
-        setForm(pill.form);
-        setAmount(pill.amount);
-        setTimes([...pill.times].sort(byTime));
-        setStartDate(pill.startDate);
-        setPhoto(pill.photo);
-        setPhotoUri(pill.photoUri);
-        herPhoto.current = pill.photo;
-        setCount(pill.remaining === null ? '' : String(pill.remaining));
-        if (pill.days === null) {
-          setDuration('none');
-        } else if ((PRESETS as number[]).includes(pill.days)) {
-          setDuration(pill.days as Duration);
-        } else {
-          setDuration('other');
-          setOtherDays(String(pill.days));
-        }
+        setDraft(draftFromPill(pill));
         setLoaded(true);
       })
       .catch(e => {
@@ -245,14 +173,13 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
   const chooseForm = (next: PillForm) => {
     if (next !== form) {
-      setForm(next);
-      setAmount(AMOUNT_RULES[next].initial);
+      update({ form: next, amount: AMOUNT_RULES[next].initial });
     }
   };
 
   /** Picks a time for slot [index], or a new one; a time already on the pill is refused. */
   const chooseTime = async (index?: number) => {
-    const current = index === undefined ? FIRST_TIME : times[index];
+    const current = index === undefined ? QUICK_TIMES[0] : times[index];
     const picked = await pickTime(current.hour, current.minute);
     if (!picked || !mounted.current) {
       return;
@@ -265,38 +192,13 @@ export default function PillEditScreen({ navigation, route }: Props) {
       index === undefined
         ? [...times, picked]
         : times.map((time, i) => (i === index ? picked : time));
-    setTimes(next.sort(byTime));
+    update({ times: next.sort(byTime) });
   };
 
   const removeTime = (index: number) =>
-    setTimes(list => list.filter((_, i) => i !== index));
+    setDraft(d => ({ ...d, times: d.times.filter((_, i) => i !== index) }));
 
-  /** A new photo from the camera or gallery; a cancelled pick keeps the one there is. */
-  const choosePhoto = async (source: 'camera' | 'gallery') => {
-    if (picking.current) {
-      return;
-    }
-    picking.current = true;
-    try {
-      const picked = await pickPhoto(source);
-      if (picked && mounted.current) {
-        setPhoto(picked.name);
-        setPhotoUri(picked.uri);
-      }
-    } catch (e) {
-      console.warn('Could not add the photo', e);
-      if (mounted.current) {
-        Alert.alert(t.pill.photoFailed);
-      }
-    } finally {
-      picking.current = false;
-    }
-  };
-
-  const removePhoto = () => {
-    setPhoto(null);
-    setPhotoUri(null);
-  };
+  const removePhoto = () => update({ photo: null, photoUri: null });
 
   // A frame later: Android ignores a scroll made while the page is still taking its new size.
   const scrollToCount = useCallback(() => {
@@ -314,148 +216,17 @@ export default function PillEditScreen({ navigation, route }: Props) {
     scrollToCount();
   };
 
-  const changeCount = (text: string) => {
-    setCount(text);
-    setCountChanged(true);
-  };
-
-  /** Adds [n] to the count; an empty field counts as 0. */
-  const addToCount = (n: number) =>
-    changeCount(String((COUNT.test(count) ? Number(count) : 0) + n));
+  const changeCount = (text: string) =>
+    update({ count: text, countChanged: true });
 
   const counted = isCountable(form);
-  const countValid = !counted || count === '' || COUNT.test(count);
-  const remaining = counted && count !== '' ? Number(count) : null;
+  const countValid = stepReady(draft, 5);
 
   const days = daysOf(duration, otherDays);
-  const ready =
-    loaded &&
-    name.trim() !== '' &&
-    times.length > 0 &&
-    days !== undefined &&
-    countValid;
-  const courseStart = startDate ?? (startsTomorrow ? addDays(today, 1) : today);
-
-  // Runs after a successful save; it never throws, so the user always leaves.
-  const finish = useCallback(async () => {
-    try {
-      if (!(await getSetupState()).seen) {
-        await markSetupSeen();
-        navigation.replace('Setup');
-        return;
-      }
-    } catch (e) {
-      console.warn('Could not check the setup state', e);
-    }
-    leave();
-  }, [navigation, leave]);
-
-  const save = useCallback(async () => {
-    if (saving || !ready || days === undefined) {
-      return;
-    }
-    setSaving(true);
-    const input = {
-      id: pillId ?? null,
-      name: name.trim(),
-      form,
-      amount,
-      times,
-      startsTomorrow: pillId ? false : startsTomorrow,
-      days,
-      photo,
-      remaining,
-      remainingChanged: countChanged,
-    };
-    if (elderId) {
-      // Her phone takes it from here; the setup and alarm prompts are about this phone.
-      const photoChoice =
-        photo === null ? 'none' : photo === herPhoto.current ? 'keep' : 'new';
-      try {
-        await sendPill(elderId, {
-          ...input,
-          photo: photoChoice === 'new' ? photo : null,
-          photoChoice,
-        });
-        leave();
-      } catch (e) {
-        console.warn('Could not send the pill', e);
-        if (mounted.current) {
-          Alert.alert(
-            errorCode(e) === FamilyErrors.NotAllowed
-              ? t.remote.notEditor(elderName)
-              : familyMessage(e, t),
-          );
-          setSaving(false);
-        }
-      }
-      return;
-    }
-    try {
-      await savePill(input);
-    } catch (e) {
-      console.warn('Could not save the pill', e);
-      if (mounted.current) {
-        Alert.alert(t.pill.saveFailed, t.common.tryAgain);
-        setSaving(false);
-      }
-      return;
-    }
-    // The pill is saved; whatever happens next, leave the page.
-    let exactAlarmAllowed = true;
-    try {
-      exactAlarmAllowed = (await getHealth()).exactAlarmAllowed;
-    } catch (e) {
-      console.warn('Could not read health', e);
-    }
-    if (!exactAlarmAllowed) {
-      Alert.alert(
-        t.pill.exactAlarmTitle,
-        t.pill.exactAlarmBody,
-        [
-          { text: t.pill.notNow, style: 'cancel', onPress: () => finish() },
-          {
-            text: t.pill.allow,
-            onPress: () => {
-              openSetting('exactAlarm').catch(e =>
-                console.warn('Could not open settings', e),
-              );
-              finish();
-            },
-          },
-        ],
-        { cancelable: false },
-      );
-    } else {
-      await finish();
-    }
-    if (mounted.current) {
-      setSaving(false);
-    }
-  }, [
-    saving,
-    ready,
-    days,
-    pillId,
-    elderId,
-    elderName,
-    name,
-    form,
-    amount,
-    times,
-    startsTomorrow,
-    photo,
-    remaining,
-    countChanged,
-    finish,
-    leave,
-    t,
-  ]);
+  const ready = loaded && draftReady(draft);
+  const courseStart = startDate ?? today;
 
   const confirmDelete = useCallback(() => {
-    if (!pillId) {
-      return;
-    }
     Alert.alert(t.pill.deleteConfirm, undefined, [
       { text: t.common.cancel, style: 'cancel' },
       {
@@ -485,19 +256,17 @@ export default function PillEditScreen({ navigation, route }: Props) {
 
   const actions = (
     <View style={styles.headerActions}>
-      {pillId ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={confirmDelete}
-          hitSlop={spacing.sm}
-        >
-          <Text style={styles.headerDelete}>{t.common.delete}</Text>
-        </Pressable>
-      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        onPress={confirmDelete}
+        hitSlop={spacing.sm}
+      >
+        <Text style={styles.headerDelete}>{t.common.delete}</Text>
+      </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !ready || saving }}
-        onPress={save}
+        onPress={() => save(draft)}
         disabled={!ready || saving}
         hitSlop={spacing.sm}
       >
@@ -511,13 +280,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <SkyBand
-        title={
-          elderId
-            ? t.remote.pillTitle(elderName)
-            : pillId
-            ? t.pill.editTitle
-            : t.pill.addTitle
-        }
+        title={elderId ? t.remote.pillTitle(elderName) : t.pill.editTitle}
         onClose={leave}
         right={actions}
       />
@@ -537,7 +300,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
         <Text style={styles.label}>{t.pill.name}</Text>
         <TextInput
           value={name}
-          onChangeText={setName}
+          onChangeText={text => update({ name: text })}
           maxLength={60}
           placeholder={t.pill.namePlaceholder}
           placeholderTextColor={colors.textMuted}
@@ -595,7 +358,11 @@ export default function PillEditScreen({ navigation, route }: Props) {
         </View>
 
         <Text style={styles.label}>{t.pill.howMuch}</Text>
-        <AmountStepper form={form} amount={amount} onChange={setAmount} />
+        <AmountStepper
+          form={form}
+          amount={amount}
+          onChange={next => update({ amount: next })}
+        />
 
         {counted ? (
           <View testID="count-section" onLayout={onCountLayout}>
@@ -622,7 +389,7 @@ export default function PillEditScreen({ navigation, route }: Props) {
                 <Pressable
                   key={n}
                   accessibilityRole="button"
-                  onPress={() => addToCount(n)}
+                  onPress={() => changeCount(addToCount(count, n))}
                   style={styles.chip}
                 >
                   <Text style={styles.chipText}>{`+${n}`}</Text>
@@ -677,24 +444,24 @@ export default function PillEditScreen({ navigation, route }: Props) {
               key={n}
               label={t.pill.nDays(n)}
               selected={duration === n}
-              onPress={() => setDuration(n)}
+              onPress={() => update({ duration: n })}
             />
           ))}
           <Chip
             label={t.pill.otherDays}
             selected={duration === 'other'}
-            onPress={() => setDuration('other')}
+            onPress={() => update({ duration: 'other' })}
           />
           <Chip
             label={t.pill.noEnd}
             selected={duration === 'none'}
-            onPress={() => setDuration('none')}
+            onPress={() => update({ duration: 'none' })}
           />
         </View>
         {duration === 'other' ? (
           <TextInput
             value={otherDays}
-            onChangeText={setOtherDays}
+            onChangeText={text => update({ otherDays: text })}
             accessibilityLabel={t.pill.days}
             placeholder={t.pill.days}
             placeholderTextColor={colors.textMuted}
@@ -703,24 +470,6 @@ export default function PillEditScreen({ navigation, route }: Props) {
             style={[styles.input, styles.daysInput]}
           />
         ) : null}
-
-        {pillId ? null : (
-          <>
-            <Text style={styles.label}>{t.pill.starts}</Text>
-            <View style={styles.chips}>
-              <Chip
-                label={t.pill.startsToday}
-                selected={!startsTomorrow}
-                onPress={() => setStartsTomorrow(false)}
-              />
-              <Chip
-                label={t.pill.startsTomorrow}
-                selected={startsTomorrow}
-                onPress={() => setStartsTomorrow(true)}
-              />
-            </View>
-          </>
-        )}
 
         {times.length > 0 && days !== undefined ? (
           <Text style={styles.summary}>

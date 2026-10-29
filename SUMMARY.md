@@ -1,8 +1,8 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 9, 10 (running in parallel, one worktree and branch `ui/task-N` each); then 11, 16, 18
-**Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 (14 ✓) · C = 11 · D = 16 · then 18. Parallel agents don't edit this file; the orchestrator merges their branches (cherry-pick) and adds their notes here.
+**Next task**: 11 and 16 (running in parallel; 16 leaves ElderPills' pill-row link and its "Alarm sounds" section for the orchestrator to finish after both merge); then 18
+**Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 ✓ · C = 11 + 16 · then 18. Parallel agents don't edit this file; the orchestrator merges their branches (cherry-pick) and adds their notes here.
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
@@ -108,6 +108,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Layout: PersonCards come first in the lifted body, then a "My pills" label, then this phone's own Today in her order (WarningCard, RefillCards, NextDose…). With people but no pills of his own: "You have no pills of your own." + an "Add a pill" link (same `addPill`). `FamilySection.tsx` deleted; PersonCard (`testID="person-card"`) holds its own refill and heard lines.
 - Data: `problemsOf` calls `getElderSetup` per person on every family load (and the 2-minute timer); cards and problems show together; a failed read gives no problem line. The greeting's first name comes from `signedInRelative()` via a new `firstName()` in `lib/family.ts`, only when he follows someone. Before her first upload, the tally is hidden and "Not heard from Amma's phone yet" is the last amber line.
 - Deviations: PersonCard takes `is24h`; the real signature is `problemText(problem, t, name)`; the name area and the missed line are separate buttons to her page, with Call a 48 dp round green button beside them. "Family" heading and "+ Add family" gone from Today. For Task 16: `remote.problem` still ends "…tap the yellow banner." (reword: her Today now shows an "Alarms may not ring" card with "Fix now"); her page can reuse the round Call style and `firstName`.
+
+### Task 10: Adding a pill in five steps
+**Status**: ✓ Done (parallel, branch `ui/task-10`)
+**Notes**:
+- `AddPill: { elderId?: string } | undefined`. Her phone: no band title (step bar beside ×); his: "Add a pill for Amma", step 3 says "Times are Amma's time.". Back/Next/Save sit in a fixed footer (`add-pill-foot`) below the scroll and above the keyboard. Step 3 cards tick on tap; tick (checkbox "Morning, 8:00 AM") and "Change" are separate controls; "Another time" hides at 6 times. Step 5 Tablets left is a row with "+ Add" (+10/+15/+30). The phone's Back closes Add pill (doesn't step back).
+- Deviations: presets are 5/10/30 days everywhere (7 and 20 now load as "Other…"); `AmountStepper` shows the number with the unit under it, read as one label ("½ tablet"); `PillEdit` route now requires `pillId` (add-only branches and `pill.addTitle` gone); no `tooBig` on pill save (it never had it). New hooks `useElder(elderId?)` → `{ name, otherZone }`, `usePickPhoto(onPicked)` → `pick(source)`; `amount.ts` adds `amountParts`, `kindAndAmount` ("Tablet · 1 each time"); `t.addPill.joinTimes([...])`.
+- For Task 11: `pillDraft.ts` exports `PillDraft` (plan fields + `savedPhoto`, the photo as loaded, so a relative's send knows keep/drop/replace), `Duration = 5|10|30|'other'|'none'`, `Step`, `PRESETS`, `MAX_TIMES = 6`, `QUICK_TIMES`, `sameTime`, `byTime`, `isCountable`, `daysOf`, `emptyDraft`, `draftFromPill`, `stepReady`, `draftReady`, `toPillInput` (throws without a duration), `addToCount`. `useSavePill(elderId?, { elderName?, onSaved? })` → `{ save, saving }`; without `onSaved` it leaves the page; pass `onSaved` to close a sheet and stay; `save` resolves false on failure/not ready/already saving. PillEdit already loads with `draftFromPill` and saves with `useSavePill` (only its time and count controls are its own). 25 tests remain in `PillEditScreen.test.tsx` to port (editing 11, counts 8, her pill on his phone 6); PillEdit's own time editing has no test until Task 11's sheets.
 
 ---
 

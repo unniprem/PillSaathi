@@ -149,7 +149,6 @@ export const en = {
       `${start} · last dose ${last}`,
   },
   pill: {
-    addTitle: 'Add pill',
     editTitle: 'Edit pill',
     name: 'Name',
     namePlaceholder: 'Medicine name',
@@ -187,6 +186,33 @@ export const en = {
     tabletsLeft: 'Tablets left',
     capsulesLeft: 'Capsules left',
     countNote: 'Optional. It goes down by the amount at each Taken.',
+  },
+  /** Adding a pill: one question to a page, five pages. */
+  addPill: {
+    titleFor: (name: string) => `Add a pill for ${name}`,
+    nameQuestion: "What's the medicine called?",
+    addPhoto: 'Add a photo of the strip',
+    photoNote: 'Optional. Helps tell pills apart.',
+    camera: 'Camera',
+    gallery: 'Gallery',
+    kindQuestion: 'What kind, and how much?',
+    eachTimeLabel: 'Each time',
+    whenQuestion: (name: string) => `When should ${name} ring?`,
+    pickSome: 'Pick one or more.',
+    morning: 'Morning',
+    afternoon: 'Afternoon',
+    night: 'Night',
+    changeTime: (time: string) => `Change ${time}`,
+    anotherTime: 'Another time',
+    howLongQuestion: 'For how long?',
+    checkQuestion: 'Does this look right?',
+    eachTime: (kind: string, amount: string) => `${kind} · ${amount} each time`,
+    joinTimes: (times: string[]) =>
+      times.length < 2
+        ? times.join('')
+        : `${times.slice(0, -1).join(', ')} and ${times[times.length - 1]}`,
+    optional: 'Optional',
+    addCount: '+ Add',
   },
   health: {
     notifications:

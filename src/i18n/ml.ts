@@ -151,7 +151,6 @@ export const ml: Strings = {
       `${start} · അവസാന ഡോസ് ${last}`,
   },
   pill: {
-    addTitle: 'മരുന്ന് ചേർക്കുക',
     editTitle: 'മരുന്ന് മാറ്റുക',
     name: 'പേര്',
     namePlaceholder: 'മരുന്നിന്റെ പേര്',
@@ -190,6 +189,30 @@ export const ml: Strings = {
     tabletsLeft: 'ബാക്കിയുള്ള ഗുളികകൾ',
     capsulesLeft: 'ബാക്കിയുള്ള ക്യാപ്സ്യൂളുകൾ',
     countNote: 'നിർബന്ധമില്ല. ഓരോ തവണ കഴിക്കുമ്പോഴും ആ അളവ് കുറയും.',
+  },
+  addPill: {
+    titleFor: (name: string) => `${name}-യ്ക്ക് ഒരു മരുന്ന് ചേർക്കുക`,
+    nameQuestion: 'മരുന്നിന്റെ പേര് എന്താണ്?',
+    addPhoto: 'സ്ട്രിപ്പിന്റെ ഫോട്ടോ ചേർക്കുക',
+    photoNote: 'നിർബന്ധമില്ല. മരുന്നുകൾ തിരിച്ചറിയാൻ സഹായിക്കും.',
+    camera: 'ക്യാമറ',
+    gallery: 'ഗാലറി',
+    kindQuestion: 'ഏത് തരം, എത്ര അളവ്?',
+    eachTimeLabel: 'ഓരോ തവണയും',
+    whenQuestion: (name: string) => `${name} എപ്പോൾ ഓർമ്മിപ്പിക്കണം?`,
+    pickSome: 'ഒന്നോ അതിലധികമോ തിരഞ്ഞെടുക്കുക.',
+    morning: 'രാവിലെ',
+    afternoon: 'ഉച്ചയ്ക്ക്',
+    night: 'രാത്രി',
+    changeTime: (time: string) => `${time} മാറ്റുക`,
+    anotherTime: 'മറ്റൊരു സമയം',
+    howLongQuestion: 'എത്ര ദിവസത്തേക്ക്?',
+    checkQuestion: 'ഇത് ശരിയാണോ?',
+    eachTime: (kind: string, amount: string) =>
+      `${kind} · ഓരോ തവണയും ${amount}`,
+    joinTimes: (times: string[]) => times.join(', '),
+    optional: 'നിർബന്ധമില്ല',
+    addCount: '+ ചേർക്കുക',
   },
   health: {
     notifications:

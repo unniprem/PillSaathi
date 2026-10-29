@@ -277,7 +277,7 @@ export default function TodayScreen({ navigation }: Props) {
 
   const openPill = (pillId: string) =>
     navigation.navigate('PillEdit', { pillId });
-  const addPill = () => navigation.navigate('PillEdit', {});
+  const addPill = () => navigation.navigate('AddPill');
 
   const is24h = is24HourFormat();
   const hour = new Date(now).getHours();

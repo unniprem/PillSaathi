@@ -1,11 +1,14 @@
 import {
   AMOUNT_RULES,
   FORMS,
+  amountParts,
   formatAmount,
+  kindAndAmount,
   stepAmount,
   type PillForm,
 } from '../../src/lib/amount';
 import { en } from '../../src/i18n/en';
+import { ml } from '../../src/i18n/ml';
 
 test.each([
   ['tablet', 0.5, '½ tablet'],
@@ -40,6 +43,24 @@ test('formats Malayalam and Hindi amounts', () => {
     expect(formatAmount(form, amount, 'ml')).toBe(mlText);
     expect(formatAmount(form, amount, 'hi')).toBe(hiText);
   }
+});
+
+test('splits an amount into its number and unit', () => {
+  expect(amountParts('tablet', 0.5)).toEqual(['½', 'tablet']);
+  expect(amountParts('tablet', 1.5)).toEqual(['1½', 'tablets']);
+  expect(amountParts('syrup', 7.5)).toEqual(['7.5', 'ml']);
+  expect(amountParts('drops', 2, 'ml')).toEqual(['2', 'തുള്ളി']);
+});
+
+test('names the kind and how much each time', () => {
+  expect(kindAndAmount('tablet', 1, en)).toBe('Tablet · 1 each time');
+  expect(kindAndAmount('capsule', 2, en)).toBe('Capsule · 2 each time');
+  expect(kindAndAmount('drops', 3, en)).toBe('Drops · 3 each time');
+  // A syrup's ml isn't the kind, so it says it.
+  expect(kindAndAmount('syrup', 7.5, en)).toBe('Syrup · 7.5 ml each time');
+  expect(kindAndAmount('tablet', 0.5, ml, 'ml')).toBe(
+    `${ml.forms.tablet} · ഓരോ തവണയും ½`,
+  );
 });
 
 test('stepAmount steps and clamps', () => {
