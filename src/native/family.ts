@@ -76,6 +76,16 @@ export async function listFollowers(): Promise<Follower[]> {
   return native().listFollowers();
 }
 
+/** Applies the changes this phone's family sent; how many were applied. */
+export async function checkIn(): Promise<number> {
+  return native().checkIn();
+}
+
+/** Applies family changes live while on (the app is in front). */
+export async function watchChanges(on: boolean): Promise<void> {
+  return native().watchChanges(on);
+}
+
 /** Lets a follower change this phone's pills and alarm sounds, or stops them. */
 export async function setCanChange(uid: string, on: boolean): Promise<void> {
   return native().setCanChange(uid, on);

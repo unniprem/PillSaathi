@@ -137,6 +137,8 @@ export interface Spec extends TurboModule {
   answerRequest(uid: string, allow: boolean): Promise<void>;
   listFollowers(): Promise<Follower[]>; // [] when never shared
   setCanChange(uid: string, on: boolean): Promise<void>;
+  checkIn(): Promise<number>; // applies changes family sent; how many
+  watchChanges(on: boolean): Promise<void>; // applies them live while on
   removeFollower(uid: string): Promise<void>;
 
   // The relative's side.

@@ -27,6 +27,12 @@ object ElderSync {
   private fun upload(context: Context) {
     val store = AlarmStore(context)
     if (!FamilyRules.uploads(store.locked { store.loadFamily() })) return
+    // Changes her family sent go in first, so this upload already shows them.
+    try {
+      CheckIn.apply(context)
+    } catch (e: FamilyException) {
+      Log.w(FAMILY_TAG, "Check-in before the upload failed (${e.code})", e)
+    }
     val cloud = FamilyCloud.get(context)
     val uid = cloud.elderUid()
     val (pills, records) = store.locked { store.loadPills() to store.loadDoses() }
@@ -101,7 +107,8 @@ object ElderSync {
   fun stopSharing(context: Context, uid: String) = synchronized(lock) {
     FamilyCloud.get(context).deleteElderCopy(uid)
     val store = AlarmStore(context)
-    store.locked { store.saveFamily(store.loadFamily().copy(sharing = false, uploaded = Uploaded())) }
+    store.locked { store.saveFamily(store.loadFamily().copy(sharing = false, uploaded = Uploaded(), editors = emptyList())) }
     FamilyWork.cancelHeartbeat(context)
+    FamilyWork.cancelCheckIn(context)
   }
 }

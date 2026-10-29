@@ -31,4 +31,9 @@
     <string name="family_call">कॉल करें</string>
     <string name="family_open">खोलें</string>
     <string name="family_checking">परिवार की खबर ले रहे हैं…</string>
+    <string name="channel_family_changes">परिवार: बदलाव</string>
+    <string name="family_change_added">%1$s ने %2$s जोड़ी (%3$s)।</string>
+    <string name="family_change_changed">%1$s ने %2$s बदली।</string>
+    <string name="family_change_deleted">%1$s ने %2$s हटाई।</string>
+    <string name="family_change_sound">%1$s ने %2$s की अलार्म आवाज़ %3$s कर दी।</string>
 </resources>

@@ -213,6 +213,85 @@ class FamilyCloud private constructor(context: Context) {
     return FollowRequest(snap.id, snap.getString("name") ?: "", snap.getString("email") ?: "", snap.getString("code"))
   }
 
+  /** Her changes still to apply (pending, or claimed by a check-in that stopped), oldest first. */
+  fun waitingChanges(uid: String): List<RemoteChange> =
+    await(elder(uid).collection(CHANGES).whereIn("status", listOf(RemoteRules.PENDING, RemoteRules.APPLYING)).get(Source.SERVER))
+      .documents.map(::changeOf)
+      .sortedBy { it.at ?: Long.MAX_VALUE }
+
+  /**
+   * Claims change [changeId] for applying, in a transaction, so its maker can't cancel it halfway;
+   * false when it was cancelled, or is already done.
+   */
+  fun claim(uid: String, changeId: String): Boolean {
+    val ref = elder(uid).collection(CHANGES).document(changeId)
+    return await(
+      db().runTransaction { tx ->
+        val status = tx.get(ref).takeIf { it.exists() }?.getString("status")
+        if (status == RemoteRules.PENDING || status == RemoteRules.APPLYING) {
+          tx.update(ref, "status", RemoteRules.APPLYING)
+          true
+        } else {
+          false
+        }
+      },
+    )
+  }
+
+  /** Marks change [changeId] applied, or rejected for [reason]. */
+  fun finish(uid: String, changeId: String, reason: String?) {
+    await(
+      elder(uid).collection(CHANGES).document(changeId).update(
+        mapOf(
+          "status" to if (reason == null) RemoteRules.APPLIED else RemoteRules.REJECTED,
+          "reason" to reason,
+          "doneAt" to FieldValue.serverTimestamp(),
+        ),
+      ),
+    )
+  }
+
+  /** The parts of change [changeId]'s file that are there, by index. */
+  fun readParts(uid: String, changeId: String, count: Int): Map<Int, ByteArray> =
+    (0 until count).mapNotNull { i ->
+      val snap = await(elder(uid).collection(PARTS).document(FileParts.partId(changeId, i)).get(Source.SERVER))
+      snap.getBlob("data")?.let { i to it.toBytes() }
+    }.toMap()
+
+  fun deleteParts(uid: String, changeId: String, count: Int) {
+    val batch = db().batch()
+    (0 until count).forEach { batch.delete(elder(uid).collection(PARTS).document(FileParts.partId(changeId, it))) }
+    await(batch.commit())
+  }
+
+  /** Deletes done changes, and parts no change waits for, from before [before]. */
+  fun cleanUp(uid: String, before: Long) {
+    val cutoff = Timestamp(Date(before))
+    val old = await(elder(uid).collection(CHANGES).whereLessThan("doneAt", cutoff).get(Source.SERVER)).documents
+    val waiting = waitingChanges(uid).map { it.id }.toSet()
+    val parts = await(elder(uid).collection(PARTS).whereLessThan("at", cutoff).get(Source.SERVER)).documents
+      .filter { it.getString("change") !in waiting }
+    (old.map { it.reference } + parts.map { it.reference }).chunked(400).forEach { refs ->
+      val batch = db().batch()
+      refs.forEach(batch::delete)
+      await(batch.commit())
+    }
+  }
+
+  /**
+   * Calls [onWaiting] on [executor] whenever a change waits for her phone, until removed. As with
+   * [listenRequests], [onError] means the listener has stopped.
+   */
+  fun listenChanges(uid: String, executor: Executor, onError: () -> Unit, onWaiting: () -> Unit): ListenerRegistration =
+    elder(uid).collection(CHANGES).whereEqualTo("status", RemoteRules.PENDING).addSnapshotListener(executor) { snap, e ->
+      if (e != null) {
+        Log.w(FAMILY_TAG, "Listening for changes failed", e)
+        onError()
+        return@addSnapshotListener
+      }
+      if (snap != null && !snap.isEmpty) onWaiting()
+    }
+
   /** Elder [uid]'s doc from the server, or from the cache when offline; null when there is none. */
   fun readElderCached(uid: String): ElderDoc? = elderOf(await(elder(uid).get()))
 
@@ -401,6 +480,8 @@ class FamilyCloud private constructor(context: Context) {
     const val CODES = "codes"
     const val MONTHS = "months"
     const val PHOTOS = "photos"
+    const val CHANGES = "changes"
+    const val PARTS = "parts"
     const val REQUESTS = "requests"
 
     @Volatile private var instance: FamilyCloud? = null
@@ -409,6 +490,11 @@ class FamilyCloud private constructor(context: Context) {
       instance ?: synchronized(this) { instance ?: FamilyCloud(context.applicationContext).also { instance = it } }
 
     /** The elder doc in [snap], or null when it doesn't exist. */
+    internal fun changeOf(snap: DocumentSnapshot): RemoteChange =
+      RemoteRules.changeFromMap(
+        snap.id, snap.data.orEmpty(), snap.getTimestamp("at")?.toDate()?.time, snap.getTimestamp("doneAt")?.toDate()?.time,
+      )
+
     internal fun elderOf(snap: DocumentSnapshot): ElderDoc? {
       val data = snap.data ?: return null
       return FamilyJson.elderFromMap(data, snap.getTimestamp("heardAt")?.toDate()?.time)

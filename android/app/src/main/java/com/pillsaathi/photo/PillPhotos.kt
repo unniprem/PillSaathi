@@ -52,6 +52,26 @@ class PillPhotos(context: Context, private val dir: File) {
     }
   }
 
+  /**
+   * Takes in a photo sent from a relative's phone (a JPEG already upright) and returns its name.
+   * Throws [IOException] if [bytes] aren't an image.
+   */
+  fun importBytes(bytes: ByteArray): String {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("Not an image")
+    val options = BitmapFactory.Options().apply {
+      inSampleSize = PhotoRules.sampleSize(bounds.outWidth, bounds.outHeight)
+    }
+    val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: throw IOException("Could not decode the photo")
+    val scaled = scaled(decoded)
+    try {
+      return write(scaled)
+    } finally {
+      scaled.recycle()
+    }
+  }
+
   fun delete(name: String) {
     if (PhotoRules.isPhotoName(name)) File(dir, name).delete()
   }

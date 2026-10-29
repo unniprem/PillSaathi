@@ -14,6 +14,8 @@ export const familyDefaults: Record<string, unknown> = {
   listFollowers: [],
   removeFollower: undefined,
   setCanChange: undefined,
+  checkIn: 0,
+  watchChanges: undefined,
   signedInRelative: null,
   signInWithGoogle: null,
   scanCode: null,

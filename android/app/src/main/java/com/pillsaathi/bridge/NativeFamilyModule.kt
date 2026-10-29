@@ -17,6 +17,7 @@ import com.pillsaathi.alarm.DoseRules
 import com.pillsaathi.alarm.History
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.family.CodeImage
+import com.pillsaathi.family.CheckIn
 import com.pillsaathi.family.CodeScanner
 import com.pillsaathi.family.ElderSync
 import com.pillsaathi.family.FamilyChecks
@@ -61,6 +62,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
   private var watching = false
   private var requestsListener: ListenerRegistration? = null
   private var requestsRetryAt = 0L
+  private var watchingChanges = false
+  private var changesListener: ListenerRegistration? = null
   private var pending: List<FollowRequest> = emptyList()
   private val answered = mutableSetOf<String>()
   private var currentCode: String? = null
@@ -146,6 +149,7 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
           FamilyWork.ensureHeartbeat(reactApplicationContext)
           cloud.answerRequest(elder, request, true)
           store.locked { store.saveFamily(store.loadFamily().let { it.copy(editors = (it.editors + uid).distinct()) }) }
+          FamilyWork.ensureCheckIn(reactApplicationContext)
         }
         if (request.code == currentCode) currentCode = null
       } else {
@@ -180,15 +184,63 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
       val editors = cloud.setEditor(elder, uid, on)
       store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
+      if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext) else FamilyWork.ensureCheckIn(reactApplicationContext)
       null
     }
+
+  override fun checkIn(promise: Promise) =
+    onWorker(promise) { synchronized(ElderSync.lock) { CheckIn.apply(reactApplicationContext) }.toDouble() }
+
+  override fun watchChanges(on: Boolean, promise: Promise) =
+    onWorker(promise) {
+      watchingChanges = on
+      changesListener?.remove()
+      changesListener = null
+      listenForChanges()
+      null
+    }
+
+  /**
+   * While the app is in front, listens for changes her family sends and applies them at once. A
+   * listener stopped by an error starts again after [RETRY_MS]. Worker thread.
+   */
+  private fun listenForChanges() {
+    if (!watchingChanges || changesListener != null) return
+    val local = store.locked { store.loadFamily() }
+    if (!FamilyRules.uploads(local) || local.editors.isEmpty()) return
+    val uid = cloud.signedInElder() ?: return
+    lateinit var listener: ListenerRegistration
+    listener = cloud.listenChanges(
+      uid,
+      worker,
+      onError = {
+        if (changesListener === listener) {
+          changesListener = null
+          handler.postDelayed({ listenForChanges() }, RETRY_MS)
+        }
+      },
+    ) {
+      try {
+        synchronized(ElderSync.lock) { CheckIn.apply(reactApplicationContext) }
+        Unit
+      } catch (e: FamilyException) {
+        Log.w(TAG, "Live check-in failed (${e.code})", e)
+        FamilyWork.requestCheckIn(reactApplicationContext)
+      }
+    }
+    changesListener = listener
+  }
 
   override fun removeFollower(uid: String, promise: Promise) =
     onWorker(promise) {
       val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
       // After any upload still running, so nothing it writes outlives the copy.
       synchronized(ElderSync.lock) {
-        if (cloud.removeFollower(elder, uid).isEmpty()) ElderSync.stopSharing(reactApplicationContext, elder)
+        val left = cloud.removeFollower(elder, uid)
+        val editors = store.locked { store.loadFamily().editors - uid }
+        store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
+        if (editors.isEmpty()) FamilyWork.cancelCheckIn(reactApplicationContext)
+        if (left.isEmpty()) ElderSync.stopSharing(reactApplicationContext, elder)
       }
       null
     }
@@ -381,6 +433,8 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     handler.post {
       requestsListener?.remove()
       requestsListener = null
+      changesListener?.remove()
+      changesListener = null
       asks.values.forEach { it.listener?.remove() }
       asks.clear()
       thread.quitSafely()
