@@ -59,8 +59,10 @@ function messageFor(e: unknown, t: Strings): string {
  * Following an elder: sign in with Google, scan or type her code, wait for her Allow, then say
  * what to call her, her number and when to ping.
  */
-export default function AddFamilyScreen({ navigation }: Props) {
+export default function AddFamilyScreen({ navigation, route }: Props) {
   const { t } = useI18n();
+  // Straight after the login there is no page behind this one: leaving goes on to Today.
+  const fromLogin = route.params?.fromLogin ?? false;
   const [step, setStep] = useState<Step>({ kind: 'loading' });
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
@@ -179,10 +181,18 @@ export default function AddFamilyScreen({ navigation }: Props) {
     return () => clearInterval(timer);
   }, [waitingFor, t]);
 
+  const leave = () => {
+    if (fromLogin) {
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } else {
+      navigation.goBack();
+    }
+  };
+
   const done = async (follow: Follow) => {
     try {
       await saveFollow(follow);
-      navigation.goBack();
+      leave();
     } catch (e) {
       console.warn('Could not save the follow', e);
       Alert.alert(t.settings.saveFailed);
@@ -191,7 +201,7 @@ export default function AddFamilyScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <SkyBand title={t.family.addTitle} onBack={() => navigation.goBack()} />
+      <SkyBand title={t.family.addTitle} onBack={leave} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

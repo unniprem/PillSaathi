@@ -56,8 +56,11 @@ export default function SkyTop({ hour, title, sub, children }: Props) {
   );
 }
 
-/** The sun in the top corner with two clouds, or low and setting behind the card below. */
-function Sun({ top, low }: { top: number; low: boolean }) {
+/**
+ * The sun in the top corner with two clouds, or low and setting behind the card below. The
+ * login page's sky has it too.
+ */
+export function Sun({ top, low }: { top: number; low: boolean }) {
   return (
     <>
       <View

@@ -11,6 +11,8 @@ import type {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { I18nProvider } from '../i18n';
+import LoginScreen from '../screens/LoginScreen';
+import WhoScreen from '../screens/WhoScreen';
 import TodayScreen from '../screens/TodayScreen';
 import PillEditScreen from '../screens/PillEditScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
@@ -43,6 +45,10 @@ export const TAB_ROUTES: (keyof TabParamList)[] = [
 ];
 
 export type RootStackParamList = {
+  // again: the phone was asked who it is for before, so the login goes straight to Today.
+  Login: { again?: boolean } | undefined;
+  // first: the Google first name to greet, or null without a login.
+  Who: { first: string | null };
   Main: NavigatorScreenParams<TabParamList> | undefined;
   // focusCount opens at Tablets left, from the running-low banner. elderId edits her pill, on a
   // relative's phone: Save sends the change to her phone.
@@ -62,12 +68,14 @@ export type RootStackParamList = {
     hour?: number;
     minute?: number;
   };
-  Setup: undefined;
+  // firstRun: shown once after the login, with no page behind it.
+  Setup: { firstRun?: boolean } | undefined;
   // An elder's History, read-only, on a relative's phone.
   ElderHistory: { elderId: string };
   HistoryDay: { date: string; elderId?: string }; // YYYY-MM-DD
   ShareCode: undefined;
-  AddFamily: undefined;
+  // fromLogin: straight after the login, with no page behind it.
+  AddFamily: { fromLogin?: boolean } | undefined;
   Elder: { elderId: string };
   ElderPills: { elderId: string };
   FollowEdit: { elderId: string };
@@ -120,6 +128,16 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        initialParams={paramsFor('Login')}
+      />
+      <Stack.Screen
+        name="Who"
+        component={WhoScreen}
+        initialParams={paramsFor('Who')}
+      />
+      <Stack.Screen
         name="Main"
         component={Main}
         initialParams={paramsFor('Main')}
@@ -139,7 +157,11 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
         component={RecordScreen}
         initialParams={paramsFor('Record')}
       />
-      <Stack.Screen name="Setup" component={SetupScreen} />
+      <Stack.Screen
+        name="Setup"
+        component={SetupScreen}
+        initialParams={paramsFor('Setup')}
+      />
       <Stack.Screen
         name="ElderHistory"
         component={HistoryScreen}
@@ -151,7 +173,11 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
         initialParams={paramsFor('HistoryDay')}
       />
       <Stack.Screen name="ShareCode" component={ShareCodeScreen} />
-      <Stack.Screen name="AddFamily" component={AddFamilyScreen} />
+      <Stack.Screen
+        name="AddFamily"
+        component={AddFamilyScreen}
+        initialParams={paramsFor('AddFamily')}
+      />
       <Stack.Screen
         name="Elder"
         component={ElderScreen}

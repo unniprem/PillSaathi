@@ -8,13 +8,15 @@ import { pillColor } from './pillLook';
 type Props = {
   pill: { name: string; form: PillForm; photoUri: string | null };
   size?: 30 | 40 | 56;
+  /** Instead of the name's colour, for the app's logo. */
+  color?: string;
 };
 
 /**
  * The pill's photo, or a shape by its type in its name's colour when it has none or the
  * photo can't be read. Callers key it by `photoUri`, so a new photo is tried afresh.
  */
-export default function PillPicture({ pill, size = 40 }: Props) {
+export default function PillPicture({ pill, size = 40, color }: Props) {
   const [failed, setFailed] = useState(false);
   const box = { width: size, height: size };
   if (pill.photoUri && !failed) {
@@ -27,7 +29,7 @@ export default function PillPicture({ pill, size = 40 }: Props) {
       />
     );
   }
-  const color = pillColor(pill.name);
+  const fill = color ?? pillColor(pill.name);
   return (
     <View style={[styles.box, box]}>
       {pill.form === 'tablet' ? (
@@ -38,7 +40,7 @@ export default function PillPicture({ pill, size = 40 }: Props) {
             {
               width: size * 0.82,
               height: size * 0.82,
-              backgroundColor: color,
+              backgroundColor: fill,
             },
           ]}
         >
@@ -54,7 +56,7 @@ export default function PillPicture({ pill, size = 40 }: Props) {
               width: size * 0.96,
               height: size * 0.34,
               borderRadius: size * 0.17,
-              backgroundColor: color,
+              backgroundColor: fill,
               transform: [{ rotate: '-45deg' }],
             },
           ]}
@@ -74,7 +76,7 @@ export default function PillPicture({ pill, size = 40 }: Props) {
           <Icon
             name={pill.form === 'syrup' ? 'medication_liquid' : 'water_drop'}
             size={size * 0.85}
-            color={color}
+            color={fill}
             style={styles.symbol}
           />
         </View>

@@ -49,6 +49,25 @@ export const en = {
     Family: 'Family',
     Settings: 'Settings',
   },
+  /** The first page on every phone. */
+  login: {
+    tagline: 'Your medicines on time.\nYour family close by.',
+    welcome: 'Welcome',
+    intro: 'Log in to keep your pills safe and stay close to family.',
+    google: 'Continue with Google',
+    oneTap: 'One tap. No new password.',
+    offline: 'Continue offline',
+  },
+  /** Asked once, after the login: who the phone is for. */
+  who: {
+    hi: (first: string | null) => (first ? `Hi ${first}!` : 'Hi!'),
+    question: 'Who is this phone for?',
+    elder: 'I take medicines',
+    elderSub: 'Ring my alarms on this phone',
+    carer: 'I look after someone',
+    carerSub: 'See their day, set up their pills',
+    both: 'You can do both later. Anyone can add their own pills or add family.',
+  },
   today: {
     title: 'Today',
     titleOn: (day: string) => `Today · ${day}`,
@@ -191,6 +210,7 @@ export const en = {
   },
   setup: {
     title: 'Make alarms reliable',
+    firstTitle: "Let's make sure alarms ring",
     intro:
       'Some phones stop apps in the background. Do these steps once so your alarms always ring.',
     done: 'Done',

@@ -155,26 +155,28 @@ before Today.
 
 **Under the hood (the user's decision; how is my call):**
 
-- Today her phone logs in to Firebase anonymously, and that login's id is
-  her id online (`FamilyCloud.elderUid()`; the rules check `isUser(e)`).
-  With this step, **her phone logs in with her Google account**.
-- On a phone that already has the app (the testers'), the anonymous login is
-  **linked** to her Google account, not replaced, so her id, her online copy
-  and the family who follow her all stay. The login page shows once after
-  the update.
-- The same Google login also serves as the phone's relative identity, when
-  that phone looks after someone. Today a relative logs in with Google
-  inside Add family; that moves to the login page.
+- Her phone logs in to Firebase anonymously, and that login's id is her id
+  online (`FamilyCloud.elderUid()`; the rules check `isUser(e)`). **That
+  stays as it is**: her elder id remains her phone's anonymous login,
+  untouched, so her online copy and the family who follow her stay with it.
+- **The login page uses the phone's existing Google sign-in** (the phone's
+  "family" Firebase app, `signInWithGoogle`, as Add family used it). This
+  was refined while planning: a Google account can belong to only one
+  Firebase login, so linking her anonymous login to Google would take over
+  the account's existing login, and on a phone already logged in as a
+  relative it would change that relative's id and break the elders who
+  follow-list it. The login page shows once after the update.
+- The same Google login serves as the phone's relative identity, when that
+  phone looks after someone. Today a relative logs in with Google inside Add
+  family; that moves to the login page.
 - **Alarms never wait for the login** (my call, because alarm reliability
-  comes first). If there is no internet at first open, the login page offers
-  "Continue offline": pills and alarms work, Family waits, and the login page
-  comes back once the phone is online.
-- If the account is already the elder on another phone (a new phone), this
-  phone asks before taking over as her phone. Bringing her pills across is
-  out of scope (my call).
-- The rules keep their checks. The Allow prompt still checks the relative's
-  Google name and email. A rules change is needed only if the builder finds
-  a check that assumes her login is anonymous.
+  comes first). If the login doesn't go through at first open (no internet,
+  a build without Firebase, or no Google account picked), the login page
+  offers "Continue offline": pills and alarms work, Family waits, and the
+  login page comes back at the next open until the phone is logged in.
+- The rules keep their checks, with no change: her login is still
+  anonymous. The Allow prompt still checks the relative's Google name and
+  email.
 
 ### Today, on her phone (the user's pick: Sky)
 
@@ -449,8 +451,8 @@ Mockup `09-family-add.html`.
   images or a small library), and how to load the icon font (by codepoint
   or ligature). New dependencies are fine if they are well maintained and
   needed (my call).
-- The mechanics of linking her anonymous login to Google, within the rules
-  above.
+- How the login page signs in and picks where the app starts, within the
+  rules above.
 - Exact colour shades for contrast, and the sky's colours at each time.
 - Loading, error and empty states not described above, in the same look,
   with today's words.

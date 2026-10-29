@@ -17,7 +17,9 @@ import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Setup'>;
 
-export default function SetupScreen({ navigation }: Props) {
+export default function SetupScreen({ navigation, route }: Props) {
+  // Once after the login, with no page behind it: Finish goes on to Today.
+  const firstRun = route.params?.firstRun ?? false;
   const [health, setHealth] = useState<Health | null>(null);
   const [setup, setSetup] = useState<SetupState | null>(null);
   const mounted = useRef(true);
@@ -63,12 +65,23 @@ export default function SetupScreen({ navigation }: Props) {
     }
   };
 
+  const finish = () => {
+    if (firstRun) {
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } else {
+      navigation.goBack();
+    }
+  };
+
   const open = (setting: NonNullable<(typeof steps)[number]['setting']>) =>
     openSetting(setting).catch(e => console.warn('Could not open settings', e));
 
   return (
     <View style={styles.container}>
-      <SkyBand title={t.setup.title} onBack={() => navigation.goBack()} />
+      <SkyBand
+        title={firstRun ? t.setup.firstTitle : t.setup.title}
+        onBack={firstRun ? undefined : () => navigation.goBack()}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>{t.setup.intro}</Text>
         {steps.map(step => (
@@ -111,7 +124,7 @@ export default function SetupScreen({ navigation }: Props) {
       </ScrollView>
       <Pressable
         accessibilityRole="button"
-        onPress={() => navigation.goBack()}
+        onPress={finish}
         style={styles.finish}
       >
         <Text style={styles.finishText}>{t.setup.finish}</Text>

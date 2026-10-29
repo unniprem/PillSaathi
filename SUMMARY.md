@@ -1,7 +1,7 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 6
+**Next task**: 7
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
@@ -44,6 +44,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 **Notes**:
 - Kotlin `AppSettings.role: String?` (stored as given; JS is the gatekeeper), written to JSON as `"role"` (null when unset); `getSettings()` returns it, `setRole` saves it, `openSetting('display')` → `ACTION_DISPLAY_SETTINGS`. The native `Spec.AppSettings.role` is `string | null`; `src/native/alarms.ts` now defines its own `AppSettings` (role `Role | null`, anything but elder/carer reads as null) and exports `type Role`.
 - `mockAlarmsDefaults()` gives `role: 'elder'` and mocks `setRole`. Tests that build their own `getSettings` value must include `role` (tsc); `FamilyScreen` and `SettingsScreen` tests updated. Jest 37 suites / 311 tests.
+
+### Task 6: Login page, "Who is this phone for?", and where the app starts
+**Status**: ✓ Done
+**Notes**:
+- Deviation: a cancelled login also offers "Continue offline" (no message), because native returns null for "no Google account on the phone" too (`NoCredentialException`); without it such a phone could never pass the login. `FamilyErrors` keys are `Offline`/`NotSetUp` (the plan wrote `OFFLINE`). The login's "PillSaathi" carries `testID="sky-title"`, so `headerTitles()` is `['PillSaathi']`. Small kit additions: `PillPicture color?` (the logo's blue capsule), `SkyTop` exports `Sun` (the login sky uses it). A failed `setRole` still moves on (warns).
+- Bridges for Tasks 7 and 16: `Setup { firstRun }` shows `t.setup.firstTitle` ("Let's make sure alarms ring"), has no Back, and its Finish resets to Main (the App test presses Finish; Task 7 may switch it to "Do this later"). `AddFamily { fromLogin }`: Back and Done reset to Main (Task 16 adds "Skip for now"). First-run Setup doesn't call `markSetupSeen`, so the first pill saved still opens Setup again: Task 7 (or 10's `useSavePill`) should decide.
+- `App.tsx` shows a plain page-coloured view until `getSettings` and `signedInRelative` settle; a phone with a role but no login sees the login (with `again`) at every open, as `startRoute` says. Spec "Under the hood" rewritten. Not yet viewed on a device. Jest 40 suites / 334 tests.
 
 ---
 
