@@ -1,0 +1,111 @@
+rules_version = '2';
+
+// Family online. An elder's phone signs in anonymously and its uid is her id; a relative signs in
+// with Google. Nobody sees an elder's pills unless her phone tapped Allow, and only her phone
+// writes them. See docs/superpowers/specs/2026-10-27-family-online-design.md.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function elderDoc(e) {
+      return get(/databases/$(database)/documents/elders/$(e)).data;
+    }
+
+    function follows(data) {
+      return signedIn() && request.auth.uid in data.get('followers', []);
+    }
+
+    // Silent for 30 days: any follower may delete her copy, which only her old identity could
+    // otherwise write.
+    function abandoned(data) {
+      return data.get('heardAt', null) is timestamp
+        && data.heardAt < request.time - duration.value(30, 'd');
+    }
+
+    // A follower taking himself off her list, and nothing else.
+    function removesOnlyHimself() {
+      let uid = request.auth.uid;
+      let before = resource.data;
+      let after = request.resource.data;
+      return follows(before)
+        && after.diff(before).affectedKeys().hasOnly(['followers', 'people'])
+        && after.get('followers', []) == before.get('followers', []).removeAll([uid])
+        && !(uid in after.get('people', {}))
+        && before.get('people', {}).diff(after.get('people', {})).affectedKeys().hasOnly([uid]);
+    }
+
+    // A link code: 6 digits, made by the elder's phone, alive for 15 minutes. Anyone signed in can
+    // look one up by its digits; nobody can list them.
+    match /codes/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['elderId', 'expiresAt'])
+        && request.resource.data.elderId == request.auth.uid
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt <= request.time + duration.value(15, 'm');
+      allow delete: if signedIn() && resource.data.elderId == request.auth.uid;
+    }
+
+    // Her copy hangs off her doc, so it is made with its follower list, and months and photos
+    // are written only while it exists: an upload still running when her copy is deleted can't
+    // leave records behind.
+    function elderExists(e) {
+      return exists(/databases/$(database)/documents/elders/$(e));
+    }
+
+    match /elders/{e} {
+      allow get: if isUser(e) || follows(resource.data);
+      allow create: if isUser(e) && request.resource.data.keys().hasAll(['followers', 'people']);
+      allow update: if isUser(e) || removesOnlyHimself();
+      allow delete: if isUser(e) || (follows(resource.data) && abandoned(resource.data));
+
+      match /months/{month} {
+        allow read: if isUser(e) || follows(elderDoc(e));
+        allow create, update: if isUser(e) && elderExists(e);
+        allow delete: if isUser(e) || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
+      }
+
+      match /photos/{pill} {
+        allow read: if isUser(e) || follows(elderDoc(e));
+        allow create, update: if isUser(e) && elderExists(e);
+        allow delete: if isUser(e) || (follows(elderDoc(e)) && abandoned(elderDoc(e)));
+      }
+
+      // A relative asking to follow her, with a live code of hers. Her phone answers it. The
+      // name and email her phone shows on the Allow prompt are his Google account's own, so
+      // nobody holding a code can pass as someone else.
+      match /requests/{uid} {
+        function asks() {
+          let data = request.resource.data;
+          let code = /databases/$(database)/documents/codes/$(data.code);
+          let token = request.auth.token;
+          return isUser(uid)
+            && token.firebase.sign_in_provider == 'google.com'
+            && token.get('email_verified', false) == true
+            && data.email == token.get('email', '')
+            && data.name == token.get('name', '')
+            && data.keys().hasOnly(['code', 'name', 'email', 'at', 'status'])
+            && data.status == 'pending'
+            && data.code is string
+            && exists(code)
+            && get(code).data.elderId == e
+            && get(code).data.expiresAt > request.time;
+        }
+
+        allow get: if isUser(uid) || isUser(e);
+        allow list: if isUser(e);
+        // Asking again with a fresh code replaces an old request.
+        allow create: if asks();
+        allow update: if isUser(e) || asks();
+        allow delete: if isUser(e) || isUser(uid);
+      }
+    }
+  }
+}

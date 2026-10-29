@@ -20,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DoseCard from '../components/DoseCard';
+import FamilySection from '../components/FamilySection';
 import HealthBanner from '../components/HealthBanner';
 import RefillBanner from '../components/RefillBanner';
 import { formatDay } from '../lib/course';
@@ -37,6 +38,8 @@ import {
   reconcileOnAppOpen,
 } from '../native/alarms';
 import type { MissedAlarm, Today, TodayCard } from '../native/alarms';
+import { getFamily, refreshFamily } from '../native/family';
+import type { FamilyCard } from '../native/family';
 import { listSounds } from '../native/sounds';
 import type { Sound } from '../native/sounds';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -45,6 +48,9 @@ import type { Strings } from '../i18n';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Today'>;
+
+/** While Today is on screen, the family cards are read again this often. */
+const FAMILY_REFRESH_MS = 120_000;
 
 /** One line per missed dose: "8:00 AM: Azithromycin 500, Telma 40". */
 function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
@@ -70,13 +76,32 @@ export default function TodayScreen({ navigation }: Props) {
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [family, setFamily] = useState<FamilyCard[]>([]);
   const mounted = useRef(true);
+  const familyRequest = useRef(0);
   const latest = useRef(0);
   const firstFocus = useRef(true);
+
+  /** The family cards as last read, then as read again now; offline keeps the last ones. */
+  const loadFamily = useCallback(async () => {
+    const request = ++familyRequest.current;
+    const show = (cards: FamilyCard[]) => {
+      if (mounted.current && request === familyRequest.current) {
+        setFamily(cards);
+      }
+    };
+    try {
+      show(await getFamily());
+      show(await refreshFamily());
+    } catch (e) {
+      console.warn('Could not load family', e);
+    }
+  }, []);
 
   const refresh = useCallback(
     async (reconcile: boolean) => {
       const request = ++latest.current;
+      loadFamily();
       if (reconcile) {
         try {
           // Each reconcile result is reported once, here; focus refreshes
@@ -99,12 +124,7 @@ export default function TodayScreen({ navigation }: Props) {
         .then(([health, setup]) => {
           if (mounted.current && request === latest.current) {
             setIssues(
-              healthIssues(
-                health,
-                setup,
-                currentManufacturer(),
-                words.current,
-              ),
+              healthIssues(health, setup, currentManufacturer(), words.current),
             );
           }
         })
@@ -135,7 +155,7 @@ export default function TodayScreen({ navigation }: Props) {
         setLoadFailed(true);
       }
     },
-    [navigation],
+    [navigation, loadFamily],
   );
 
   useEffect(() => {
@@ -164,13 +184,15 @@ export default function TodayScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      const timer = setInterval(loadFamily, FAMILY_REFRESH_MS);
       // The mount effect already refreshed for the first focus.
       if (firstFocus.current) {
         firstFocus.current = false;
-        return;
+      } else {
+        refresh(false);
       }
-      refresh(false);
-    }, [refresh]),
+      return () => clearInterval(timer);
+    }, [refresh, loadFamily]),
   );
 
   const renderHeaderButtons = useCallback(
@@ -258,6 +280,16 @@ export default function TodayScreen({ navigation }: Props) {
         data={today?.cards ?? []}
         keyExtractor={c => `${c.hour}:${c.minute}`}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          family.length > 0 ? (
+            <FamilySection
+              cards={family}
+              is24h={is24h}
+              onOpen={elderId => navigation.navigate('Elder', { elderId })}
+              onAdd={() => navigation.navigate('AddFamily')}
+            />
+          ) : undefined
+        }
         renderItem={({ item }) => (
           <DoseCard
             card={item}
@@ -278,8 +310,17 @@ export default function TodayScreen({ navigation }: Props) {
         ListEmptyComponent={
           loadFailed ? (
             <Text style={styles.empty}>{t.today.loadFailed}</Text>
-          ) : loaded ? (
-            <Text style={styles.empty}>{t.today.empty}</Text>
+          ) : loaded && family.length === 0 ? (
+            <View>
+              <Text style={styles.empty}>{t.today.empty}</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('AddFamily')}
+                style={styles.addFamily}
+              >
+                <Text style={styles.addFamilyText}>{t.family.addFamily}</Text>
+              </Pressable>
+            </View>
           ) : undefined
         }
       />
@@ -312,6 +353,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
+  addFamily: { alignSelf: 'center', padding: spacing.md },
+  addFamilyText: { color: colors.primary, fontSize: 18, fontWeight: '600' },
   gear: { fontSize: 26, color: colors.text },
   headerButtons: {
     flexDirection: 'row',

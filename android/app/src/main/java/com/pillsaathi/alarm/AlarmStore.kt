@@ -2,6 +2,8 @@ package com.pillsaathi.alarm
 
 import android.content.Context
 import android.util.Log
+import com.pillsaathi.family.FamilyJson
+import com.pillsaathi.family.FamilyLocal
 import java.io.File
 import java.io.IOException
 
@@ -67,6 +69,23 @@ class AlarmStore(context: Context) {
       AppSettings()
     }
 
+  /** What Family keeps on this phone ([FamilyLocal]). */
+  fun loadFamily(): FamilyLocal = load(FAMILY, FamilyLocal(), FamilyJson::localFromJson)
+
+  fun saveFamily(l: FamilyLocal) = save(FAMILY, FamilyJson.localToJson(l))
+
+  /**
+   * Family's data without the store lock, for the ringing path, which must never wait on it. Any
+   * problem gives the defaults (not sharing), so it never sends anything it shouldn't.
+   */
+  fun peekFamily(): FamilyLocal =
+    try {
+      FamilyJson.localFromJson(files.peek(FAMILY))
+    } catch (e: Exception) {
+      Log.w(LOG_TAG, "Could not peek at family; taking it as not sharing", e)
+      FamilyLocal()
+    }
+
   /** What the `:ringing` process is ringing, or null. A crashed process can leave a stale one. */
   fun loadRingingMarker(): RingingMarker? = load(RINGING, null, AlarmJson::ringingMarkerFromJson)
 
@@ -110,6 +129,7 @@ class AlarmStore(context: Context) {
     const val SETUP = "setup.json"
     const val SETTINGS = "settings.json"
     const val RINGING = "ringing.json"
+    const val FAMILY = "family.json"
     const val SOUNDS_DIR = "sounds"
     const val PHOTOS_DIR = "photos"
   }

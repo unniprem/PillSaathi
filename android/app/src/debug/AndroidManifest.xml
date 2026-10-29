@@ -20,5 +20,15 @@
             <action android:name="com.pillsaathi.DEBUG_ADD_DOSE" />
         </intent-filter>
       </receiver>
+      <!-- Debug-only adb hooks for Family; see DebugFamilyReceiver. Main process, where Firebase runs. -->
+      <receiver
+        android:name="com.pillsaathi.family.debug.DebugFamilyReceiver"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="com.pillsaathi.DEBUG_FAMILY_UPLOAD" />
+            <action android:name="com.pillsaathi.DEBUG_FAMILY_LIST" />
+            <action android:name="com.pillsaathi.DEBUG_FAMILY_CHECK" />
+        </intent-filter>
+      </receiver>
     </application>
 </manifest>

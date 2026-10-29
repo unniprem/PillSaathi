@@ -98,6 +98,9 @@ enum class DoseStatus(val json: String) {
   UPCOMING("upcoming"),
   LATER("later"),
   DONE("done"),
+
+  /** Only on a relative's phone: a dose time passed with nothing uploaded for it yet. */
+  NOT_REPORTED("notReported"),
 }
 
 /**

@@ -2,9 +2,10 @@ import { Alert, AppState, Share } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type { History, HistoryDose } from '../../src/native/alarms';
+import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { colors } from '../../src/theme';
-import { mockAlarmsDefaults } from '../helpers/nativeMocks';
+import { mockAlarmsDefaults, mockFamilyDefaults } from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
 
 jest.mock('../../src/native/alarms');
@@ -229,4 +230,33 @@ it('reloads the month when the app comes back', async () => {
   await act(async () => listeners.forEach(l => l('active')));
   expect(await screen.findByText('50% taken')).toBeTruthy();
   expect(screen.getByLabelText('Mon 26 Oct: None taken')).toBeTruthy();
+});
+
+it('History for an elder reads her history and hides Mark as taken', async () => {
+  mockFamilyDefaults();
+  jest.mocked(family.getElderHistory).mockResolvedValue(october);
+  jest
+    .mocked(family.listFollows)
+    .mockResolvedValue([
+      { elderId: 'E', name: 'Amma', phone: null, delayMinutes: 30 },
+    ]);
+  await renderApp('History', { elderId: 'E' });
+  expect(await screen.findByText('60% taken')).toBeTruthy();
+  expect(family.getElderHistory).toHaveBeenCalledWith(
+    'E',
+    '2026-10-01',
+    '2026-10-31',
+  );
+  expect(alarms.getHistory).not.toHaveBeenCalled();
+  await waitFor(() => expect(headerTitles()).toEqual(['Amma · History']));
+
+  // Her day page reads her history too, and offers no Mark as taken.
+  await fireEvent.press(screen.getByLabelText(/^Tue 6 Oct/));
+  expect((await screen.findAllByText('Missed')).length).toBeGreaterThan(0);
+  expect(family.getElderHistory).toHaveBeenCalledWith(
+    'E',
+    '2026-10-06',
+    '2026-10-06',
+  );
+  expect(screen.queryByText('Mark as taken')).toBeNull();
 });

@@ -41,7 +41,8 @@ export type DoseStatus =
   | 'snoozed'
   | 'upcoming'
   | 'later'
-  | 'done';
+  | 'done'
+  | 'notReported';
 
 export type Pill = Omit<NativePill, 'form'> & { form: PillForm };
 export type PillInput = Omit<NativePillInput, 'form'> & { form: PillForm };
@@ -58,7 +59,8 @@ export type Today = { date: string; cards: TodayCard[]; refills: Refill[] };
 
 export type HistoryPill = Omit<NativeHistoryPill, 'form'> & { form: PillForm };
 export type HistoryDose = Omit<NativeHistoryDose, 'outcome' | 'pills'> & {
-  outcome: 'taken' | 'skipped' | 'missed';
+  // notReported only in an elder's History: due, with no record uploaded yet.
+  outcome: 'taken' | 'skipped' | 'missed' | 'notReported';
   pills: HistoryPill[];
 };
 export type History = Omit<NativeHistory, 'doses'> & { doses: HistoryDose[] };

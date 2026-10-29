@@ -14,6 +14,7 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.Notifications
 import com.pillsaathi.bridge.PillSaathiPackage
+import com.pillsaathi.family.FamilyNotifications
 import java.io.File
 
 class MainApplication : Application(), ReactApplication {
@@ -38,6 +39,8 @@ class MainApplication : Application(), ReactApplication {
     super.onCreate()
     try {
       Notifications.ensureChannels(this)
+      // Family pings come from the main process only.
+      if (!isRingingProcess) FamilyNotifications.ensureChannels(this)
     } catch (e: Exception) {
       Log.e(LOG_TAG, "Could not create the notification channels", e)
     }

@@ -9,6 +9,11 @@ import SetupScreen from '../screens/SetupScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import HistoryDayScreen from '../screens/HistoryDayScreen';
+import FamilyScreen from '../screens/FamilyScreen';
+import ShareCodeScreen from '../screens/ShareCodeScreen';
+import AddFamilyScreen from '../screens/AddFamilyScreen';
+import ElderScreen from '../screens/ElderScreen';
+import FollowEditScreen from '../screens/FollowEditScreen';
 import { formatDay } from '../lib/course';
 
 export type RootStackParamList = {
@@ -20,8 +25,14 @@ export type RootStackParamList = {
   Record: { alarmId: string };
   Setup: undefined;
   Settings: undefined;
-  History: undefined;
-  HistoryDay: { date: string }; // YYYY-MM-DD
+  // elderId shows an elder's History, read-only, on a relative's phone.
+  History: { elderId?: string } | undefined;
+  HistoryDay: { date: string; elderId?: string }; // YYYY-MM-DD
+  Family: undefined;
+  ShareCode: undefined;
+  AddFamily: undefined;
+  Elder: { elderId: string };
+  FollowEdit: { elderId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -83,12 +94,38 @@ function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
         name="History"
         component={HistoryScreen}
         options={{ title: t.history.title }}
+        initialParams={paramsFor('History')}
       />
       <Stack.Screen
         name="HistoryDay"
         component={HistoryDayScreen}
         options={({ route }) => ({ title: formatDay(route.params.date, t) })}
         initialParams={paramsFor('HistoryDay')}
+      />
+      <Stack.Screen
+        name="Family"
+        component={FamilyScreen}
+        options={{ title: t.family.title }}
+      />
+      <Stack.Screen
+        name="ShareCode"
+        component={ShareCodeScreen}
+        options={{ title: t.family.codeTitle }}
+      />
+      <Stack.Screen
+        name="AddFamily"
+        component={AddFamilyScreen}
+        options={{ title: t.family.addTitle }}
+      />
+      <Stack.Screen
+        name="Elder"
+        component={ElderScreen}
+        initialParams={paramsFor('Elder')}
+      />
+      <Stack.Screen
+        name="FollowEdit"
+        component={FollowEditScreen}
+        initialParams={paramsFor('FollowEdit')}
       />
     </Stack.Navigator>
   );

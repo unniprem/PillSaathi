@@ -45,7 +45,11 @@ export function reportText(o: {
           t.report.doseLine(
             formatDay(d.date, t),
             formatTime(d.hour, d.minute, o.is24h),
-            d.outcome === 'missed' ? t.report.missed : t.report.skipped,
+            d.outcome === 'missed'
+              ? t.report.missed
+              : d.outcome === 'notReported'
+              ? t.report.notReported
+              : t.report.skipped,
             d.pills.map(p => p.name).join(', '),
           ),
         ),

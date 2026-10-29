@@ -76,3 +76,9 @@ yarn-error.log
 
 # Brainstorm mockups
 .superpowers/
+
+# Firebase config for Family (see README); the build works without it
+android/app/google-services.json
+
+# Firestore emulator logs
+firestore-debug.log

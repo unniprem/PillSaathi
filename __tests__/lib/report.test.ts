@@ -79,6 +79,13 @@ const base = {
   t: en,
 };
 
+it("names an elder's unreported dose as not reported, never as skipped", () => {
+  const doses = october([dose('2026-10-06', 21, 'notReported')]);
+  const text = reportText({ ...base, doses });
+  expect(text).toContain('• Tue 6 Oct, 9:00 PM: not reported (Telma 40)');
+  expect(text).toContain('Taken 49 of 50 doses (98%)');
+});
+
 it('writes the spec example exactly', () => {
   // The spec's example says 46 of 50 but lists two doses; every dose not taken is listed, so
   // here two of the 50 were not taken.

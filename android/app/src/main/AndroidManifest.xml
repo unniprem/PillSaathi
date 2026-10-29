@@ -84,6 +84,31 @@
             android:resource="@xml/photo_paths" />
       </provider>
 
+      <!-- Google's code scanner module, fetched with the app instead of at the first scan. -->
+      <meta-data
+        android:name="com.google.mlkit.vision.DEPENDENCIES"
+        android:value="barcode_ui" />
+
+      <!-- Family online runs in the main process only; :ringing never touches Firebase. -->
+      <receiver
+        android:name=".family.FamilyChangeReceiver"
+        android:exported="false" />
+
+      <receiver
+        android:name=".family.CheckAlarmReceiver"
+        android:exported="false" />
+
+      <receiver
+        android:name=".family.FamilySystemReceiver"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.BOOT_COMPLETED" />
+            <action android:name="android.intent.action.TIME_SET" />
+            <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        </intent-filter>
+      </receiver>
+
       <service
         android:name=".alarm.RingingService"
         android:process=":ringing"

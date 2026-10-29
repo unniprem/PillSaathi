@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.util.Log
 import com.pillsaathi.R
+import com.pillsaathi.family.FamilyHooks
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
@@ -91,6 +92,7 @@ class AlarmEngine private constructor(context: Context) {
       pill to syncCards(now)
     }
     stopRings(removed)
+    FamilyHooks.changed(context)
     return pill
   }
 
@@ -107,6 +109,7 @@ class AlarmEngine private constructor(context: Context) {
       syncCards(System.currentTimeMillis())
     }
     stopRings(removed)
+    FamilyHooks.changed(context)
   }
 
   /**
@@ -152,6 +155,7 @@ class AlarmEngine private constructor(context: Context) {
       if (after != null && RefillRules.takenNow(before, after)) lowerCounts(after, now) else emptyList()
     }
     notices.forEach { Notifications.postRefill(context, it) }
+    FamilyHooks.changed(context)
   }
 
   /** The Today screen: today's cards with their pills and statuses, and the refill warnings. */
@@ -223,6 +227,7 @@ class AlarmEngine private constructor(context: Context) {
     }
     stopRings(removed)
     if (trigger != ReconcileTrigger.APP_OPEN) missed.forEach { Notifications.postMissed(context, it) }
+    FamilyHooks.changed(context)
     return missed
   }
 
@@ -273,7 +278,10 @@ class AlarmEngine private constructor(context: Context) {
         }
       }
     }
-    missed?.let { Notifications.postMissed(context, it) }
+    missed?.let {
+      Notifications.postMissed(context, it)
+      FamilyHooks.changed(context)
+    }
     return ring
   }
 
@@ -330,6 +338,7 @@ class AlarmEngine private constructor(context: Context) {
     stopRings(removed)
     missed?.let { Notifications.postMissed(context, it) }
     notices.forEach { Notifications.postRefill(context, it) }
+    FamilyHooks.changed(context)
   }
 
   fun onSnoozed(id: String) {
