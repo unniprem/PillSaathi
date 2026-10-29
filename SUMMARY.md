@@ -53,6 +53,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Bridges for Tasks 7 and 16: `Setup { firstRun }` shows `t.setup.firstTitle` ("Let's make sure alarms ring"), has no Back, and its Finish resets to Main (the App test presses Finish; Task 7 may switch it to "Do this later"). `AddFamily { fromLogin }`: Back and Done reset to Main (Task 16 adds "Skip for now"). First-run Setup doesn't call `markSetupSeen`, so the first pill saved still opens Setup again: Task 7 (or 10's `useSavePill`) should decide.
 - `App.tsx` shows a plain page-coloured view until `getSettings` and `signedInRelative` settle; a phone with a role but no login sees the login (with `again`) at every open, as `startRoute` says. Spec "Under the hood" rewritten. Not yet viewed on a device. Jest 40 suites / 334 tests.
 
+### Task 15: Family on her phone: the tab, the code, and Allow
+**Status**: ✓ Done (parallel, branch `ui/task-15`)
+**Notes**:
+- `useFollowRequests(onAnswered)` returns `{ asking, answer }`; Family and ShareCode render `<AllowDialog>` (a fading Modal that Back doesn't close, like the old non-cancelable alert). A request on screen when the page loses focus is asked again on return; a failed answer alerts and asks again. `family.allowBody` removed; new `allowSees/allowEdits/allowNotice/howToAdd/worksFor`; several family words changed (ml/hi drafts).
+- ShareCode: Close (not Back) in the band; the 6 digit boxes are one group labelled "4 8 2 9 1 3" (tests use `findByLabelText`); the countdown rounds up and never shows 0; the amber chip is local to the screen.
+- For Task 16: `remote.notEditor` still says "Settings → Family → …" (Family is a tab now; reword it). Opening `Elder` in tests needs both `getFamily` and `refreshFamily` to include her. Check on the phone (Task 18): the "Can change my pills" switch's off state may be faint on a white card.
+
 ---
 
 ## Blockers / Deferred Items

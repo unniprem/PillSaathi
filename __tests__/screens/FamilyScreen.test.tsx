@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import * as family from '../../src/native/family';
+import type { FamilyCard } from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { mockAlarmsDefaults, mockFamilyDefaults } from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
@@ -10,6 +11,7 @@ jest.mock('../../src/native/alarms');
 jest.mock('../../src/native/sounds');
 
 const ravi = { uid: 'R', name: 'Ravi', email: 'ravi@gmail.com' };
+const askRavi = 'Let Ravi see and change your pills?';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -30,7 +32,7 @@ test('Family lists who can see my pills, and Remove asks first', async () => {
     .mockResolvedValue([{ ...ravi, canChange: true }]);
   await renderApp('Family');
   expect(headerTitles()).toEqual(['Family']);
-  expect(screen.getByText('People who can see my pills')).toBeTruthy();
+  expect(screen.getByText('Who can see my pills')).toBeTruthy();
   expect(await screen.findByText('Ravi')).toBeTruthy();
   expect(screen.getByText('ravi@gmail.com')).toBeTruthy();
 
@@ -42,41 +44,62 @@ test('Family lists who can see my pills, and Remove asks first', async () => {
   jest.mocked(family.listFollowers).mockResolvedValue([]);
   await act(async () => buttons[1].onPress!());
   expect(family.removeFollower).toHaveBeenCalledWith('R');
-  await waitFor(() =>
-    expect(screen.getAllByText('No one yet.')).toHaveLength(2),
-  );
+  await waitFor(() => expect(screen.getByText('No one yet.')).toBeTruthy());
 });
 
 test('Family shows "No one yet." with no followers', async () => {
   await renderApp('Family');
-  expect((await screen.findAllByText('No one yet.')).length).toBeGreaterThan(0);
-  expect(screen.getByText('Show a code to a family member')).toBeTruthy();
+  expect(await screen.findByText('No one yet.')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Show my code' })).toBeTruthy();
+  expect(screen.getByText('To add someone, show them your code.')).toBeTruthy();
 });
 
-test('a request asks Allow / No, and Allow answers it', async () => {
+test('a request opens the Allow dialog, and Allow answers it', async () => {
   jest.useFakeTimers();
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.mocked(family.pendingRequests).mockResolvedValue([ravi]);
   await renderApp('Family');
   await act(async () => jest.advanceTimersByTime(2000));
   expect(family.watchRequests).toHaveBeenCalledWith(true);
-  await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
-  expect(alert.mock.calls[0][0]).toBe('Let Ravi see and change your pills?');
-  expect(alert.mock.calls[0][1]).toBe(
-    "ravi@gmail.com will see your pills and whether you took them, and can add or change pills and alarm sounds. You'll get a notice each time.",
-  );
-  const buttons = alert.mock.calls[0][2]!;
-  expect(buttons.map(b => b.text)).toEqual(['No', 'Allow']);
+  expect(await screen.findByText(askRavi)).toBeTruthy();
+  expect(screen.getByText('ravi@gmail.com')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'No' })).toBeTruthy();
   jest
     .mocked(family.listFollowers)
     .mockResolvedValue([{ ...ravi, canChange: true }]);
-  await act(async () => buttons[1].onPress!());
+  await fireEvent.press(screen.getByRole('button', { name: 'Allow' }));
   expect(family.answerRequest).toHaveBeenCalledWith('R', true);
-  expect(await screen.findByText('ravi@gmail.com')).toBeTruthy();
+  expect(screen.queryByText(askRavi)).toBeNull();
+  expect(
+    await screen.findByRole('button', { name: 'Remove Ravi' }),
+  ).toBeTruthy();
+  expect(screen.getByText('ravi@gmail.com')).toBeTruthy();
 
   // The mock still lists Ravi; an answered request is never asked about again.
   await act(async () => jest.advanceTimersByTime(6000));
-  expect(alert).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText(askRavi)).toBeNull();
+  expect(family.answerRequest).toHaveBeenCalledTimes(1);
+  expect(alert).not.toHaveBeenCalled();
+});
+
+test('an answer that fails says so, and she is asked again', async () => {
+  jest.useFakeTimers();
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest.mocked(family.pendingRequests).mockResolvedValue([ravi]);
+  jest
+    .mocked(family.answerRequest)
+    .mockRejectedValueOnce(
+      Object.assign(new Error('OFFLINE'), { code: 'OFFLINE' }),
+    );
+  await renderApp('Family');
+  await act(async () => jest.advanceTimersByTime(2000));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Allow' }));
+  await waitFor(() =>
+    expect(alert).toHaveBeenCalledWith('No internet. Please try again.'),
+  );
+  expect(screen.queryByText(askRavi)).toBeNull();
+  await act(async () => jest.advanceTimersByTime(2000));
+  expect(await screen.findByText(askRavi)).toBeTruthy();
 });
 
 test('each person has Can change my pills, and the switch calls setCanChange', async () => {
@@ -129,9 +152,9 @@ test('a refused switch says so and stays as it was', async () => {
 test('the Family page stops listening when it is left', async () => {
   await renderApp('Family');
   await waitFor(() => expect(family.watchRequests).toHaveBeenCalledWith(true));
-  await fireEvent.press(screen.getByText('Show a code to a family member'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Show my code' }));
   await waitFor(() =>
-    expect(headerTitles()).toEqual(['Family', 'Family code']),
+    expect(headerTitles()).toEqual(['Family', 'My family code']),
   );
   // The code screen listens in its turn: one listener stays on.
   expect(jest.mocked(family.watchRequests).mock.calls.at(-1)).toEqual([true]);
@@ -144,17 +167,44 @@ test('Family lists the people I look after, with + Add family', async () => {
       { elderId: 'E', name: 'Amma', phone: null, delayMinutes: 30 },
     ]);
   await renderApp('Family');
-  expect(screen.getByText('People I look after')).toBeTruthy();
-  expect(await screen.findByText('Amma')).toBeTruthy();
+  expect(await screen.findByText('People I look after')).toBeTruthy();
+  expect(screen.getByText('Amma')).toBeTruthy();
   await fireEvent.press(screen.getByText('+ Add family'));
   await waitFor(() => expect(headerTitles()).toEqual(['Family', 'Add family']));
 });
 
-test('Family says "No one yet." when looking after no one', async () => {
+test('a person I look after opens her page', async () => {
+  jest
+    .mocked(family.listFollows)
+    .mockResolvedValue([
+      { elderId: 'E', name: 'Amma', phone: null, delayMinutes: 30 },
+    ]);
+  const amma: FamilyCard = {
+    elderId: 'E',
+    name: 'Amma',
+    phone: null,
+    delayMinutes: 30,
+    heardAt: null,
+    silent: false,
+    abandoned: false,
+    otherZone: false,
+    tally: { taken: 0, skipped: 0, missed: 0, notReported: 0, later: 0 },
+    refills: [],
+  };
+  jest.mocked(family.getFamily).mockResolvedValue([amma]);
+  jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
   await renderApp('Family');
-  await waitFor(() =>
-    expect(screen.getAllByText('No one yet.')).toHaveLength(2),
-  );
+  await fireEvent.press(await screen.findByRole('button', { name: 'Amma' }));
+  await waitFor(() => expect(headerTitles()).toEqual(['Family', 'Amma']));
+  expect(family.getElderToday).toHaveBeenCalledWith('E');
+});
+
+test('People I look after appears only on a phone that follows someone', async () => {
+  await renderApp('Family');
+  expect(await screen.findByText('No one yet.')).toBeTruthy();
+  await waitFor(() => expect(family.listFollows).toHaveBeenCalled());
+  expect(screen.queryByText('People I look after')).toBeNull();
+  expect(screen.getByText('+ Add family')).toBeTruthy();
 });
 
 test('Family is a tab of its own, no longer a Settings row', async () => {

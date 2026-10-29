@@ -24,7 +24,7 @@ test('the tab bar opens each main page', async () => {
   expect(headerTitles()).toContain('Family');
 });
 
-test("a page opened from a tab goes back to it from its sky band's Back", async () => {
+test("a page opened from a tab goes back to it from its sky band's Close", async () => {
   jest.mocked(family.createLinkCode).mockResolvedValue({
     code: '482913',
     expiresAt: Date.now() + 15 * 60_000,
@@ -32,11 +32,11 @@ test("a page opened from a tab goes back to it from its sky band's Back", async 
   });
   await renderApp('Family');
   await fireEvent.press(
-    await screen.findByText('Show a code to a family member'),
+    await screen.findByRole('button', { name: 'Show my code' }),
   );
   await waitFor(() =>
-    expect(headerTitles()).toEqual(['Family', 'Family code']),
+    expect(headerTitles()).toEqual(['Family', 'My family code']),
   );
-  await fireEvent.press(screen.getAllByLabelText('Back').at(-1)!);
+  await fireEvent.press(screen.getAllByLabelText('Close').at(-1)!);
   await waitFor(() => expect(headerTitles()).toEqual(['Family']));
 });

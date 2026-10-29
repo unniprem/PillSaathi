@@ -333,12 +333,14 @@ export const hi: Strings = {
     title: 'परिवार',
     canSee: 'जो मेरी दवाइयाँ देख सकते हैं',
     noOne: 'अभी कोई नहीं।',
-    showCode: 'परिवार के सदस्य को कोड दिखाएँ',
+    showCode: 'मेरा कोड दिखाएँ',
+    howToAdd: 'किसी को जोड़ने के लिए, उन्हें अपना कोड दिखाएँ।',
     remove: 'हटाएँ',
     removeLabel: (name: string) => `${name} को हटाएँ`,
     removeConfirm: (name: string) => `${name} को आपकी दवाइयाँ देखने से रोकें?`,
-    codeTitle: 'परिवार कोड',
-    codeBody: 'इसे परिवार के सदस्य को दिखाएँ, या भेजें। यह 15 मिनट तक चलेगा।',
+    codeTitle: 'मेरा परिवार कोड',
+    codeBody: 'इसे अपने बेटे या बेटी को दिखाएँ',
+    worksFor: (minutes: number) => `अभी ${minutes} मिनट और चलेगा`,
     sendCode: 'कोड भेजें',
     shareMessage: (code: string) =>
       `PillSaathi खोलें, Add family पर टैप करें, और ${code} टाइप करें। यह 15 मिनट तक चलेगा।`,
@@ -349,8 +351,12 @@ export const hi: Strings = {
     expired: 'इस कोड का समय खत्म हो गया।',
     newCode: 'नया कोड',
     allowTitle: (name: string) => `${name} को आपकी दवाइयाँ देखने और बदलने दें?`,
-    allowBody: (email: string) =>
-      `${email} आपकी दवाइयाँ और आपने उन्हें लिया या नहीं, देख पाएँगे, और दवाइयाँ व अलार्म की आवाज़ जोड़ या बदल सकेंगे। हर बार आपको सूचना मिलेगी।`,
+    allowSees: (name: string) =>
+      `${name} आपकी दवाइयाँ और आपने उन्हें लिया या नहीं, देख पाएँगे`,
+    allowEdits: (name: string) =>
+      `${name} दवाइयाँ और आवाज़ें जोड़ या बदल सकेंगे`,
+    allowNotice: (name: string) =>
+      `हर बार जब ${name} ऐसा करें, आपको सूचना मिलेगी`,
     canChange: 'मेरी दवाइयाँ बदल सकते हैं',
     canChangeLabel: (name: string) => `मेरी दवाइयाँ बदल सकते हैं: ${name}`,
     no: 'नहीं',

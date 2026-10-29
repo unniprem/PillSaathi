@@ -327,16 +327,20 @@ export const en = {
   },
   family: {
     title: 'Family',
-    canSee: 'People who can see my pills',
+    canSee: 'Who can see my pills',
     noOne: 'No one yet.',
-    showCode: 'Show a code to a family member',
+    showCode: 'Show my code',
+    howToAdd: 'To add someone, show them your code.',
     remove: 'Remove',
     removeLabel: (name: string) => `Remove ${name}`,
     removeConfirm: (name: string) => `Stop ${name} seeing your pills?`,
-    codeTitle: 'Family code',
-    codeBody:
-      'Show this to a family member, or send it. It works for 15 minutes.',
-    sendCode: 'Send code',
+    codeTitle: 'My family code',
+    codeBody: 'Show this to your son or daughter',
+    worksFor: (minutes: number) =>
+      minutes === 1
+        ? 'Works for 1 more minute'
+        : `Works for ${minutes} more minutes`,
+    sendCode: 'Send the code',
     shareMessage: (code: string) =>
       `Open PillSaathi, tap Add family, and type ${code}. It works for 15 minutes.`,
     scanCode: 'Scan code',
@@ -346,8 +350,10 @@ export const en = {
     expired: 'This code has expired.',
     newCode: 'New code',
     allowTitle: (name: string) => `Let ${name} see and change your pills?`,
-    allowBody: (email: string) =>
-      `${email} will see your pills and whether you took them, and can add or change pills and alarm sounds. You'll get a notice each time.`,
+    allowSees: (name: string) =>
+      `${name} sees your pills and whether you took them`,
+    allowEdits: (name: string) => `${name} can add or change pills and sounds`,
+    allowNotice: (name: string) => `You get a notice each time ${name} does`,
     canChange: 'Can change my pills',
     canChangeLabel: (name: string) => `Can change my pills: ${name}`,
     no: 'No',
