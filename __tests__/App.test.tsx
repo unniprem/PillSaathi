@@ -2,6 +2,7 @@
  * @format
  */
 
+import { Platform } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import App from '../App';
 import * as alarms from '../src/native/alarms';
@@ -106,6 +107,9 @@ test("a tester's phone with pills and no role opens the login page, and Today ke
     seen: true,
     doneSteps: ['lockRecents'],
   });
+  jest
+    .spyOn(Platform, 'constants', 'get')
+    .mockReturnValue({ Manufacturer: 'Xiaomi' } as never);
   jest.mocked(family.signInWithGoogle).mockResolvedValue(kamala);
   await render(<App />);
   await fireEvent.press(await screen.findByText('Continue with Google'));
@@ -113,7 +117,9 @@ test("a tester's phone with pills and no role opens the login page, and Today ke
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
   expect(alarms.setRole).toHaveBeenCalledWith('elder');
   expect(await screen.findByText("Let's make sure alarms ring")).toBeTruthy();
-  await fireEvent.press(screen.getByText('Finish'));
+  // Lock in recent apps stays ticked, and the phone has allowed battery use.
+  expect(screen.getByText('2 of 4 done · Xiaomi phone')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Do this later'));
   expect(await screen.findByText('Metformin 500')).toBeTruthy();
   expect(alarms.deletePill).not.toHaveBeenCalled();
 });

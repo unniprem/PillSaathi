@@ -212,14 +212,18 @@ export const hi: Strings = {
     changeFailed: 'आवाज़ नहीं बदल सकी',
   },
   setup: {
-    title: 'अलार्म को भरोसेमंद बनाएं',
+    title: 'अलार्म हर बार बजें',
     firstTitle: 'पक्का करें कि अलार्म बजें',
     intro:
       'कुछ फ़ोन बैकग्राउंड में ऐप बंद कर देते हैं। ये कदम एक बार करें ताकि आपके अलार्म हमेशा बजें।',
-    done: 'हो गया',
-    doneTick: 'हो गया ✓',
-    allowed: '✓ अनुमति है',
+    progress: (done: number, total: number, maker: string) =>
+      `${total} में से ${done} हो गए${maker ? ` · ${maker} फ़ोन` : ''}`,
+    ticked: 'हो गया',
+    done: 'मैंने यह कर लिया',
+    doneTick: 'मैंने यह कर लिया ✓',
+    allowed: 'अनुमति है',
     finish: 'पूरा हुआ',
+    later: 'बाद में करें',
     steps: {
       lockRecents: {
         title: 'हाल के ऐप्स में PillSaathi को लॉक करें',

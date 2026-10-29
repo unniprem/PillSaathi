@@ -15,7 +15,8 @@ type Props = {
   onClose?: () => void;
   /** Round buttons on the right, such as Share. */
   right?: ReactNode;
-  progress?: { step: number; total: number };
+  /** A step bar. Its [label] ("2 of 4 done") goes under it, in place of "2 of 4" beside it. */
+  progress?: { step: number; total: number; label?: string };
   /** The hour whose sky to draw; now when left out. */
   hour?: number;
 };
@@ -60,9 +61,11 @@ export default function SkyBand({
           ]}
         />
       </View>
-      <Text style={[styles.stepText, { color: ink }]}>
-        {t.steps.of(progress.step, progress.total)}
-      </Text>
+      {progress.label == null ? (
+        <Text style={[styles.stepText, { color: ink }]}>
+          {t.steps.of(progress.step, progress.total)}
+        </Text>
+      ) : null}
     </View>
   ) : null;
   return (
@@ -110,6 +113,9 @@ export default function SkyBand({
         {right}
       </View>
       {title && bar ? <View style={styles.row}>{bar}</View> : null}
+      {progress?.label != null ? (
+        <Text style={[styles.stepText, { color: ink }]}>{progress.label}</Text>
+      ) : null}
     </View>
   );
 }

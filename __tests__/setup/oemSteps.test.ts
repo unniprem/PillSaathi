@@ -1,6 +1,9 @@
 import {
+  autoChecked,
   isAggressiveMaker,
   makerKey,
+  makerName,
+  setupProgress,
   stepsFor,
 } from '../../src/setup/oemSteps';
 import { hi } from '../../src/i18n/hi';
@@ -84,4 +87,77 @@ test('gives each step in the app language', () => {
   expect(stepsFor('samsung', hi)[0].title).toBe(
     hi.setup.steps.samsungSleeping.title,
   );
+});
+
+test('setupProgress counts auto-checked steps as done', () => {
+  const steps = stepsFor('Xiaomi');
+  const allowed = (check: string) => check === 'batteryOptimization';
+  expect(setupProgress(steps, [], allowed)).toEqual({
+    done: 1,
+    total: 4,
+    current: 'autostart',
+  });
+  expect(setupProgress(steps, ['autostart'], () => false)).toEqual({
+    done: 1,
+    total: 4,
+    current: 'oemBattery',
+  });
+  expect(
+    setupProgress(steps, ['autostart', 'oemBattery', 'lockRecents'], allowed),
+  ).toEqual({ done: 4, total: 4, current: null });
+});
+
+test('setupProgress: the current step is the first not done, whatever comes after', () => {
+  const steps = stepsFor('Xiaomi');
+  expect(setupProgress(steps, ['lockRecents'], () => false)).toEqual({
+    done: 1,
+    total: 4,
+    current: 'autostart',
+  });
+  expect(
+    setupProgress(
+      steps,
+      ['autostart', 'oemBattery', 'lockRecents'],
+      () => false,
+    ),
+  ).toEqual({ done: 3, total: 4, current: 'battery' });
+});
+
+test('setupProgress: only the phone can tick an auto-checked step', () => {
+  // A stray mark for the battery step, from before the phone checked it itself.
+  expect(setupProgress(stepsFor('Google'), ['battery'], () => false)).toEqual({
+    done: 0,
+    total: 1,
+    current: 'battery',
+  });
+});
+
+test("names the phone's maker as a person would", () => {
+  expect(makerName('Xiaomi')).toBe('Xiaomi');
+  expect(makerName('samsung')).toBe('Samsung');
+  expect(makerName(' realme ')).toBe('Realme');
+  expect(makerName('HUAWEI')).toBe('HUAWEI');
+  expect(makerName('')).toBe('');
+});
+
+test('the battery check passes when the phone ignores battery saving for the app', () => {
+  const health = {
+    notificationsEnabled: true,
+    alarmChannelEnabled: true,
+    exactAlarmAllowed: true,
+    fullScreenAllowed: true,
+    ignoringBatteryOptimizations: true,
+    backgroundRestricted: false,
+    alarmVolumeLow: false,
+  };
+  expect(autoChecked(health)('batteryOptimization')).toBe(true);
+  expect(
+    autoChecked({ ...health, ignoringBatteryOptimizations: false })(
+      'batteryOptimization',
+    ),
+  ).toBe(false);
+  expect(autoChecked(null)('batteryOptimization')).toBe(false);
+  expect(
+    setupProgress(stepsFor('Google'), [], autoChecked(health)).current,
+  ).toBeNull();
 });

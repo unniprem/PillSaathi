@@ -31,6 +31,7 @@ export function mockAlarmsDefaults() {
     seen: true,
     doneSteps: [],
   });
+  jest.mocked(alarms.markSetupSeen).mockResolvedValue();
   jest.mocked(alarms.setCardSound).mockResolvedValue();
   jest.mocked(alarms.markDoseTaken).mockResolvedValue();
   jest.mocked(alarms.getHistory).mockResolvedValue({

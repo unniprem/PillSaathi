@@ -212,14 +212,18 @@ export const ml: Strings = {
     changeFailed: 'ശബ്ദം മാറ്റാനായില്ല',
   },
   setup: {
-    title: 'അലാറങ്ങൾ മുടങ്ങാതിരിക്കാൻ',
+    title: 'അലാറങ്ങൾ എപ്പോഴും മുഴങ്ങാൻ',
     firstTitle: 'അലാറങ്ങൾ മുഴങ്ങുമെന്ന് ഉറപ്പാക്കാം',
     intro:
       'ചില ഫോണുകൾ പശ്ചാത്തലത്തിലുള്ള ആപ്പുകൾ നിർത്തും. അലാറങ്ങൾ എപ്പോഴും മുഴങ്ങാൻ ഈ ഘട്ടങ്ങൾ ഒരിക്കൽ ചെയ്യുക.',
-    done: 'ചെയ്തു',
-    doneTick: 'ചെയ്തു ✓',
-    allowed: '✓ അനുവദിച്ചു',
+    progress: (done: number, total: number, maker: string) =>
+      `${total}-ൽ ${done} കഴിഞ്ഞു${maker ? ` · ${maker} ഫോൺ` : ''}`,
+    ticked: 'ചെയ്തു',
+    done: 'ഞാൻ ഇത് ചെയ്തു',
+    doneTick: 'ഞാൻ ഇത് ചെയ്തു ✓',
+    allowed: 'അനുവദിച്ചു',
     finish: 'പൂർത്തിയായി',
+    later: 'പിന്നീട് ചെയ്യാം',
     steps: {
       lockRecents: {
         title: 'സമീപകാല ആപ്പുകളിൽ PillSaathi ലോക്ക് ചെയ്യുക',

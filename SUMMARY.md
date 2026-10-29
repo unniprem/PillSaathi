@@ -67,6 +67,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Theme additions: `colors.amber '#F0A030'` (shapes only, never words) and `timeTiles` (morning/afternoon/evening `{ fill, ink }`), which Task 10's time cards can reuse. `PART_ICON` is local to `HistoryDayScreen.tsx`; move it to `src/ui` if Task 10 needs it.
 - Day circles are ~45 dp on a 360 dp phone (seven columns allow no more). Test IDs: `month-bar`, `dose-card`, `dose-time`. A PillEdit test ("scrolls the count into view from the refill banner") failed once under machine load and passed alone; watch for flakiness.
 
+### Task 7: Alarm setup, on first open and from Settings
+**Status**: ✓ Done (parallel, branch `ui/task-7`)
+**Notes**:
+- First-run Setup calls `markSetupSeen()` on mount (so the first pill saved doesn't open Setup again); Setup from Settings doesn't. First run ends with "Do this later" (→ Main); Finish shows only when every step is done. Without `firstRun`, Finish always shows and goes back. The App tester test now checks "2 of 4 done · Xiaomi phone" and presses "Do this later" (Review Focus 4).
+- Builder calls: tapping a faded later step opens it instead (only one step open at a time; no dead end); after unticking, the step stays open. An AppState "active" re-read makes the battery step tick itself on return from the phone's settings. `SkyBand` `progress` takes an optional `label` (under the bar). `markSetupSeen` is in `mockAlarmsDefaults`.
+- For Task 14: `oemSteps.ts` exports `setupProgress(steps, doneSteps, autoDone)`, `autoChecked(health | null)`, `stepDone`, `makerName`; steps left = `total - done` of `setupProgress(stepsFor(currentManufacturer()), setup.doneSteps, autoChecked(health))`. Renaming the Settings row "Make alarms reliable" to "Alarm setup" changes two tests (Settings, and SetupScreen's "Finish goes back to where setup was opened from").
+
 ---
 
 ## Blockers / Deferred Items

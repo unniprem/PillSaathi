@@ -209,14 +209,20 @@ export const en = {
     changeFailed: 'Could not change the sound',
   },
   setup: {
-    title: 'Make alarms reliable',
+    title: 'Make alarms ring every time',
     firstTitle: "Let's make sure alarms ring",
     intro:
       'Some phones stop apps in the background. Do these steps once so your alarms always ring.',
-    done: 'Done',
-    doneTick: 'Done ✓',
-    allowed: '✓ Allowed',
+    /** "2 of 4 done · Xiaomi phone"; [maker] is '' when the phone doesn't say. */
+    progress: (done: number, total: number, maker: string) =>
+      `${done} of ${total} done${maker ? ` · ${maker} phone` : ''}`,
+    /** The tick on a done step, for TalkBack. */
+    ticked: 'Done',
+    done: 'I did this',
+    doneTick: 'I did this ✓',
+    allowed: 'Allowed',
     finish: 'Finish',
+    later: 'Do this later',
     steps: {
       lockRecents: {
         title: 'Lock PillSaathi in recent apps',

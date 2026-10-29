@@ -128,6 +128,6 @@ test('opens Setup from Make alarms reliable', async () => {
   await renderApp('Settings');
   await fireEvent.press(await screen.findByText('Make alarms reliable'));
   await waitFor(() =>
-    expect(headerTitles()).toEqual(['Settings', 'Make alarms reliable']),
+    expect(headerTitles()).toEqual(['Settings', 'Make alarms ring every time']),
   );
 });
