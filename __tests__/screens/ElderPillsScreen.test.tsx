@@ -179,3 +179,19 @@ test('a time opens the sound picker', async () => {
   await fireEvent.press(await screen.findByText("8:00 AM · Ravi's sound"));
   await waitFor(() => expect(headerTitles()).toHaveLength(2));
 });
+
+test('says when her phone was last heard from', async () => {
+  const now = new Date();
+  const heard = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    13,
+    12,
+  );
+  jest
+    .mocked(family.getElderSetup)
+    .mockResolvedValue({ ...setup, heardAt: heard.getTime() });
+  await renderApp('ElderPills', { elderId: 'E' });
+  expect(await screen.findByText('Last heard from at 1:12 PM')).toBeTruthy();
+});

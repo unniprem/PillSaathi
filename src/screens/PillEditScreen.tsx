@@ -121,6 +121,8 @@ export default function PillEditScreen({ navigation, route }: Props) {
   // On a relative's phone: her pill, whose Save and Delete are sent to her phone.
   const elderId = route.params?.elderId;
   const [elderName, setElderName] = useState('');
+  // Her times are on her clock; said so when she lives in another zone.
+  const [otherZone, setOtherZone] = useState(false);
   // Her photo as loaded, to tell her phone to keep it, drop it or take a new one.
   const herPhoto = useRef<string | null>(null);
   const focusCount = route.params?.focusCount ?? false;
@@ -213,11 +215,12 @@ export default function PillEditScreen({ navigation, route }: Props) {
     if (!elderId) {
       return;
     }
-    getFamily()
-      .then(cards => {
+    Promise.all([getFamily(), getElderSetup(elderId)])
+      .then(([cards, setup]) => {
         const called = cards.find(c => c.elderId === elderId)?.name;
-        if (mounted.current && called) {
-          setElderName(called);
+        if (mounted.current) {
+          setElderName(called ?? '');
+          setOtherZone(setup.otherZone);
         }
       })
       .catch(e => console.warn('Could not read her name', e));
@@ -684,6 +687,9 @@ export default function PillEditScreen({ navigation, route }: Props) {
           <Text style={styles.link}>{t.pill.addTime}</Text>
         </Pressable>
       ) : null}
+      {elderId && otherZone ? (
+        <Text style={styles.hint}>{t.family.herTime(elderName)}</Text>
+      ) : null}
 
       <Text style={styles.label}>{t.pill.howLong}</Text>
       <View style={styles.chips}>
@@ -808,6 +814,7 @@ const styles = StyleSheet.create({
   time: { flex: 1, fontSize: 22, color: colors.text },
   timeButton: { padding: spacing.sm },
   link: { fontSize: 16, color: colors.primary },
+  hint: { fontSize: 16, color: colors.textMuted, marginTop: spacing.sm },
   remove: { fontSize: 18, color: colors.textMuted },
   addTime: { paddingVertical: spacing.sm },
   photoRow: { flexDirection: 'row', alignItems: 'center' },

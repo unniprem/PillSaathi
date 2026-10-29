@@ -10,7 +10,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useI18n } from '../i18n';
-import { errorCode, familyMessage } from '../lib/family';
+import { errorCode, familyMessage, heardText } from '../lib/family';
+import { toISODate } from '../lib/course';
 import {
   changeState,
   changeTitle,
@@ -116,6 +117,13 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
       {setup?.editor ? (
         <>
           <Text style={styles.muted}>{t.remote.delayNote(name)}</Text>
+          {setup.heardAt !== null ? (
+            <Text style={styles.muted}>
+              {t.family.lastHeard(
+                heardText(setup.heardAt, toISODate(new Date()), is24h, t),
+              )}
+            </Text>
+          ) : null}
           {setup.otherZone ? (
             <Text style={styles.muted}>{t.family.herTime(name)}</Text>
           ) : null}

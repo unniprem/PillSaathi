@@ -723,6 +723,21 @@ describe('for her, on a relative’s phone', () => {
     );
   });
 
+  test('says the times are hers when she is in another zone', async () => {
+    jest.mocked(family.getElderSetup).mockResolvedValue({
+      editor: true,
+      otherZone: true,
+      heardAt: null,
+      pills: [herTelma],
+      times: [],
+      sounds: [],
+      problem: null,
+    });
+    await renderApp('PillEdit', { elderId: 'E', pillId: 'p1' });
+    await screen.findByDisplayValue('Telma 40');
+    expect(await screen.findByText("Times are Amma's time.")).toBeTruthy();
+  });
+
   test('never opens setup or the exact-alarm prompt', async () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     jest
