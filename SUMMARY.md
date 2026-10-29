@@ -81,6 +81,13 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Deviation: after a pick or saved recording SoundPicker goes `back` (fallback `replace('Main')`) instead of `popTo('Main'/'ElderPills')`. `Sheet` got keyboard padding (`keyboardDidShow`) and `testID="sheet"`. Phone check (Task 18): the recording name field and Task 11's sheet inputs stay above the keyboard inside the Modal.
 - For Task 11: navigate to `SoundPicker` with `selectedSoundId` (still required); close `SoundTimesSheet` before navigating (a Modal stays above a pushed page); reload the summary on focus so the new sound name shows. Words: no symbols in buttons ("Listen", "Record again"); "Imported" → "Song"; removed `sound.yourSounds`, `record.changeFailed`.
 
+### Task 8: Today on her phone
+**Status**: ✓ Done (parallel, branch `ui/task-8`)
+**Notes**:
+- Deviations: `DoseCard.tsx` and `RefillBanner.tsx` stay until Task 16 (ElderScreen still uses them); `statusText` moved unchanged to `src/lib/today.ts`, `daysText` to `today/RefillCard.tsx`; only `HealthBanner.tsx` and `DoseCard.test.ts` deleted. `untilText` uses a new `t.today.until(h, m)` ("in 6 hr 50 min", "in 25 min", "now"), since `formatDuration` only gives m:ss.
+- Decisions: `doseCounts` leaves out `later` and `done` so the day can reach "3 of 3 done"; with a dose missed and nothing left to ring the card says "Nothing more today"; done/later lines are one line with names joined (a pill added after the dose shows "(from tomorrow)"); Today ticks its clock every minute while focused; "+ Add family" is gone from empty Today (the Family tab has it). Strings: `today.title`/`titleOn` removed, `addPill` "Add a pill", `empty` "No pills yet", new `today.*`, `health.title/fix`.
+- For Tasks 9–10: Today is one ScrollView (`today-scroll`): SkyTop, then a body lifted −44: WarningCard, RefillCards, the family block (old `FamilySection` in a Card, where Task 9's PersonCards go), NextDoseCard / EmptyToday, MissedCards, "Later today" DoseLines, done DoseLines, the dashed "Add a pill" row. Pill taps go through `openPill` (`PillEdit`); both add buttons call one `addPill` line. Reusable: `today/PillRow.tsx`, `WHEN_ICONS`. Tests: `clockAt(h, m)` helper; always `await fireEvent.press` in RNTL 14 (unawaited presses broke act for later tests in a full run).
+
 ---
 
 ## Blockers / Deferred Items

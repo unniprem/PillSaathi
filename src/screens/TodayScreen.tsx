@@ -2,23 +2,27 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
-  FlatList,
   PermissionsAndroid,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import DoseCard from '../components/DoseCard';
 import FamilySection from '../components/FamilySection';
-import HealthBanner from '../components/HealthBanner';
-import RefillBanner from '../components/RefillBanner';
+import DoseLine from '../components/today/DoseLine';
+import EmptyToday from '../components/today/EmptyToday';
+import MissedCard from '../components/today/MissedCard';
+import NextDoseCard from '../components/today/NextDoseCard';
+import RefillCard from '../components/today/RefillCard';
+import WarningCard from '../components/today/WarningCard';
 import { formatDay } from '../lib/course';
 import { healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
 import { formatTime } from '../lib/time';
+import { arrangeToday, doseCounts } from '../lib/today';
 import { currentManufacturer } from '../setup/oemSteps';
 import {
   getHealth,
@@ -32,18 +36,22 @@ import {
 import type { MissedAlarm, Today, TodayCard } from '../native/alarms';
 import { getFamily, refreshFamily } from '../native/family';
 import type { FamilyCard } from '../native/family';
-import { listSounds } from '../native/sounds';
-import type { Sound } from '../native/sounds';
 import type { TabProps } from '../navigation/RootNavigator';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
-import { colors, spacing } from '../theme';
-import SkyBand from '../ui/SkyBand';
+import { colors, font, spacing } from '../theme';
+import Card from '../ui/Card';
+import DoseBars from '../ui/DoseBars';
+import Icon from '../ui/Icon';
+import SkyTop from '../ui/SkyTop';
+import { greetingFor, skyFor, skyInk } from '../ui/sky';
 
 type Props = TabProps<'Today'>;
 
 /** While Today is on screen, the family cards are read again this often. */
 const FAMILY_REFRESH_MS = 120_000;
+/** And the clock, for the greeting, the sky and the time left. */
+const CLOCK_MS = 60_000;
 
 /** One line per missed dose: "8:00 AM: Azithromycin 500, Telma 40". */
 function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
@@ -58,6 +66,11 @@ function alertMissed(missed: MissedAlarm[], onFix: () => void, t: Strings) {
   ]);
 }
 
+/**
+ * Her day: the sky with how many doses are done, any warning, the next dose, anything missed,
+ * then the rest of the day as short lines. It all scrolls, the sky too, so large text never
+ * pushes a button out of reach.
+ */
 export default function TodayScreen({ navigation }: Props) {
   const { t } = useI18n();
   // Read by the refresh and mount effects, which must not re-run when the language changes.
@@ -65,10 +78,10 @@ export default function TodayScreen({ navigation }: Props) {
   words.current = t;
   const [issues, setIssues] = useState<Issue[]>([]);
   const [today, setToday] = useState<Today | null>(null);
-  const [sounds, setSounds] = useState<Sound[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [family, setFamily] = useState<FamilyCard[]>([]);
+  const [now, setNow] = useState(() => Date.now());
   const mounted = useRef(true);
   const familyRequest = useRef(0);
   const latest = useRef(0);
@@ -111,7 +124,7 @@ export default function TodayScreen({ navigation }: Props) {
         }
       }
       // A health or setup failure must never hide the doses, and shows no
-      // banner rather than a wrong one.
+      // warning rather than a wrong one.
       Promise.all([getHealth(), getSetupState()])
         .then(([health, setup]) => {
           if (mounted.current && request === latest.current) {
@@ -126,25 +139,21 @@ export default function TodayScreen({ navigation }: Props) {
             setIssues([]);
           }
         });
-      const [todayResult, soundsResult] = await Promise.allSettled([
-        getToday(),
-        listSounds(),
-      ]);
-      if (!mounted.current || request !== latest.current) {
+      let day: Today;
+      try {
+        day = await getToday();
+      } catch (e) {
+        if (mounted.current && request === latest.current) {
+          console.warn("Could not load today's doses", e);
+          setLoadFailed(true);
+        }
         return;
       }
-      if (soundsResult.status === 'fulfilled') {
-        setSounds(soundsResult.value);
-      } else {
-        console.warn('Could not load sounds', soundsResult.reason);
-      }
-      if (todayResult.status === 'fulfilled') {
-        setToday(todayResult.value);
+      if (mounted.current && request === latest.current) {
+        setToday(day);
         setLoadFailed(false);
         setLoaded(true);
-      } else {
-        console.warn("Could not load today's doses", todayResult.reason);
-        setLoadFailed(true);
+        setNow(Date.now());
       }
     },
     [navigation, loadFamily],
@@ -176,14 +185,18 @@ export default function TodayScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      const timer = setInterval(loadFamily, FAMILY_REFRESH_MS);
+      const familyTimer = setInterval(loadFamily, FAMILY_REFRESH_MS);
+      const clockTimer = setInterval(() => setNow(Date.now()), CLOCK_MS);
       // The mount effect already refreshed for the first focus.
       if (firstFocus.current) {
         firstFocus.current = false;
       } else {
         refresh(false);
       }
-      return () => clearInterval(timer);
+      return () => {
+        clearInterval(familyTimer);
+        clearInterval(clockTimer);
+      };
     }, [refresh, loadFamily]),
   );
 
@@ -225,98 +238,196 @@ export default function TodayScreen({ navigation }: Props) {
     }
   };
 
+  const openPill = (pillId: string) =>
+    navigation.navigate('PillEdit', { pillId });
+  const addPill = () => navigation.navigate('PillEdit', {});
+
   const is24h = is24HourFormat();
-  const soundName = (id: string | null) =>
-    sounds.find(s => s.id === id)?.name ?? null;
+  const hour = new Date(now).getHours();
+  const cards = today?.cards ?? [];
+  const { next, missed, later, done } = arrangeToday(cards);
+  const counts = doseCounts(cards);
+  const total = counts.taken + counts.missed + counts.rest;
+  const empty =
+    cards.length === 0 && loaded && !loadFailed && family.length === 0;
+  const key = (card: TodayCard) => `${card.hour}:${card.minute}`;
 
   return (
-    <View style={styles.container}>
-      <SkyBand
-        title={date ? t.today.titleOn(formatDay(date, t)) : t.today.title}
-      />
-      <HealthBanner issues={issues} onAction={runAction} />
-      <RefillBanner
-        refills={today?.refills ?? []}
-        onOpen={pillId =>
-          navigation.navigate('PillEdit', { pillId, focusCount: true })
-        }
-      />
-      <FlatList
-        data={today?.cards ?? []}
-        keyExtractor={c => `${c.hour}:${c.minute}`}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          family.length > 0 ? (
-            <FamilySection
-              cards={family}
-              is24h={is24h}
-              onOpen={elderId => navigation.navigate('Elder', { elderId })}
-              onAdd={() => navigation.navigate('AddFamily')}
-            />
-          ) : undefined
-        }
-        renderItem={({ item }) => (
-          <DoseCard
-            card={item}
-            date={today!.date}
-            is24h={is24h}
-            soundName={soundName(item.soundId)}
-            onOpenPill={pillId => navigation.navigate('PillEdit', { pillId })}
-            onOpenSound={() =>
-              item.alarmId &&
-              navigation.navigate('SoundPicker', {
-                alarmId: item.alarmId,
-                selectedSoundId: item.soundId,
-              })
-            }
-            onMarkTaken={() => confirmTaken(item)}
-          />
-        )}
-        ListEmptyComponent={
-          loadFailed ? (
-            <Text style={styles.empty}>{t.today.loadFailed}</Text>
-          ) : loaded && family.length === 0 ? (
-            <View>
-              <Text style={styles.empty}>{t.today.empty}</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => navigation.navigate('AddFamily')}
-                style={styles.addFamily}
+    <View style={styles.page}>
+      <ScrollView testID="today-scroll" contentContainerStyle={styles.scroll}>
+        <SkyTop
+          hour={hour}
+          title={t.today.greeting[greetingFor(hour)]}
+          sub={date ? formatDay(date, t) : undefined}
+        >
+          {total > 0 ? (
+            <View style={styles.progress}>
+              <DoseBars {...counts} />
+              <Text
+                style={[styles.progressText, { color: skyInk(skyFor(hour)) }]}
               >
-                <Text style={styles.addFamilyText}>{t.family.addFamily}</Text>
-              </Pressable>
+                {t.today.progress(counts.taken, total)}
+              </Text>
             </View>
-          ) : undefined
-        }
-      />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('PillEdit', {})}
-        style={styles.add}
-      >
-        <Text style={styles.addText}>{t.today.addPill}</Text>
-      </Pressable>
+          ) : null}
+        </SkyTop>
+        {/* The first card lifts into the foot of the sky. */}
+        <View style={styles.body}>
+          <WarningCard issues={issues} onFix={runAction} />
+          {today?.refills.map(r => (
+            <RefillCard
+              key={r.pillId}
+              refill={r}
+              onAdd={() =>
+                navigation.navigate('PillEdit', {
+                  pillId: r.pillId,
+                  focusCount: true,
+                })
+              }
+            />
+          ))}
+          {family.length > 0 ? (
+            <Card style={styles.family}>
+              <FamilySection
+                cards={family}
+                is24h={is24h}
+                onOpen={elderId => navigation.navigate('Elder', { elderId })}
+                onAdd={() => navigation.navigate('AddFamily')}
+              />
+            </Card>
+          ) : null}
+          {date && cards.length > 0 ? (
+            <>
+              <NextDoseCard
+                next={next}
+                first={cards[0]}
+                anyMissed={missed.length > 0}
+                date={date}
+                now={now}
+                is24h={is24h}
+                onOpenPill={openPill}
+              />
+              {missed.map(card => (
+                <MissedCard
+                  key={key(card)}
+                  card={card}
+                  date={date}
+                  is24h={is24h}
+                  onTookIt={() => confirmTaken(card)}
+                  onOpenPill={openPill}
+                />
+              ))}
+              {later.length > 0 ? (
+                <View>
+                  <Text style={styles.label}>{t.today.laterToday}</Text>
+                  {later.map(card => (
+                    <DoseLine
+                      key={key(card)}
+                      card={card}
+                      date={date}
+                      is24h={is24h}
+                    />
+                  ))}
+                </View>
+              ) : null}
+              {done.length > 0 ? (
+                <View>
+                  {done.map(card => (
+                    <DoseLine
+                      key={key(card)}
+                      card={card}
+                      date={date}
+                      is24h={is24h}
+                      onTookIt={() => confirmTaken(card)}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : null}
+          {cards.length === 0 && loadFailed ? (
+            <Card>
+              <Text style={styles.failed}>{t.today.loadFailed}</Text>
+            </Card>
+          ) : null}
+          {empty ? (
+            <EmptyToday
+              onAdd={addPill}
+              onShowCode={() => navigation.navigate('ShareCode')}
+            />
+          ) : loaded || loadFailed ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t.today.addPill}
+              onPress={addPill}
+              style={({ pressed }) => [styles.add, pressed && styles.pressed]}
+            >
+              <Icon name="add" size={20} color={colors.blue} />
+              <Text style={styles.addText}>{t.today.addPill}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  empty: {
-    padding: 32,
-    textAlign: 'center',
-    fontSize: 18,
-    color: colors.textMuted,
-  },
-  list: { paddingBottom: spacing.md },
-  add: {
-    margin: spacing.md,
-    padding: spacing.md,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
+  page: { flex: 1, backgroundColor: colors.page },
+  scroll: { flexGrow: 1 },
+  // At a large text size the words drop under the bars rather than squeezing them.
+  progress: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    columnGap: 10,
+    rowGap: 6,
+    marginTop: 12,
+    marginRight: 56,
   },
-  addText: { color: colors.onPrimary, fontSize: 18, fontWeight: '600' },
-  addFamily: { alignSelf: 'center', padding: spacing.md },
-  addFamilyText: { color: colors.primary, fontSize: 18, fontWeight: '600' },
+  progressText: { ...font(800), fontSize: 14 },
+  body: {
+    flexGrow: 1,
+    marginTop: -44,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: 12,
+  },
+  family: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
+  label: {
+    ...font(900),
+    fontSize: 12.5,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.blue,
+    marginLeft: 4,
+    marginBottom: 2,
+  },
+  failed: {
+    ...font(700),
+    fontSize: 17,
+    color: colors.muted,
+    textAlign: 'center',
+  },
+  add: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.edge,
+  },
+  pressed: { opacity: 0.7 },
+  addText: {
+    ...font(900),
+    fontSize: 16,
+    color: colors.blue,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
 });

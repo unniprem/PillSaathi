@@ -1,24 +1,16 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useI18n } from '../i18n';
-import type { Strings } from '../i18n';
 import { formatAmount } from '../lib/amount';
 import type { Refill } from '../native/alarms';
 import { colors, spacing } from '../theme';
+import { daysText } from './today/RefillCard';
 
 type Props = {
   refills: Refill[];
   /** Opens the pill at its count; without it (an elder's pills) the rows don't open. */
   onOpen?: (pillId: string) => void;
 };
-
-/** "About 4 days.", "About 1 day." or "Less than a day." */
-function daysText(daysLeft: number, t: Strings): string {
-  if (daysLeft === 0) {
-    return t.refill.lessThanDay;
-  }
-  return daysLeft === 1 ? t.refill.aboutOneDay : t.refill.aboutDays(daysLeft);
-}
 
 /** One row per counted pill running low or out; tapping a row opens the pill at its count. */
 export default function RefillBanner({ refills, onOpen }: Props) {

@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import { formatAmount } from '../lib/amount';
-import { courseLabel, nextLabel } from '../lib/course';
+import { courseLabel } from '../lib/course';
 import { formatTime } from '../lib/time';
+import { statusText } from '../lib/today';
 import type { TodayCard, TodayPill } from '../native/alarms';
 import { colors, spacing } from '../theme';
 import PillPicture from '../ui/PillPicture';
@@ -22,43 +23,6 @@ type Props = {
   /** An elder's card on a relative's phone: no sound, no Mark as taken, and pills don't open. */
   readOnly?: boolean;
 };
-
-function clock(millis: number, is24h: boolean) {
-  const d = new Date(millis);
-  return formatTime(d.getHours(), d.getMinutes(), is24h);
-}
-
-/** "✓ Taken 8:02 AM", "Snoozed until 8:10 AM", "Next: tomorrow"…; empty for a card that is done. */
-export function statusText(
-  card: TodayCard,
-  date: string,
-  is24h: boolean,
-  t: Strings,
-) {
-  const at = card.statusAt;
-  switch (card.status) {
-    case 'taken':
-      return at === null ? t.status.taken : t.status.takenAt(clock(at, is24h));
-    case 'skipped':
-      return t.status.skipped;
-    case 'missed':
-      return t.status.missed;
-    case 'ringing':
-      return t.status.ringing;
-    case 'snoozed':
-      return at === null
-        ? t.status.snoozed
-        : t.status.snoozedUntil(clock(at, is24h));
-    case 'upcoming':
-      return t.status.upcoming;
-    case 'later':
-      return at === null ? '' : nextLabel(at, date, t);
-    case 'notReported':
-      return t.status.notReported;
-    default:
-      return '';
-  }
-}
 
 function pillDetail(pill: TodayPill, date: string, t: Strings) {
   if (pill.fromTomorrow) {

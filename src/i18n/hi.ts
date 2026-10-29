@@ -67,10 +67,41 @@ export const hi: Strings = {
     both: 'आप बाद में दोनों कर सकते हैं। कोई भी अपनी दवाइयाँ या परिवार जोड़ सकता है।',
   },
   today: {
-    title: 'आज',
-    titleOn: (day: string) => `आज · ${day}`,
-    addPill: '+ दवा जोड़ें',
-    empty: 'अभी कोई दवा नहीं है। जोड़ने के लिए + दवा जोड़ें दबाएं।',
+    greeting: {
+      morning: 'सुप्रभात',
+      afternoon: 'शुभ दोपहर',
+      evening: 'शुभ संध्या',
+    },
+    progress: (taken: number, total: number) =>
+      `${total} में से ${taken} हो गईं`,
+    nextDose: 'अगली खुराक',
+    when: {
+      morning: 'आज सुबह',
+      afternoon: 'आज दोपहर',
+      tonight: 'आज रात',
+    },
+    until: (hours: number, minutes: number) =>
+      hours === 0
+        ? minutes === 0
+          ? 'अभी'
+          : `${minutes} मिनट में`
+        : minutes === 0
+        ? `${hours} घंटे में`
+        : `${hours} घंटे ${minutes} मिनट में`,
+    allDone: 'आज की सब दवाएं हो गईं',
+    noMore: 'आज और कुछ नहीं',
+    tomorrowAt: (time: string) => `कल, ${time}`,
+    laterToday: 'आज बाद में',
+    allTaken: (pills: number) =>
+      pills <= 1 ? 'ले ली' : pills === 2 ? 'दोनों ले लीं' : 'सब ले लीं',
+    missed: 'छूट गई',
+    skipped: 'छोड़ दी',
+    tookIt: 'मैंने ले ली',
+    addPill: 'दवा जोड़ें',
+    empty: 'अभी कोई दवा नहीं',
+    emptyBody:
+      'अपनी पहली दवा जोड़ें। या आपका बेटा या बेटी अपने फ़ोन से जोड़ सकते हैं।',
+    showCode: 'मेरा कोड दिखाएं',
     loadFailed:
       'आपकी दवाएं लोड नहीं हो सकीं। फिर से कोशिश करने के लिए ऐप दोबारा खोलें।',
     missedTitle: 'छूटी हुई दवाएं',
@@ -168,6 +199,8 @@ export const hi: Strings = {
       'बैटरी बचत अलार्म रोक सकती है। बिना रोक बैटरी उपयोग की अनुमति देने के लिए दबाएं।',
     setup: 'इस फ़ोन पर अलार्म भरोसे से बजें, इसके लिए सेटअप पूरा करें।',
     more: (count: number) => ` (+${count} और)`,
+    title: 'अलार्म शायद न बजें',
+    fix: 'अभी ठीक करें',
   },
   sound: {
     title: 'आवाज़',

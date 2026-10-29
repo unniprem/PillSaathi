@@ -38,9 +38,7 @@ afterEach(() => {
 test('a set-up, logged-in phone opens on Today', async () => {
   jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
   await render(<App />);
-  expect(
-    await screen.findByText('No pills yet. Tap + Add pill to add one.'),
-  ).toBeTruthy();
+  expect(await screen.findByText('No pills yet')).toBeTruthy();
 });
 
 test('a phone with no role opens the login page', async () => {
@@ -58,9 +56,7 @@ test('a logged-out phone with a role opens the login page again', async () => {
   jest.mocked(family.signInWithGoogle).mockResolvedValue(kamala);
   await fireEvent.press(screen.getByText('Continue with Google'));
   // Asked once already: straight back to Today.
-  expect(
-    await screen.findByText('No pills yet. Tap + Add pill to add one.'),
-  ).toBeTruthy();
+  expect(await screen.findByText('No pills yet')).toBeTruthy();
 });
 
 test('a phone whose settings or login cannot be read opens the login page', async () => {

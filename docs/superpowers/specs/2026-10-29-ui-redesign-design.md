@@ -200,10 +200,12 @@ Top to bottom:
    Tonight / This morning and so on, the time very large, "in 6 hr 50 min",
    then each pill with its picture, name and amount. Tapping a pill opens
    its summary. When the next dose is ringing or snoozed, the card only says
-   so ("Ringing now", which opens the ringing screen when tapped; "Snoozed
-   until 9:10"), with **no "I took it" button** (my call, from the builder
-   check: taking a ringing or snoozed dose from Today would need a new path
-   into the alarm engine, which this step doesn't touch).
+   so ("Ringing now"; "Snoozed until 9:10"), with **no "I took it" button**
+   (my call, from the builder check: taking a ringing or snoozed dose from
+   Today would need a new path into the alarm engine, which this step
+   doesn't touch). "Ringing now" isn't tappable either, as built: `MainActivity`
+   already brings the ringing screen forward whenever the app opens during a
+   ring, and the ring's own full-screen alarm and notification lead there too.
 4. **Missed:** a soft-coral card per missed dose, with the pill, "1:30 PM ·
    missed" and an "I took it" button.
 5. **Later today** (my call; the mockup had only one upcoming dose): other

@@ -69,10 +69,41 @@ export const en = {
     both: 'You can do both later. Anyone can add their own pills or add family.',
   },
   today: {
-    title: 'Today',
-    titleOn: (day: string) => `Today · ${day}`,
-    addPill: '+ Add pill',
-    empty: 'No pills yet. Tap + Add pill to add one.',
+    greeting: {
+      morning: 'Good morning',
+      afternoon: 'Good afternoon',
+      evening: 'Good evening',
+    },
+    progress: (taken: number, total: number) => `${taken} of ${total} done`,
+    nextDose: 'Next dose',
+    when: {
+      morning: 'This morning',
+      afternoon: 'This afternoon',
+      tonight: 'Tonight',
+    },
+    until: (hours: number, minutes: number) =>
+      hours === 0
+        ? minutes === 0
+          ? 'now'
+          : `in ${minutes} min`
+        : minutes === 0
+        ? `in ${hours} hr`
+        : `in ${hours} hr ${minutes} min`,
+    allDone: 'All done for today',
+    noMore: 'Nothing more today',
+    tomorrowAt: (time: string) => `Tomorrow, ${time}`,
+    laterToday: 'Later today',
+    // A string, not the three words, so the other languages can say it their own way.
+    allTaken: (pills: number): string =>
+      pills <= 1 ? 'taken' : pills === 2 ? 'both taken' : 'all taken',
+    missed: 'missed',
+    skipped: 'skipped',
+    tookIt: 'I took it',
+    addPill: 'Add a pill',
+    empty: 'No pills yet',
+    emptyBody:
+      'Add your first medicine. Or your son or daughter can add them from their own phone.',
+    showCode: 'Show my code',
     loadFailed: "Couldn't load your pills. Reopen the app to try again.",
     missedTitle: 'Missed medicines',
     missedBody: (lines: string) =>
@@ -166,6 +197,8 @@ export const en = {
       'Battery saving may stop alarms. Tap to allow unrestricted battery use.',
     setup: 'Finish setting up so alarms ring reliably on this phone.',
     more: (count: number) => ` (+${count} more)`,
+    title: 'Alarms may not ring',
+    fix: 'Fix now',
   },
   sound: {
     title: 'Sound',
