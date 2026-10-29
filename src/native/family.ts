@@ -1,6 +1,7 @@
 import NativeFamily from '../../specs/NativeFamily';
 import type {
   Follow,
+  Follower,
   LinkCode,
   NativeFamilyCard,
   Person,
@@ -9,7 +10,7 @@ import type {
 } from '../../specs/NativeFamily';
 import type { History, Pill, Refill, Today } from './alarms';
 
-export type { Follow, LinkCode, Person, Relative };
+export type { Follow, Follower, LinkCode, Person, Relative };
 
 /** An elder's card in Today's Family section. */
 export type FamilyCard = Omit<NativeFamilyCard, 'refills'> & {
@@ -71,8 +72,13 @@ export async function answerRequest(
 }
 
 /** The people who can see this phone's pills; none when it has never shared. */
-export async function listFollowers(): Promise<Person[]> {
+export async function listFollowers(): Promise<Follower[]> {
   return native().listFollowers();
+}
+
+/** Lets a follower change this phone's pills and alarm sounds, or stops them. */
+export async function setCanChange(uid: string, on: boolean): Promise<void> {
+  return native().setCanChange(uid, on);
 }
 
 /** Stops someone seeing this phone's pills. The last one gone deletes the online copy. */

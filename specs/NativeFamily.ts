@@ -9,6 +9,14 @@ export type LinkCode = {
 
 export type Person = { uid: string; name: string; email: string };
 
+/** Someone who can see this phone's pills; canChange = may also change them. */
+export type Follower = {
+  uid: string;
+  name: string;
+  email: string;
+  canChange: boolean;
+};
+
 export type Relative = { name: string; email: string };
 
 export type Follow = {
@@ -127,7 +135,8 @@ export interface Spec extends TurboModule {
   watchRequests(on: boolean): Promise<void>; // one listener on pending requests while on
   pendingRequests(): Promise<Person[]>; // from memory, no reads
   answerRequest(uid: string, allow: boolean): Promise<void>;
-  listFollowers(): Promise<Person[]>; // [] when never shared
+  listFollowers(): Promise<Follower[]>; // [] when never shared
+  setCanChange(uid: string, on: boolean): Promise<void>;
   removeFollower(uid: string): Promise<void>;
 
   // The relative's side.

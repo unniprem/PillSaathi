@@ -25,7 +25,9 @@ afterEach(() => {
 
 test('Family lists who can see my pills, and Remove asks first', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  jest.mocked(family.listFollowers).mockResolvedValue([ravi]);
+  jest
+    .mocked(family.listFollowers)
+    .mockResolvedValue([{ ...ravi, canChange: true }]);
   await renderApp('Family');
   expect(headerTitles()).toEqual(['Family']);
   expect(screen.getByText('People who can see my pills')).toBeTruthy();
@@ -59,13 +61,15 @@ test('a request asks Allow / No, and Allow answers it', async () => {
   await act(async () => jest.advanceTimersByTime(2000));
   expect(family.watchRequests).toHaveBeenCalledWith(true);
   await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
-  expect(alert.mock.calls[0][0]).toBe('Let Ravi see your pills?');
+  expect(alert.mock.calls[0][0]).toBe('Let Ravi see and change your pills?');
   expect(alert.mock.calls[0][1]).toBe(
-    'ravi@gmail.com will see your pills and whether you took them.',
+    "ravi@gmail.com will see your pills and whether you took them, and can add or change pills and alarm sounds. You'll get a notice each time.",
   );
   const buttons = alert.mock.calls[0][2]!;
   expect(buttons.map(b => b.text)).toEqual(['No', 'Allow']);
-  jest.mocked(family.listFollowers).mockResolvedValue([ravi]);
+  jest
+    .mocked(family.listFollowers)
+    .mockResolvedValue([{ ...ravi, canChange: true }]);
   await act(async () => buttons[1].onPress!());
   expect(family.answerRequest).toHaveBeenCalledWith('R', true);
   expect(await screen.findByText('ravi@gmail.com')).toBeTruthy();
@@ -73,6 +77,53 @@ test('a request asks Allow / No, and Allow answers it', async () => {
   // The mock still lists Ravi; an answered request is never asked about again.
   await act(async () => jest.advanceTimersByTime(6000));
   expect(alert).toHaveBeenCalledTimes(1);
+});
+
+test('each person has Can change my pills, and the switch calls setCanChange', async () => {
+  jest
+    .mocked(family.listFollowers)
+    .mockResolvedValue([{ ...ravi, canChange: true }]);
+  await renderApp('Family');
+  const toggle = await screen.findByRole('switch', {
+    name: 'Can change my pills: Ravi',
+  });
+  expect(screen.getByText('Can change my pills')).toBeTruthy();
+  expect(toggle.props.value).toBe(true);
+  jest
+    .mocked(family.listFollowers)
+    .mockResolvedValue([{ ...ravi, canChange: false }]);
+  await fireEvent(toggle, 'valueChange', false);
+  expect(family.setCanChange).toHaveBeenCalledWith('R', false);
+  await waitFor(() =>
+    expect(
+      screen.getByRole('switch', { name: 'Can change my pills: Ravi' }).props
+        .value,
+    ).toBe(false),
+  );
+});
+
+test('a refused switch says so and stays as it was', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  jest
+    .mocked(family.listFollowers)
+    .mockResolvedValue([{ ...ravi, canChange: false }]);
+  jest
+    .mocked(family.setCanChange)
+    .mockRejectedValue(
+      Object.assign(new Error('OFFLINE'), { code: 'OFFLINE' }),
+    );
+  await renderApp('Family');
+  const toggle = await screen.findByRole('switch', {
+    name: 'Can change my pills: Ravi',
+  });
+  await fireEvent(toggle, 'valueChange', true);
+  await waitFor(() =>
+    expect(alert).toHaveBeenCalledWith('No internet. Please try again.'),
+  );
+  expect(
+    screen.getByRole('switch', { name: 'Can change my pills: Ravi' }).props
+      .value,
+  ).toBe(false);
 });
 
 test('the Family page stops listening when it is left', async () => {

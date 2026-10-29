@@ -311,9 +311,11 @@ export const en = {
       "The scanner isn't ready yet. Try again in a minute, or type the 6 digits.",
     expired: 'This code has expired.',
     newCode: 'New code',
-    allowTitle: (name: string) => `Let ${name} see your pills?`,
+    allowTitle: (name: string) => `Let ${name} see and change your pills?`,
     allowBody: (email: string) =>
-      `${email} will see your pills and whether you took them.`,
+      `${email} will see your pills and whether you took them, and can add or change pills and alarm sounds. You'll get a notice each time.`,
+    canChange: 'Can change my pills',
+    canChangeLabel: (name: string) => `Can change my pills: ${name}`,
     no: 'No',
     allow: 'Allow',
     offline: 'No internet. Please try again.',

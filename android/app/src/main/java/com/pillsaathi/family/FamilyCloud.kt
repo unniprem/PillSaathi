@@ -179,8 +179,9 @@ class FamilyCloud private constructor(context: Context) {
     }
 
   /**
-   * Answers [request] to elder [uid]. Allow adds the relative to her followers and uses up the
-   * code, in one batch; No marks the request denied.
+   * Answers [request] to elder [uid]. Allow adds the relative to her followers and her editors (he
+   * may change her pills, which the prompt says) and uses up the code, in one batch; No marks the
+   * request denied.
    */
   fun answerRequest(uid: String, request: FollowRequest, allow: Boolean) {
     val requestRef = elder(uid).collection(REQUESTS).document(request.uid)
@@ -193,6 +194,7 @@ class FamilyCloud private constructor(context: Context) {
       elder(uid),
       mapOf(
         "followers" to FieldValue.arrayUnion(request.uid),
+        "editors" to FieldValue.arrayUnion(request.uid),
         "people.${request.uid}" to mapOf("name" to request.name, "email" to request.email),
       ),
     )
@@ -216,8 +218,23 @@ class FamilyCloud private constructor(context: Context) {
 
   /** Takes [follower] off elder [uid]'s list. Returns who is left. */
   fun removeFollower(uid: String, follower: String): List<String> {
-    await(elder(uid).update(mapOf("followers" to FieldValue.arrayRemove(follower), "people.$follower" to FieldValue.delete())))
+    await(
+      elder(uid).update(
+        mapOf(
+          "followers" to FieldValue.arrayRemove(follower),
+          "editors" to FieldValue.arrayRemove(follower),
+          "people.$follower" to FieldValue.delete(),
+        ),
+      ),
+    )
     return readElder(uid)?.followers.orEmpty()
+  }
+
+  /** Lets [follower] change elder [uid]'s pills, or stops him; gives her editors as the server has them. */
+  fun setEditor(uid: String, follower: String, on: Boolean): List<String> {
+    val change = if (on) FieldValue.arrayUnion(follower) else FieldValue.arrayRemove(follower)
+    await(elder(uid).update("editors", change))
+    return readElder(uid)?.editors.orEmpty()
   }
 
   /** The uid this phone's default app is signed in as, or null when it never has been. */
@@ -306,7 +323,13 @@ class FamilyCloud private constructor(context: Context) {
     try {
       await(
         familyDb().collection(ELDERS).document(elderId)
-          .update(mapOf("followers" to FieldValue.arrayRemove(uid), "people.$uid" to FieldValue.delete())),
+          .update(
+            mapOf(
+              "followers" to FieldValue.arrayRemove(uid),
+              "editors" to FieldValue.arrayRemove(uid),
+              "people.$uid" to FieldValue.delete(),
+            ),
+          ),
       )
     } catch (e: FamilyException) {
       if (e.code != PERMISSION && e.code != NOT_FOUND) throw e

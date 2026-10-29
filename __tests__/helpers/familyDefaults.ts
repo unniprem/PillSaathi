@@ -13,6 +13,7 @@ export const familyDefaults: Record<string, unknown> = {
   answerRequest: undefined,
   listFollowers: [],
   removeFollower: undefined,
+  setCanChange: undefined,
   signedInRelative: null,
   signInWithGoogle: null,
   scanCode: null,

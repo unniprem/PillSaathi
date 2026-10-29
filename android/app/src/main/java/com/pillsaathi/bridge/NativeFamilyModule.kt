@@ -145,6 +145,7 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
           FamilyWork.requestUpload(reactApplicationContext)
           FamilyWork.ensureHeartbeat(reactApplicationContext)
           cloud.answerRequest(elder, request, true)
+          store.locked { store.saveFamily(store.loadFamily().let { it.copy(editors = (it.editors + uid).distinct()) }) }
         }
         if (request.code == currentCode) currentCode = null
       } else {
@@ -159,7 +160,27 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
     onWorker(promise) {
       val uid = cloud.signedInElder() ?: return@onWorker Arguments.createArray()
       val elder = cloud.readElderCached(uid) ?: return@onWorker Arguments.createArray()
-      people(elder.followers.map { it to (elder.people[it] ?: Person("", "")) })
+      Arguments.createArray().apply {
+        elder.followers.forEach { follower ->
+          val p = elder.people[follower] ?: Person("", "")
+          pushMap(
+            Arguments.createMap().apply {
+              putString("uid", follower)
+              putString("name", p.name)
+              putString("email", p.email)
+              putBoolean("canChange", follower in elder.editors)
+            },
+          )
+        }
+      }
+    }
+
+  override fun setCanChange(uid: String, on: Boolean, promise: Promise) =
+    onWorker(promise) {
+      val elder = cloud.signedInElder() ?: throw FamilyException(FamilyCloud.NOT_FOUND, "This phone never shared")
+      val editors = cloud.setEditor(elder, uid, on)
+      store.locked { store.saveFamily(store.loadFamily().copy(editors = editors)) }
+      null
     }
 
   override fun removeFollower(uid: String, promise: Promise) =

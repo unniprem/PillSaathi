@@ -4,6 +4,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -12,8 +13,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFollowRequests } from '../hooks/useFollowRequests';
 import { useI18n } from '../i18n';
 import { familyMessage } from '../lib/family';
-import { listFollowers, listFollows, removeFollower } from '../native/family';
-import type { Follow, Person } from '../native/family';
+import {
+  listFollowers,
+  listFollows,
+  removeFollower,
+  setCanChange,
+} from '../native/family';
+import type { Follow, Follower, Person } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing } from '../theme';
 
@@ -25,7 +31,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Family'>;
  */
 export default function FamilyScreen({ navigation }: Props) {
   const { t } = useI18n();
-  const [followers, setFollowers] = useState<Person[] | null>(null);
+  const [followers, setFollowers] = useState<Follower[] | null>(null);
   const [follows, setFollows] = useState<Follow[] | null>(null);
   const [failed, setFailed] = useState<unknown>(null);
   const mounted = useRef(true);
@@ -88,6 +94,16 @@ export default function FamilyScreen({ navigation }: Props) {
     ]);
   };
 
+  const allowChanges = async (person: Follower, on: boolean) => {
+    try {
+      await setCanChange(person.uid, on);
+    } catch (e) {
+      console.warn('Could not change who can change my pills', e);
+      Alert.alert(familyMessage(e, t));
+    }
+    await load();
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>{t.family.canSee}</Text>
@@ -102,6 +118,14 @@ export default function FamilyScreen({ navigation }: Props) {
           <View style={styles.who}>
             <Text style={styles.name}>{person.name}</Text>
             <Text style={styles.email}>{person.email}</Text>
+            <View style={styles.canChange}>
+              <Switch
+                accessibilityLabel={t.family.canChangeLabel(person.name)}
+                value={person.canChange}
+                onValueChange={on => allowChanges(person, on)}
+              />
+              <Text style={styles.canChangeText}>{t.family.canChange}</Text>
+            </View>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -162,6 +186,13 @@ const styles = StyleSheet.create({
   who: { flex: 1 },
   name: { fontSize: 20, color: colors.text },
   email: { fontSize: 16, color: colors.textMuted },
+  canChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  canChangeText: { fontSize: 16, color: colors.text },
   remove: { padding: spacing.sm },
   removeText: { fontSize: 18, color: colors.danger },
   button: {
