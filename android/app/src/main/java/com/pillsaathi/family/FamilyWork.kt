@@ -28,13 +28,18 @@ object FamilyWork {
 
   private val online = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-  /** Uploads the elder's changes once there is internet, after any upload already queued. */
+  /**
+   * Uploads the elder's changes once there is internet. Each upload reads her latest data, so one
+   * waiting is enough: this replaces a queued one rather than queueing behind it (ten changes made
+   * offline were ten uploads back online). A running upload isn't interrupted, as WorkManager
+   * doesn't stop a [Worker]'s thread; the new one waits on [ElderSync.lock] and sends what changed.
+   */
   fun requestUpload(context: Context) {
     val work = OneTimeWorkRequestBuilder<UploadWorker>()
       .setConstraints(online)
       .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
       .build()
-    WorkManager.getInstance(context).enqueueUniqueWork(UPLOAD, ExistingWorkPolicy.APPEND_OR_REPLACE, work)
+    WorkManager.getInstance(context).enqueueUniqueWork(UPLOAD, ExistingWorkPolicy.REPLACE, work)
   }
 
   /**

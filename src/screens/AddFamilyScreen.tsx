@@ -11,7 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
-import { errorCode } from '../lib/family';
+import { errorCode, familyMessage } from '../lib/family';
 import {
   FamilyErrors,
   followState,
@@ -30,7 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AddFamily'>;
 type Step =
   | { kind: 'loading' }
   | { kind: 'signIn'; message?: string }
-  | { kind: 'code'; message?: string }
+  | { kind: 'code'; message?: string; scanning?: boolean }
   | { kind: 'waiting'; elderId: string }
   | { kind: 'form'; elderId: string };
 
@@ -46,10 +46,10 @@ function messageFor(e: unknown, t: Strings): string {
   switch (errorCode(e)) {
     case FamilyErrors.BadCode:
       return t.family.badCode;
-    case FamilyErrors.NotSetUp:
-      return t.family.notSetUp;
+    case FamilyErrors.NoScanner:
+      return t.family.noScanner;
     default:
-      return t.family.offline;
+      return familyMessage(e, t);
   }
 }
 
@@ -132,14 +132,23 @@ export default function AddFamilyScreen({ navigation }: Props) {
   };
 
   const scan = async () => {
+    // The first scan can wait a while for Google's scanner to download.
+    setStep({ kind: 'code', scanning: true });
     try {
       const code = await scanCode();
-      if (code && mounted.current) {
+      if (!mounted.current) {
+        return;
+      }
+      setStep({ kind: 'code' });
+      if (code) {
         setTyped(code);
         await ask(code);
       }
     } catch (e) {
       console.warn('Could not scan a code', e);
+      if (mounted.current) {
+        setStep({ kind: 'code', message: messageFor(e, t) });
+      }
     }
   };
 
@@ -201,14 +210,16 @@ export default function AddFamilyScreen({ navigation }: Props) {
       ) : null}
       {step.kind === 'code' ? (
         <>
-          {step.message ? (
-            <Text style={styles.message}>{step.message}</Text>
+          {step.message || step.scanning ? (
+            <Text style={styles.message}>
+              {step.scanning ? t.family.opening : step.message}
+            </Text>
           ) : null}
           <Pressable
             accessibilityRole="button"
-            disabled={busy}
+            disabled={busy || step.scanning}
             onPress={scan}
-            style={[styles.primary, busy && styles.busy]}
+            style={[styles.primary, (busy || step.scanning) && styles.busy]}
           >
             <Text style={styles.primaryText}>{t.family.scanCode}</Text>
           </Pressable>

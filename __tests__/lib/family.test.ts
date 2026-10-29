@@ -1,4 +1,5 @@
 import {
+  familyMessage,
   formatCode,
   heardText,
   shareMessage,
@@ -11,6 +12,22 @@ test('formatCode and shareMessage', () => {
   expect(formatCode('000042')).toBe('000 042');
   expect(shareMessage('482913', en)).toBe(
     'Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes.',
+  );
+});
+
+test('familyMessage calls only OFFLINE no internet', () => {
+  const failing = (code: string) => Object.assign(new Error(code), { code });
+  expect(familyMessage(failing('OFFLINE'), en)).toBe(
+    'No internet. Please try again.',
+  );
+  expect(familyMessage(failing('NOT_SET_UP'), en)).toBe(
+    "Family isn't set up in this build.",
+  );
+  expect(familyMessage(failing('PERMISSION'), en)).toBe(
+    'Something went wrong. Please try again later.',
+  );
+  expect(familyMessage(new Error('boom'), en)).toBe(
+    'Something went wrong. Please try again later.',
   );
 });
 

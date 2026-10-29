@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useI18n } from '../i18n';
+import { familyMessage } from '../lib/family';
 import {
   answerRequest,
   pendingRequests,
@@ -46,7 +47,7 @@ export function useFollowRequests(
         } catch (e) {
           console.warn('Could not answer the request', e);
           answered.current.delete(person.uid);
-          Alert.alert(t.family.offline);
+          Alert.alert(familyMessage(e, t));
         } finally {
           asking.current = false;
         }

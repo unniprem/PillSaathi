@@ -94,6 +94,19 @@ test('OFFLINE shows its message, and New code tries again', async () => {
   expect(await screen.findByText('482 913')).toBeTruthy();
 });
 
+test('a refusal is not called no internet, and New code tries again', async () => {
+  jest
+    .mocked(family.createLinkCode)
+    .mockRejectedValueOnce(failing(family.FamilyErrors.Permission));
+  await renderApp('ShareCode');
+  expect(
+    await screen.findByText('Something went wrong. Please try again later.'),
+  ).toBeTruthy();
+  expect(screen.queryByText('No internet. Please try again.')).toBeNull();
+  await fireEvent.press(screen.getByText('New code'));
+  expect(await screen.findByText('482 913')).toBeTruthy();
+});
+
 test('Allow on the code screen goes back to the Family page', async () => {
   jest.useFakeTimers();
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});

@@ -306,6 +306,9 @@ export const en = {
     shareMessage: (code: string) =>
       `Open PillSaathi, tap Add family, and type ${code}. It works for 15 minutes.`,
     scanCode: 'Scan code',
+    opening: 'Opening the scanner…',
+    noScanner:
+      "The scanner isn't ready yet. Try again in a minute, or type the 6 digits.",
     expired: 'This code has expired.',
     newCode: 'New code',
     allowTitle: (name: string) => `Let ${name} see your pills?`,
@@ -314,6 +317,7 @@ export const en = {
     no: 'No',
     allow: 'Allow',
     offline: 'No internet. Please try again.',
+    failed: 'Something went wrong. Please try again later.',
     notSetUp: "Family isn't set up in this build.",
     lookAfter: 'People I look after',
     addFamily: '+ Add family',

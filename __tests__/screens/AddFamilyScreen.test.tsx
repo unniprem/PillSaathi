@@ -66,6 +66,41 @@ test('Scan code fills the code and asks to follow', async () => {
   ).toBeTruthy();
 });
 
+test('Scan code says so while the scanner opens', async () => {
+  let open: (code: string | null) => void = () => {};
+  jest
+    .mocked(family.scanCode)
+    .mockReturnValue(new Promise(resolve => (open = resolve)));
+  await renderApp('AddFamily');
+  const pressed = fireEvent.press(await screen.findByText('Scan code'));
+  expect(await screen.findByText('Opening the scanner…')).toBeTruthy();
+  await act(async () => open(null));
+  await pressed;
+  expect(screen.queryByText('Opening the scanner…')).toBeNull();
+  expect(family.requestFollow).not.toHaveBeenCalled();
+});
+
+test('a scanner that is not ready, or a code that is not ours, says so', async () => {
+  jest
+    .mocked(family.scanCode)
+    .mockRejectedValueOnce(failing(family.FamilyErrors.NoScanner))
+    .mockRejectedValueOnce(failing(family.FamilyErrors.BadCode));
+  await renderApp('AddFamily');
+  await fireEvent.press(await screen.findByText('Scan code'));
+  expect(
+    await screen.findByText(
+      "The scanner isn't ready yet. Try again in a minute, or type the 6 digits.",
+    ),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByText('Scan code'));
+  expect(
+    await screen.findByText(
+      "That code didn't work. Check the 6 digits, or ask for a new code.",
+    ),
+  ).toBeTruthy();
+  expect(family.requestFollow).not.toHaveBeenCalled();
+});
+
 test('waits for Allow, then shows the form; Done saves the follow', async () => {
   jest.useFakeTimers();
   await renderApp('Family');
@@ -152,6 +187,16 @@ test('BAD_CODE and OFFLINE show their messages', async () => {
   await typeCode('482913');
   expect(
     await screen.findByText('No internet. Please try again.'),
+  ).toBeTruthy();
+});
+
+test('only OFFLINE is called no internet', async () => {
+  jest
+    .mocked(family.signedInRelative)
+    .mockRejectedValue(failing(family.FamilyErrors.Permission));
+  await renderApp('AddFamily');
+  expect(
+    await screen.findByText('Something went wrong. Please try again later.'),
   ).toBeTruthy();
 });
 

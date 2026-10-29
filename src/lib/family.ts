@@ -1,5 +1,6 @@
 import type { Strings } from '../i18n';
 import type { FamilyTally } from '../../specs/NativeFamily';
+import { FamilyErrors } from '../native/family';
 import { formatDay, toISODate } from './course';
 import { formatTime } from './time';
 
@@ -16,6 +17,18 @@ export function shareMessage(code: string, t: Strings): string {
 /** The error code a native family call rejected with, if any. */
 export function errorCode(e: unknown): string | undefined {
   return (e as { code?: string } | null)?.code;
+}
+
+/** What to tell the user when a family call fails: "No internet" only when it was the internet. */
+export function familyMessage(e: unknown, t: Strings): string {
+  switch (errorCode(e)) {
+    case FamilyErrors.Offline:
+      return t.family.offline;
+    case FamilyErrors.NotSetUp:
+      return t.family.notSetUp;
+    default:
+      return t.family.failed;
+  }
 }
 
 /**
