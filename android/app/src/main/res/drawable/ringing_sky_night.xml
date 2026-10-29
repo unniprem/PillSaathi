@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The night sky behind the ringing screen, top to bottom: the app's SKY_GRADIENT.night (src/ui/sky.ts). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:centerY="0.55"
+        android:startColor="#0E1A3C"
+        android:centerColor="#1F3368"
+        android:endColor="#3B5797" />
+</shape>

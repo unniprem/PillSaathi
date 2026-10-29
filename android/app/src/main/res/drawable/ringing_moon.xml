@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A crescent moon, 40 dp in a 64 dp glow: a round moon with a disc of night sky over it, which
+     hides its glow on that side too (as on Today's sky, SkyTop.tsx). The disc is the night
+     sky's colour near the top of the screen. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:endColor="#00FFF4C7"
+                android:gradientRadius="50%"
+                android:startColor="#8CFFF4C7"
+                android:type="radial" />
+        </shape>
+    </item>
+    <item android:bottom="12dp" android:left="12dp" android:right="12dp" android:top="12dp">
+        <shape android:shape="oval">
+            <solid android:color="#FFF4C7" />
+        </shape>
+    </item>
+    <item android:bottom="21dp" android:left="24dp" android:right="4dp" android:top="7dp">
+        <shape android:shape="oval">
+            <solid android:color="#101C40" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,104 +1,217 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The time and title are in dp, so the phone's text size can't grow them; pill names, amounts
-     and buttons are in sp and grow, and the list scrolls so Taken always stays on screen. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     and buttons are in sp and grow, and the list scrolls so I took it always stays on screen.
+     The sky (set by the hour in RingingActivity) fills the screen behind the system bars, and
+     everything else sits inside them. Fonts and icons are set in RingingActivity, which falls back
+     to the phone's font if they can't be read. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ringing_sky"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B0B0F"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@drawable/ringing_sky_night"
+    android:clipToPadding="false"
+    android:fitsSystemWindows="true">
 
-    <TextView
-        android:id="@+id/ringing_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="24dp"
-        android:textColor="#FFFFFF"
-        android:textSize="72dp" />
+    <!-- By day: the sun in the top corner, partly off the screen, its light under the status bar. -->
+    <View
+        android:id="@+id/ringing_sun"
+        android:layout_width="116dp"
+        android:layout_height="116dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-22dp"
+        android:layout_marginEnd="-40dp"
+        android:background="@drawable/ringing_sun"
+        android:visibility="gone" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:gravity="center"
-        android:text="@string/ringing_title"
-        android:textColor="#B0B0B8"
-        android:textSize="22dp" />
-
-    <!-- The due pills, one row each; long lists scroll while the buttons stay put. A tapped photo
-         shows full width over the list until tapped again. -->
+    <!-- By night: a few stars and the moon. -->
     <FrameLayout
+        android:id="@+id/ringing_night"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="24dp"
-        android:layout_weight="1">
+        android:layout_height="wrap_content">
 
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="16dp"
+            android:alpha="0.8"
+            android:background="@drawable/ringing_star" />
 
-            <LinearLayout
-                android:id="@+id/ringing_pills"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </ScrollView>
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="90dp"
+            android:layout_marginTop="46dp"
+            android:alpha="0.5"
+            android:background="@drawable/ringing_star" />
 
-        <ImageView
-            android:id="@+id/ringing_photo_large"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#0B0B0F"
-            android:scaleType="fitCenter"
-            android:visibility="gone" />
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="150dp"
+            android:layout_marginTop="12dp"
+            android:alpha="0.8"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="200dp"
+            android:layout_marginTop="96dp"
+            android:alpha="0.6"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="60dp"
+            android:layout_marginTop="106dp"
+            android:alpha="0.4"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="250dp"
+            android:layout_marginTop="126dp"
+            android:alpha="0.5"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="-4dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/ringing_moon" />
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/ringing_sound"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginVertical="16dp"
-        android:gravity="center"
-        android:textColor="#B0B0B8"
-        android:textSize="18sp" />
-
-    <Button
-        android:id="@+id/ringing_taken"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="88dp"
-        android:background="#2E7D32"
-        android:text="@string/action_taken"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="8dp">
 
-    <Button
-        android:id="@+id/ringing_snooze"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:minHeight="64dp"
-        android:background="@drawable/ringing_snooze_bg"
-        android:backgroundTint="@null"
-        android:text="@string/action_snooze"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF"
-        android:textSize="20sp" />
+        <TextView
+            android:id="@+id/ringing_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="56dp"
+            android:text="@string/ringing_title"
+            android:textColor="#D9FFFFFF"
+            android:textSize="17dp" />
 
-    <TextView
-        android:id="@+id/ringing_skip"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:background="?android:attr/selectableItemBackground"
-        android:padding="16dp"
-        android:text="@string/action_skip"
-        android:textColor="#B0B0B8"
-        android:textSize="18sp" />
-</LinearLayout>
+        <TextView
+            android:id="@+id/ringing_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.03"
+            android:textColor="#FFFFFF"
+            android:textSize="58dp"
+            tools:text="9:00 PM" />
+
+        <!-- The due pills, one card each, then the sound; long lists scroll while the buttons stay
+             put. A tapped photo shows full width over the list until tapped again. -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="14dp"
+            android:layout_weight="1">
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/ringing_pills"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                    <TextView
+                        android:id="@+id/ringing_sound"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="@drawable/ringing_chip"
+                        android:paddingStart="10dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="13dp"
+                        android:paddingBottom="6dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </ScrollView>
+
+            <ImageView
+                android:id="@+id/ringing_photo_large"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/ringing_card"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <Button
+            android:id="@+id/ringing_taken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/ringing_take_bg"
+            android:backgroundTint="@null"
+            android:elevation="10dp"
+            android:minHeight="72dp"
+            android:outlineAmbientShadowColor="#2E9E5B"
+            android:outlineSpotShadowColor="#2E9E5B"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:stateListAnimator="@null"
+            android:text="@string/action_taken"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="21sp"
+            tools:targetApi="p" />
+
+        <Button
+            android:id="@+id/ringing_snooze"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/ringing_snooze_bg"
+            android:backgroundTint="@null"
+            android:minHeight="58dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:stateListAnimator="@null"
+            android:text="@string/action_snooze"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/ringing_skip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="2dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:gravity="center"
+            android:padding="15dp"
+            android:text="@string/action_skip"
+            android:textColor="#CCFFFFFF"
+            android:textSize="14.5sp" />
+    </LinearLayout>
+</FrameLayout>

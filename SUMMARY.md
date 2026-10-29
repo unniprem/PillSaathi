@@ -1,8 +1,8 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: 7, 8, 12, 13, 15, 17 (running in parallel, one worktree and branch `ui/task-N` each)
-**Waves**: A = 7, 8, 12, 13, 15, 17 · B = 9, 10, 14 · C = 11 · D = 16 · then 18. Parallel agents don't edit this file; the orchestrator merges their branches and adds their notes here.
+**Next task**: 9, 10 (running in parallel, one worktree and branch `ui/task-N` each); then 11, 16, 18
+**Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 (14 ✓) · C = 11 · D = 16 · then 18. Parallel agents don't edit this file; the orchestrator merges their branches (cherry-pick) and adds their notes here.
 **Last updated**: 2026-10-29
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
@@ -95,8 +95,18 @@ Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside 
 - Strings: removed `settings.whenItRings/reliability/makeReliable`; added `readAloudNote`, `hear`, `alarmSetup`, `stepsLeft(n)`, `allSet`; `draft` is now the bare tag word. Language tiles are radios named by the language (draft as `accessibilityHint`); rows that open something have the title as label and the note as hint. In a row, the switch or Try it chip drops under the words when they need the room (large text, Malayalam).
 - Phone check (Task 18) at font scale 2.0: the language tiles wrap; Try it moves under "Hear how it sounds" in Malayalam; amber "steps left" reads clearly.
 
+### Task 17: The ringing screen
+**Status**: ✓ Done in code (parallel, branch `ui/task-17`); Step 4 (ring it on the emulator) deferred, see Blockers
+**Notes**:
+- The sky comes from the hour the ring started (`SkyTime`; a ring has no due hour, and adding one would touch the engine). Words are navy on dawn/day/evening and white at night, so the snooze button and sound chip have light versions (`ringing_snooze_bg_light`, `ringing_chip_light`). The screen draws behind the system bars (keeps Skip above a 3-button bar on Android 15). Every view id and click handler kept; `ringing_title` got an id.
+- Deviations: "I took it" uses the app green `#2E9E5B` (white 21 sp on `#34B36A` is 2.7:1, under 3:1); title and time stay in dp (58 sp overflows at font scale 2.0); the capsule is tilted two-tone as in `PillPicture`; snooze gets the `snooze` icon. Fonts load in code inside try/catch (falls back to the phone's bold font, or words without icons). New `RingingLook.kt` (AM/PM split, soft box colour) with `RingingLookTest`. Gradle: 298 unit tests, BUILD SUCCESSFUL.
+- Strings also relabel the ringing notification's buttons ("I took it", "Remind me in 10 min"); ml/hi drafts "ഞാൻ കഴിച്ചു" / "मैंने ले ली" etc. (Task 18: align with the JS drafts).
+
 ---
 
 ## Blockers / Deferred Items
 
 <!-- Anything that couldn't be completed or was deferred -->
+
+### Task 17: the ringing screen has not been seen on a device
+The emulator (`Medium_Phone_API_34`, emulator-5556) exited at about 19:45 during the build, before a ring could be triggered. Do it with Task 18's phone checks: install with `install -r`, `DEBUG_ADD_PILL --ei minutes_from_now 1` (tablet, capsule, syrup, drops on one ring), test I took it / Remind me in 10 min / Skip, check with `DEBUG_LIST`. Test pills on Amma's emulator upload to Firebase and show on the Redmi. Checks: over the lock screen; night sky 19:00–4:59; moon cut-out and sun rings look right; icons centred in the buttons; the palest pill colour shows; font scale 2.0 keeps the buttons on screen; TalkBack reads "I took it".

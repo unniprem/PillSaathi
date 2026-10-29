@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The day sky behind the ringing screen, top to bottom: the app's SKY_GRADIENT.day (src/ui/sky.ts). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:centerY="0.55"
+        android:startColor="#6DBBEA"
+        android:centerColor="#A9D9F2"
+        android:endColor="#FBE2C4" />
+</shape>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- I took it: the app's green (white words at 21 sp bold reach 3:1 on it; the mockup's brighter
+     #34B36A does not). -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#33FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#2E9E5B" />
+            <corners android:radius="26dp" />
+        </shape>
+    </item>
+</ripple>
