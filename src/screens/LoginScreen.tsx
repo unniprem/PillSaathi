@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StatusBar,
@@ -19,7 +20,6 @@ import { signInWithGoogle } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, font, shadow, spacing } from '../theme';
 import Button from '../ui/Button';
-import PillPicture from '../ui/PillPicture';
 import { SKY_GRADIENT, skyImage } from '../ui/sky';
 import { Sun } from '../ui/SkyTop';
 
@@ -108,13 +108,12 @@ export default function LoginScreen({ navigation, route }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.sky, { paddingTop: insets.top + spacing.lg }]}>
           <Sun top={insets.top} low={false} />
-          <View style={styles.logo}>
-            <PillPicture
-              pill={{ name: APP_NAME, form: 'capsule', photoUri: null }}
-              size={56}
-              color={colors.blue}
-            />
-          </View>
+          <Image
+            testID="app-logo"
+            source={require('../assets/app-icon.png')}
+            accessibilityIgnoresInvertColors
+            style={styles.logo}
+          />
           <Text
             testID="sky-title"
             accessibilityRole="header"
@@ -194,10 +193,7 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 24,
-    backgroundColor: colors.card,
     alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: spacing.lg,
     marginBottom: 12,
     boxShadow: shadow.float,

@@ -4,6 +4,31 @@ Session log, newest first.
 
 ---
 
+## 2026-10-30 13:05 IST — Session: Real-world APK and the icon everywhere
+
+### Summary
+
+The user asked for an APK "to take it real world test". With #15 and #16 merged, the release APKs were built from origin/main (3b727e8), copied to `~/Downloads/pillsaathi/` as `pillsaathi.apk` (arm64) and `pillsaathi-32bit.apk`, and installed in place over the debug build on the Redmi. The user then asked to "clear all data": `pm clear` on the Redmi and the emulator (follows are kept on the phone, so nothing comes back from Firestore; the old test elder's documents remain there, unreferenced). Then "icon login page didnt chnage. please chnage icon in evenry place": the login page drew a blue capsule and every notification used Android's alarm clock or "i", so both now use the pill-in-a-heart, on `feature/icon-everywhere`. 550 JS and 306 Kotlin tests pass; on the emulator the login logo shows and a real alarm rang with the new icon in the status bar and the notification.
+
+### Changes Made
+
+| Commit    | Type | Description                                                         |
+| --------- | ---- | ------------------------------------------------------------------- |
+| `9fd60da` | feat | The pill-in-a-heart on the login page and in every notification     |
+
+### Key Decisions
+
+- **The login logo is the launcher's 72dp of the artwork**, with the login card's corners (24 of 76) baked in, so it matches what the home screen shows.
+- **The notification icon is a white silhouette**, since Android draws every small icon in one colour. The pill's white half can't be told from the sky by colour, so the capsule is drawn from its blue half (measured axis, length and radius); the heart is cut back 40 px around it and a line marks where the halves meet, so it still reads as a pill in a heart at 36px. Without the gap and line it read as a blob.
+- **The ringing notification uses it too**: a missing small icon would stop the ring's foreground service, so it was checked with a real alarm on the emulator, not only by the build.
+
+### Issues Encountered
+
+- `strings` is blocked on this Mac until the Xcode licence is accepted; `grep -a` and `aapt2 dump` do instead.
+- The emulator has no Google account, so its login goes through "Continue offline".
+
+---
+
 ## 2026-10-30 11:15 IST — Session: Task 18 on the Redmi
 
 ### Summary
