@@ -347,7 +347,8 @@ type BoxesProps = {
  * The code typed as six large boxes, in two groups of three as her phone shows it. One hidden
  * field lies over the boxes, so a tap anywhere on them brings up the number pad. It has no
  * maxLength: Android would cut a pasted "482 913" to "482 91" before the space is dropped, so the
- * digits are kept and cut to six here instead.
+ * digits are kept and cut to six here instead. Its cursor stays on (unseen at that opacity):
+ * without one, Android offers no Paste on a long press.
  */
 function CodeBoxes({ value, onChange, onSubmit, label }: BoxesProps) {
   const [focused, setFocused] = useState(false);
@@ -380,7 +381,6 @@ function CodeBoxes({ value, onChange, onSubmit, label }: BoxesProps) {
         onSubmitEditing={onSubmit}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        caretHidden
         style={styles.hidden}
       />
     </View>

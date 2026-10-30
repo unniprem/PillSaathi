@@ -177,6 +177,19 @@ describe('where his next change to a pill starts', () => {
     expect(pillAhead(telma, [counted]).remaining).toBe(40);
   });
 
+  // Seen on the Redmi: 30 capsules left, then 10 days; the count sheet opened empty.
+  test('pillAhead keeps a count set by an older change than the newest', () => {
+    const counted = ahead({
+      id: 'c1',
+      pill: { ...ahead().pill!, remaining: 30, remainingChanged: true },
+    });
+    const newer = ahead({ id: 'c2', pill: { ...ahead().pill!, days: 10 } });
+    expect(pillAhead(telma, [newer, counted])).toMatchObject({
+      days: 10,
+      remaining: 30,
+    });
+  });
+
   test('afterSend starts the next change from the one sent, with her photo and count', () => {
     const base = draftFromPill(telma);
     const sent = {

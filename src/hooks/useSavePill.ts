@@ -97,9 +97,15 @@ export function useSavePill(
       setSaving(true);
       const input = toPillInput(d);
       if (elderId) {
-        // Her phone takes it from here; the setup and alarm prompts are about this phone.
+        // Her phone takes it from here; the setup and alarm prompts are about this phone. Her
+        // pill's photo as her copy has it, even none, is "keep", so a new one still on its way
+        // there stays.
         const photoChoice =
-          d.photo === null ? 'none' : d.photo === d.savedPhoto ? 'keep' : 'new';
+          d.id !== null && d.photo === d.savedPhoto
+            ? 'keep'
+            : d.photo === null
+            ? 'none'
+            : 'new';
         try {
           await sendPill(elderId, {
             ...input,

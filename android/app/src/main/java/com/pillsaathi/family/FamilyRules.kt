@@ -255,6 +255,13 @@ object FamilyRules {
     }
 
   /**
+   * The follow as saved [now], with the copy of hers from [fresh] (read from an older snapshot):
+   * his name, number, delay and [Follow.since] stay as he may have just changed them.
+   */
+  fun withHers(now: Follow, fresh: Follow): Follow =
+    fresh.copy(name = now.name, phone = now.phone, delayMinutes = now.delayMinutes, since = now.since)
+
+  /**
    * The instant whose wall clock in [localZone] reads what [millis] reads in [elderZone], so a
    * screen that formats times in the phone's zone shows her times.
    */

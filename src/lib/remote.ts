@@ -70,23 +70,26 @@ export function waitingByPill(changes: ChangeView[]): Map<string, ChangeView> {
  * newest change to it that the copy doesn't show yet sets ([changes] newest first). Each change
  * sends the whole pill and her phone applies them in order, so starting from the copy would undo
  * that change. Her photo and start date stay as read (the next change's photo is then "keep",
- * which keeps whatever photo her phone has by then), and her count unless that change set it.
+ * which keeps whatever photo her phone has by then), and her count unless one of those changes
+ * set it (a change that leaves the count alone doesn't send one).
  */
 export function pillAhead(pill: Pill, changes: ChangeView[]): Pill {
-  const sent = changes.find(
-    c => c.ahead && c.kind === 'pill' && c.pillId === pill.id && c.pill,
-  )?.pill;
-  if (!sent) {
+  const sent = changes
+    .filter(c => c.ahead && c.kind === 'pill' && c.pillId === pill.id)
+    .flatMap(c => (c.pill ? [c.pill] : []));
+  if (sent.length === 0) {
     return pill;
   }
+  const [newest] = sent;
+  const counted = sent.find(p => p.remainingChanged);
   return {
     ...pill,
-    name: sent.name,
-    form: sent.form as PillForm,
-    amount: sent.amount,
-    times: sent.times,
-    days: sent.days,
-    remaining: sent.remainingChanged ? sent.remaining : pill.remaining,
+    name: newest.name,
+    form: newest.form as PillForm,
+    amount: newest.amount,
+    times: newest.times,
+    days: newest.days,
+    remaining: counted ? counted.remaining : pill.remaining,
   };
 }
 

@@ -1206,5 +1206,29 @@ describe('for her, on a relative’s phone', () => {
         );
       },
     );
+
+    // Seen on the Redmi: her pill had no photo, so the next Save sent "none" and removed it.
+    test('a new photo for a pill with none is not removed by the next Save', async () => {
+      jest.mocked(family.getElderSetup).mockResolvedValue({
+        ...setup,
+        pills: [{ ...herTelma, photo: null, photoUri: null }],
+      });
+      jest
+        .mocked(alarms.pickPhoto)
+        .mockResolvedValue({ name: 'b.jpg', uri: 'file:///mine/b.jpg' });
+      await openHers();
+      await fireEvent.press(screen.getByLabelText('Change the photo'));
+      await fireEvent.press(sheet().getByText('Camera'));
+      expect(family.sendPill).toHaveBeenLastCalledWith(
+        'E',
+        expect.objectContaining({ photo: 'b.jpg', photoChoice: 'new' }),
+      );
+      await screen.findByText("Waiting for Amma's phone: Change Telma 40");
+      await thirtyDays();
+      expect(family.sendPill).toHaveBeenLastCalledWith(
+        'E',
+        expect.objectContaining({ days: 30, photoChoice: 'keep' }),
+      );
+    });
   });
 });

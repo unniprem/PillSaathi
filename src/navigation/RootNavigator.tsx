@@ -10,6 +10,7 @@ import type {
 } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { I18nProvider } from '../i18n';
 import LoginScreen from '../screens/LoginScreen';
 import WhoScreen from '../screens/WhoScreen';
@@ -27,6 +28,7 @@ import AddFamilyScreen from '../screens/AddFamilyScreen';
 import ElderScreen from '../screens/ElderScreen';
 import FollowEditScreen from '../screens/FollowEditScreen';
 import ElderPillsScreen from '../screens/ElderPillsScreen';
+import { colors } from '../theme';
 import TabBar from '../ui/TabBar';
 
 /** The main pages, one per bottom tab. History is this phone's own. */
@@ -118,15 +120,27 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
   // Only the first screen takes params from outside (tests open any screen first).
   const paramsFor = (name: keyof RootStackParamList) =>
     name === initialRouteName ? (initialParams as never) : undefined;
+  // The app draws edge to edge, so a phone's three-button bar would cover a page's foot: every
+  // page stops above it, but those that already make that room themselves (the tab bar, the
+  // login's sheet, Add pill's and Setup's buttons).
+  const insets = useSafeAreaInsets();
+  const ownFoot = { contentStyle: { backgroundColor: colors.page } };
   return (
     <Stack.Navigator
       initialRouteName={initialRouteName}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: colors.page,
+          paddingBottom: insets.bottom,
+        },
+      }}
     >
       <Stack.Screen
         name="Login"
         component={LoginScreen}
         initialParams={paramsFor('Login')}
+        options={ownFoot}
       />
       <Stack.Screen
         name="Who"
@@ -137,11 +151,13 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
         name="Main"
         component={Main}
         initialParams={paramsFor('Main')}
+        options={ownFoot}
       />
       <Stack.Screen
         name="AddPill"
         component={AddPillScreen}
         initialParams={paramsFor('AddPill')}
+        options={ownFoot}
       />
       <Stack.Screen
         name="Pill"
@@ -157,6 +173,7 @@ function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
         name="Setup"
         component={SetupScreen}
         initialParams={paramsFor('Setup')}
+        options={ownFoot}
       />
       <Stack.Screen
         name="ElderHistory"

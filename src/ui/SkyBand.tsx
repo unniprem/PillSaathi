@@ -81,9 +81,12 @@ export default function SkyBand({
   ) : null;
   const heading = title ? (
     <View style={styles.titles}>
+      {/* Grows less than the words under it: at twice the size a name such as "Ammoomma" beside
+          her picture and Call broke inside the word, and it stays the biggest text even so. */}
       <Text
         testID="sky-title"
         accessibilityRole="header"
+        maxFontSizeMultiplier={1.5}
         style={[styles.title, { color: ink }]}
       >
         {title}

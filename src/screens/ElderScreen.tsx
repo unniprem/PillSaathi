@@ -1,5 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { daysText } from '../components/today/RefillCard';
@@ -85,6 +92,9 @@ function chipFor(
 export default function ElderScreen({ navigation, route }: Props) {
   const { elderId } = route.params;
   const { lang, t } = useI18n();
+  // At a large text size the names take a line of their own under the time and its chip:
+  // beside them they would be squeezed to a letter a line.
+  const stacked = useWindowDimensions().fontScale >= 1.3;
   const [card, setCard] = useState<FamilyCard | null>(null);
   const [today, setToday] = useState<ElderToday | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -205,6 +215,18 @@ export default function ElderScreen({ navigation, route }: Props) {
                       : p.name,
                   )
                   .join(', ');
+                const pills = (
+                  <Text style={[styles.names, stacked && styles.namesUnder]}>
+                    {names}
+                  </Text>
+                );
+                const badge = chip ? (
+                  <View style={[styles.chip, { backgroundColor: chip.fill }]}>
+                    <Text style={[styles.chipText, { color: chip.ink }]}>
+                      {chip.text}
+                    </Text>
+                  </View>
+                ) : null;
                 return (
                   <View
                     key={`${item.hour}:${item.minute}`}
@@ -213,16 +235,8 @@ export default function ElderScreen({ navigation, route }: Props) {
                     <Text style={styles.time}>
                       {formatTime(item.hour, item.minute, is24h)}
                     </Text>
-                    <Text style={styles.names}>{names}</Text>
-                    {chip ? (
-                      <View
-                        style={[styles.chip, { backgroundColor: chip.fill }]}
-                      >
-                        <Text style={[styles.chipText, { color: chip.ink }]}>
-                          {chip.text}
-                        </Text>
-                      </View>
-                    ) : null}
+                    {stacked ? badge : pills}
+                    {stacked ? pills : badge}
                   </View>
                 );
               })}
@@ -253,12 +267,18 @@ type TileProps = { icon: IconName; label: string; onPress: () => void };
 
 /** A way off her page, as an icon on a tint and its word. */
 function Tile({ icon, label, onPress }: TileProps) {
+  // At a large text size each tile takes the whole width rather than break its word.
+  const { fontScale } = useWindowDimensions();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.tile,
+        { flexBasis: 140 * fontScale },
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.tileIcon}>
         <Icon name={icon} size={22} color={colors.blue} />
@@ -293,11 +313,11 @@ const styles = StyleSheet.create({
   },
   lineDetail: { ...font(700), fontSize: 14, color: colors.amberText },
   day: { paddingVertical: spacing.xs, paddingHorizontal: 14 },
-  // At large text the chip drops under the time and names rather than squeezing them.
   dose: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+    justifyContent: 'space-between',
     columnGap: 10,
     rowGap: spacing.xs,
     minHeight: 48,
@@ -307,13 +327,12 @@ const styles = StyleSheet.create({
   time: { ...font(900), minWidth: 72, fontSize: 15.5, color: colors.navy },
   names: {
     ...font(700),
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 110,
+    flex: 1,
     fontSize: 14.5,
     lineHeight: 20,
     color: colors.muted,
   },
+  namesUnder: { flexBasis: '100%' },
   chip: {
     paddingHorizontal: 10,
     paddingVertical: spacing.xs,
@@ -323,7 +342,6 @@ const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: {
     flexGrow: 1,
-    flexBasis: 140,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
