@@ -4,6 +4,35 @@ Session log, newest first.
 
 ---
 
+## 2026-10-30 11:15 IST — Session: Task 18 on the Redmi
+
+### Summary
+
+The user unlocked the Redmi ("unlocked redmi phone lets test") and turned on MIUI's "USB debugging (Security settings)" so adb could tap. The Redmi (Ravi) was updated in place, then installed fresh and walked through C1–C11 against `10-journeys.html`, with the emulator as Amma; the Fix B checks, the code paste, the keyboard, font scale 2.0, and the pending Redmi items from the remote setup were run too. Six bugs were found and fixed (one from PR #10, already on main), and origin/main's README change (#12) was merged in.
+
+### Changes Made
+
+| Commit    | Type  | Description                                                                                         |
+| --------- | ----- | --------------------------------------------------------------------------------------------------- |
+| `c3feeda` | fix   | His phone keeps her editor right and setup; photo and count survive; 3-button bar; 2.0; code paste |
+| `3f14549` | merge | origin/main (#12: rules deployed)                                                                   |
+
+### Key Decisions
+
+- **Her copy on his phone is merged with `FamilyRules.withHers`**: everything of hers from the read, only his name, number, delay and link time kept, so a field added to her copy can't be dropped again (`editor`, sounds and health were, since PR #10).
+- **A relative's Save sends photo "keep" whenever the photo is as his copy has it, even none**: "none" now only when he removed one. A new pill still sends "none".
+- **The stack pads every page above the system bar** (`contentStyle`), except Login, Main, Add pill and Setup, which already do; one place instead of eleven screens.
+- **Her page's dose row at a large text size is laid out explicitly** (names under the time and chip at `fontScale >= 1.3`); flex-wrap with a basis on the names' Text, or on a View round it, still squeezed them to a letter a line on the Redmi.
+- **SkyBand titles grow at most 1.5x**, as the tab bar's words do.
+
+### Issues Encountered
+
+- MIUI refuses adb taps and `settings put system` until "USB debugging (Security settings)" is on; turning it on restarts adbd, which drops wireless debugging until it is switched on again (the pairing holds). Rotation can be locked with `adb shell cmd window user-rotation lock 0` (`free` to undo).
+- Google sign-in failed once on the fresh install with Play services error 20 and worked on the next tap.
+- `adb shell input keyevent 279` (Paste) fills the code boxes even without the long-press menu, so it doesn't prove a person can paste.
+
+---
+
 ## 2026-10-29 22:15 IST — Session: Sky UI redesign, Tasks 1–17
 
 ### Summary

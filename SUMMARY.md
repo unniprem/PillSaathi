@@ -1,9 +1,9 @@
 # Implementation Progress
 
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
-**Next task**: Task 18 (phone checks: fresh install on both phones, as the user chose). Review fixes A–D are done.
+**Next task**: Task 18's PR (phone checks done on both phones; the user's questions below first). Review fixes A–D are done.
 **Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 ✓ · C = 11 + 16 ✓ · then 18. Parallel tasks were merged by cherry-pick; their notes are below.
-**Last updated**: 2026-10-30 06:55 IST (Task 18: emulator side done; waiting for the Redmi to be unlocked)
+**Last updated**: 2026-10-30 11:15 IST (Task 18: Redmi checks done, 6 fixes in `c3feeda`, origin/main merged)
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
 Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside it (`10-journeys.html` wins).
@@ -27,7 +27,10 @@ Steps 1–2 ✓ (old files gone, no SVG/emoji; jest 543, tsc, `eslint .`, Kotlin
 - **Ringing (Task 17 blocker) ✓:** over the lock screen, four forms on one ring, palest tablet visible; landscape (pills left, buttons right) and font scale 2.0 upright/landscape keep all three buttons whole; Malayalam at 2.0 ✓; heads-up "I took it" / "In 10 min" fit in English at 1.0 (cut in Malayalam at 2.0, Android's own sizing); I took it, Remind me (rang again 10 min after the tap), Skip all recorded; Today switches to "Ringing now" on the next minute tick (up to 60 s late).
 - **Fixed (acb5e68):** Google login refusals said "No internet" (now GOOGLE_FAILED, "Couldn't log in with Google on this phone."); wrapped pill-name links had a line-height gap; Add pill kinds were 3 + 1 (now 2×2).
 - **For the user (not changed):** (1) the login's Google button is solid blue with no G; the mockup has a white outlined button with a coloured G; (2) a phone that continued offline sees the login page at every open, and after a font-size or language change (by the spec, but Amma taps Continue offline each time); (3) the Malayalam Settings tab word "ക്രമീകരണങ്ങൾ" shrinks small (translator could pick a shorter word); (4) the warning card's dark amber top edge.
-- **Left (needs the Redmi unlocked):** in-place update on the Redmi, its fresh install, C1–C11, E13 Allow, re-link, Fix B's two quick Saves and photo-then-edit, the code-box paste, AddFamily/FollowEdit above the keyboard, her page at 2.0, pill links via TalkBack. Then README matrix, JOURNAL, PR (merge origin/main's #12 README change first).
+- **Redmi ✓ (11:15, `c3feeda`):** in place, fresh install C1–C11 with E13, C8 at exactly 30 min, re-link after clearing its data, Fix B (two quick Saves; photo then edit), paste, keyboard, 2.0, Delete and Cancel from the Redmi, editing switched off. README matrix ("Sky redesign") and JOURNAL updated; origin/main (#12) merged.
+- **Fixed in `c3feeda`:** `FamilyRefresh.save` dropped `editor`, sounds and health (PR #10's bug: "Her pills" refused him after Allow), now `FamilyRules.withHers`; a Save after a new photo sent "none" (`useSavePill`); `pillAhead` lost an older change's count; pages under the 3-button bar (stack `contentStyle`); her page at 2.0 (dose names, tiles, title cap 1.5x); no Paste on long press (`caretHidden`).
+- **Not run:** TalkBack (one read per card, pill links, MissedCard); Today across a dose time and midnight; force-stop with a dose overdue then reopen at login; scanning; recording a voice; a remote change ringing.
+- **For the user (new):** (5) the app rotates (no portrait lock), and in landscape the 3-button bar sits on the left over the page; (6) a relative's phone with no pills of its own still shows "Alarms may not ring" (as before the redesign; C7 has none); (7) C8 is one line ("Amma hasn't taken Iron (1:30 pm).") where the mockup has a title and "Tap to see her day"; (8) Google's first sign-in on a fresh Redmi failed once with Play services error 20 and showed "Couldn't log in with Google on this phone." (a retry worked). Then the PR (check `gh pr list` first).
 
 ## Next: Task 18 phone checks (user chose fresh install on both phones)
 
