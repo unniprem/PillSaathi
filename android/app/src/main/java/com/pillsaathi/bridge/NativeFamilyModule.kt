@@ -15,6 +15,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.pillsaathi.alarm.AlarmStore
 import com.pillsaathi.alarm.DoseRules
 import com.pillsaathi.alarm.History
+import com.pillsaathi.alarm.PillDraft
 import com.pillsaathi.alarm.StorageException
 import com.pillsaathi.family.CodeImage
 import com.pillsaathi.family.CheckIn
@@ -600,11 +601,14 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
       putNull("hour")
       putNull("minute")
       putNull("soundName")
+      putNull("pill")
+      putBoolean("ahead", RemoteRules.ahead(c, follow.heardAt))
       when (val body = c.body) {
         is ChangeBody.SavePill -> {
           putString("kind", "pill")
           putString("pillId", body.draft.id)
           putString("pillName", body.draft.name)
+          putMap("pill", changePill(body.draft))
         }
         is ChangeBody.DeletePill -> {
           putString("kind", "deletePill")
@@ -623,6 +627,30 @@ class NativeFamilyModule(reactContext: ReactApplicationContext) : NativeFamilySp
         }
         is ChangeBody.Invalid -> putString("kind", "invalid")
       }
+    }
+
+  /** What pill change [d] sets, for his next change to that pill to start from. */
+  private fun changePill(d: PillDraft): WritableMap =
+    Arguments.createMap().apply {
+      putString("name", d.name)
+      putString("form", d.form.json)
+      putDouble("amount", d.amount)
+      putArray(
+        "times",
+        Arguments.createArray().apply {
+          d.times.forEach {
+            pushMap(
+              Arguments.createMap().apply {
+                putInt("hour", it.hour)
+                putInt("minute", it.minute)
+              },
+            )
+          }
+        },
+      )
+      d.days?.let { putInt("days", it) } ?: putNull("days")
+      d.remaining?.let { putDouble("remaining", it) } ?: putNull("remaining")
+      putBoolean("remainingChanged", d.remainingChanged)
     }
 
   override fun invalidate() {

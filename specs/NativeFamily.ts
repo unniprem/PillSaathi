@@ -165,6 +165,17 @@ export type RemotePillInput = {
   photoChoice: string; // keep | none | new
 };
 
+/** What a pill change sets, as sent: the whole pill but its photo and start date. */
+export type ChangePill = {
+  name: string;
+  form: string;
+  amount: number;
+  times: ElderPillTime[]; // on her clock
+  days: number | null;
+  remaining: number | null;
+  remainingChanged: boolean; // false: her phone keeps its own count
+};
+
 /** A change sent to her phone, and where it stands. Times are shifted to her wall clock. */
 export type ChangeView = {
   id: string;
@@ -180,6 +191,8 @@ export type ChangeView = {
   hour: number | null;
   minute: number | null;
   soundName: string | null; // null = default tone
+  pill?: ChangePill | null; // what a pill change sets; null for other kinds
+  ahead?: boolean; // this phone's copy of her pills doesn't show it yet: waiting, or done after the upload it was read from
 };
 
 export interface Spec extends TurboModule {

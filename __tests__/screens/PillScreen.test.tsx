@@ -566,6 +566,18 @@ describe('photos', () => {
     );
   });
 
+  // A photo taken before the pill is there would have no pill to save with.
+  test('the camera waits for the pill to load', async () => {
+    let show: (pills: Pill[]) => void = () => {};
+    jest
+      .mocked(alarms.listPills)
+      .mockReturnValue(new Promise(resolve => (show = resolve)));
+    await renderApp('Pill', { pillId: 'p1' });
+    expect(screen.queryByLabelText('Change the photo')).toBeNull();
+    await act(async () => show(stored));
+    expect(await screen.findByLabelText('Change the photo')).toBeTruthy();
+  });
+
   test('says when a photo could not be added', async () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     jest
@@ -1036,5 +1048,163 @@ describe('for her, on a relative’s phone', () => {
     );
     expect(family.sendSound).toHaveBeenCalledWith('E', 21, 0, 'default', null);
     await waitFor(() => expect(headerTitles()).toEqual(["Amma's pill"]));
+  });
+
+  // Each Save sends the whole pill and her phone applies them in order, so a Save that started
+  // from her copy again would undo the change before it.
+  describe('while a change waits', () => {
+    // Her changes as the server has them, newest first: each send waits there.
+    let changes: ChangeView[];
+    const twoTimes = [
+      { hour: 8, minute: 0 },
+      { hour: 21, minute: 0 },
+    ];
+
+    beforeEach(() => {
+      changes = [];
+      jest.mocked(family.listChanges).mockImplementation(async () => changes);
+      jest.mocked(family.sendPill).mockImplementation(async (_, input) => {
+        const id = `c${changes.length + 1}`;
+        const { name, form, amount, times, days } = input;
+        const { remaining, remainingChanged } = input;
+        changes = [
+          change({
+            id,
+            ahead: true,
+            pill: {
+              ...{ name, form, amount, times, days },
+              ...{ remaining, remainingChanged },
+            },
+          }),
+          ...changes,
+        ];
+        return id;
+      });
+    });
+
+    /** Adds 8:00 to her pill, and waits for the sheet to close. */
+    async function addEight() {
+      await fireEvent.press(screen.getByText('Rings at'));
+      await fireEvent.press(sheet().getByText('Another time'));
+      await saveSheet();
+      await waitFor(() => expect(screen.queryByTestId('sheet')).toBeNull());
+    }
+
+    async function thirtyDays() {
+      await fireEvent.press(screen.getByText('For how long'));
+      await fireEvent.press(sheet().getByText('30 days'));
+      await saveSheet();
+    }
+
+    test('two Saves in a row keep both edits', async () => {
+      await openHers();
+      await addEight();
+      expect(family.sendPill).toHaveBeenLastCalledWith(
+        'E',
+        expect.objectContaining({ times: twoTimes, days: 12 }),
+      );
+      await screen.findByText("Waiting for Amma's phone: Change Telma 40");
+      // Her phone's values stay until it takes the change.
+      expect(screen.getByText('9:00 PM')).toBeTruthy();
+      await thirtyDays();
+      expect(family.sendPill).toHaveBeenCalledTimes(2);
+      expect(family.sendPill).toHaveBeenLastCalledWith('E', {
+        id: 'p1',
+        name: 'Telma 40',
+        form: 'tablet',
+        amount: 0.5,
+        times: twoTimes,
+        startsTomorrow: false,
+        days: 30,
+        photo: null,
+        remaining: null,
+        remainingChanged: false,
+        photoChoice: 'keep',
+      });
+    });
+
+    test.each([
+      ['is still on its way', () => new Promise<ChangeView[]>(() => {})],
+      ['failed', () => Promise.reject(new Error('OFFLINE'))],
+    ])(
+      'keeps both edits before her changes are read again (the read %s)',
+      async (_, read) => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        await openHers();
+        jest.mocked(family.listChanges).mockImplementation(read);
+        await addEight();
+        await thirtyDays();
+        expect(family.sendPill).toHaveBeenLastCalledWith(
+          'E',
+          expect.objectContaining({ times: twoTimes, days: 30 }),
+        );
+      },
+    );
+
+    test('a page opened while a change waits starts each sheet from it', async () => {
+      changes = [
+        change({
+          ahead: true,
+          pill: {
+            name: 'Telma 40',
+            form: 'tablet',
+            amount: 0.5,
+            times: twoTimes,
+            days: 30,
+            remaining: null,
+            remainingChanged: false,
+          },
+        }),
+      ];
+      await openHers();
+      expect(screen.getByText(/^12 days/)).toBeTruthy();
+      await fireEvent.press(screen.getByText('Rings at'));
+      expect(sheet().getByText('8:00 AM')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('sheet-backdrop'));
+      await fireEvent.press(screen.getByText('Telma 40'));
+      await fireEvent.changeText(
+        sheet().getByDisplayValue('Telma 40'),
+        'Telma 80',
+      );
+      await saveSheet();
+      expect(family.sendPill).toHaveBeenCalledWith(
+        'E',
+        expect.objectContaining({
+          name: 'Telma 80',
+          times: twoTimes,
+          days: 30,
+        }),
+      );
+    });
+
+    // "keep" keeps the photo her phone has by then, so a waiting new photo or removal stands.
+    test.each([
+      ['Camera', 'new'],
+      ['Remove', 'none'],
+    ])(
+      'a photo change still waiting (%s) is not undone by the next Save',
+      async (button, choice) => {
+        jest
+          .mocked(alarms.pickPhoto)
+          .mockResolvedValue({ name: 'b.jpg', uri: 'file:///mine/b.jpg' });
+        await openHers();
+        await fireEvent.press(screen.getByLabelText('Change the photo'));
+        await fireEvent.press(sheet().getByText(button));
+        expect(family.sendPill).toHaveBeenLastCalledWith(
+          'E',
+          expect.objectContaining({ photoChoice: choice }),
+        );
+        await screen.findByText("Waiting for Amma's phone: Change Telma 40");
+        await thirtyDays();
+        expect(family.sendPill).toHaveBeenLastCalledWith(
+          'E',
+          expect.objectContaining({
+            days: 30,
+            photo: null,
+            photoChoice: 'keep',
+          }),
+        );
+      },
+    );
   });
 });

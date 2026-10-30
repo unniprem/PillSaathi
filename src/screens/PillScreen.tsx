@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Alert,
@@ -38,7 +32,12 @@ import {
   sameTime,
 } from '../lib/pillDraft';
 import type { PillDraft } from '../lib/pillDraft';
-import { changeTitle, waitingByPill } from '../lib/remote';
+import {
+  afterSend,
+  changeTitle,
+  pillAhead,
+  waitingByPill,
+} from '../lib/remote';
 import { formatTime } from '../lib/time';
 import {
   deletePill,
@@ -80,10 +79,19 @@ type Loaded = {
   name: string;
   /** On a relative's phone: a change to this pill still waiting for her phone. */
   waiting: ChangeView | null;
+  /**
+   * Where each sheet starts. On a relative's phone: [pill] with what he (or another relative)
+   * sent that the copy doesn't show yet, so a Save doesn't undo the change before it.
+   */
+  draft: PillDraft;
 };
 
+/** A load: on a relative's phone without [waiting] and [draft] when her changes couldn't be read. */
+type Read = Omit<Loaded, 'waiting' | 'draft'> &
+  Partial<Pick<Loaded, 'waiting' | 'draft'>>;
+
 /** Her pill on her phone, with each time's card and sound, or null when it is gone. */
-async function loadMine(pillId: string): Promise<Loaded | null> {
+async function loadMine(pillId: string): Promise<Read | null> {
   const [pills, today, saved] = await Promise.all([
     listPills(),
     // Without these the pill still shows, with the default tone and no refill.
@@ -117,20 +125,18 @@ async function loadMine(pillId: string): Promise<Loaded | null> {
     refill: today?.refills.find(r => r.pillId === pillId) ?? null,
     name: '',
     waiting: null,
+    draft: draftFromPill(pill),
   };
 }
 
 /** Her pill as the relative's phone last read it, with any change still waiting for her phone. */
-async function loadHers(
-  elderId: string,
-  pillId: string,
-): Promise<Loaded | null> {
+async function loadHers(elderId: string, pillId: string): Promise<Read | null> {
   const [cards, setup, changes] = await Promise.all([
     getFamily(),
     getElderSetup(elderId),
     listChanges(elderId).catch(e => {
       console.warn("Could not load her pills' changes", e);
-      return [];
+      return null;
     }),
   ]);
   const found = setup.pills.find(p => p.id === pillId);
@@ -154,7 +160,10 @@ async function loadHers(
     }),
     refill: card?.refills.find(r => r.pillId === pillId) ?? null,
     name: card?.name ?? '',
-    waiting: waitingByPill(changes).get(pillId) ?? null,
+    ...(changes && {
+      waiting: waitingByPill(changes).get(pillId) ?? null,
+      draft: draftFromPill(pillAhead(pill, changes)),
+    }),
   };
 }
 
@@ -180,10 +189,7 @@ export default function PillScreen({ navigation, route }: Props) {
   const mounted = useRef(true);
   // Once the pill has shown, a later read that fails leaves it as it was.
   const shown = useRef(false);
-  const draft = useMemo<PillDraft>(
-    () => (loaded ? draftFromPill(loaded.pill) : emptyDraft()),
-    [loaded],
-  );
+  const draft = loaded?.draft ?? emptyDraft();
   const name = loaded?.name ?? '';
 
   useEffect(() => {
@@ -215,7 +221,13 @@ export default function PillScreen({ navigation, route }: Props) {
         return;
       }
       shown.current = true;
-      setLoaded(next);
+      // Her changes unread: the strip, and where the sheets start, stay as they were.
+      setLoaded(before => ({
+        ...next,
+        waiting:
+          next.waiting === undefined ? before?.waiting ?? null : next.waiting,
+        draft: next.draft ?? before?.draft ?? draftFromPill(next.pill),
+      }));
       if (askCount.current) {
         askCount.current = false;
         if (isCountable(next.pill.form)) {
@@ -246,8 +258,12 @@ export default function PillScreen({ navigation, route }: Props) {
 
   const { save, saving } = useSavePill(elderId, {
     elderName: name,
-    onSaved: () => {
+    onSaved: sent => {
       close();
+      if (elderId) {
+        // Until her changes are read again, the next change starts from this one.
+        setLoaded(l => l && { ...l, draft: afterSend(l.draft, sent) });
+      }
       load();
     },
   });
@@ -460,10 +476,11 @@ export default function PillScreen({ navigation, route }: Props) {
       {/* The sky scrolls with the page, as on Today: a long name at a large text size makes it
           tall, and the lines under it must still have the room. */}
       <ScrollView testID="pill-page">
+        {/* The camera waits for the pill: a photo needs a pill to be saved with. */}
         <SkyBand
           title={elderId && name ? t.remote.pillTitle(name) : ''}
           onBack={leave}
-          right={camera}
+          right={loaded ? camera : undefined}
         >
           {hero}
         </SkyBand>

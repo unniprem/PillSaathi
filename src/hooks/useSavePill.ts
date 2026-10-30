@@ -19,8 +19,8 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 type Options = {
   /** What he calls her, for "Amma's phone hasn't allowed you…". */
   elderName?: string;
-  /** Runs once the pill is saved; leaves the page when left out. */
-  onSaved?: () => void;
+  /** Runs once the pill is saved, with the draft saved; leaves the page when left out. */
+  onSaved?: (saved: PillDraft) => void;
 };
 
 /**
@@ -51,29 +51,35 @@ export function useSavePill(
     };
   }, []);
 
-  const done = useCallback(() => {
-    if (latest.current) {
-      latest.current();
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.replace('Main');
-    }
-  }, [navigation]);
+  const done = useCallback(
+    (d: PillDraft) => {
+      if (latest.current) {
+        latest.current(d);
+      } else if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.replace('Main');
+      }
+    },
+    [navigation],
+  );
 
   // Runs after a successful save; it never throws, so the user always moves on.
-  const finish = useCallback(async () => {
-    try {
-      if (!(await getSetupState()).seen) {
-        await markSetupSeen();
-        navigation.replace('Setup');
-        return;
+  const finish = useCallback(
+    async (d: PillDraft) => {
+      try {
+        if (!(await getSetupState()).seen) {
+          await markSetupSeen();
+          navigation.replace('Setup');
+          return;
+        }
+      } catch (e) {
+        console.warn('Could not check the setup state', e);
       }
-    } catch (e) {
-      console.warn('Could not check the setup state', e);
-    }
-    done();
-  }, [navigation, done]);
+      done(d);
+    },
+    [navigation, done],
+  );
 
   const stop = useCallback(() => {
     busy.current = false;
@@ -112,7 +118,7 @@ export function useSavePill(
           stop();
           return false;
         }
-        done();
+        done(d);
         stop();
         return true;
       }
@@ -138,21 +144,21 @@ export function useSavePill(
           t.pill.exactAlarmTitle,
           t.pill.exactAlarmBody,
           [
-            { text: t.pill.notNow, style: 'cancel', onPress: () => finish() },
+            { text: t.pill.notNow, style: 'cancel', onPress: () => finish(d) },
             {
               text: t.pill.allow,
               onPress: () => {
                 openSetting('exactAlarm').catch(e =>
                   console.warn('Could not open settings', e),
                 );
-                finish();
+                finish(d);
               },
             },
           ],
           { cancelable: false },
         );
       } else {
-        await finish();
+        await finish(d);
       }
       stop();
       return true;
