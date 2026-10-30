@@ -105,8 +105,9 @@ test('lists her pills and times, waiting first, and Cancel cancels', async () =>
     screen.getAllByText("Waiting for Amma's phone").length,
   ).toBeGreaterThan(0);
   expect(screen.getByText('Azee 500')).toBeTruthy();
-  // Each time's sound is on the pill's own page now (PillScreen's sound row).
-  expect(screen.queryByText('Alarm sounds')).toBeNull();
+  // Each of her times, with the sound it rings with, one tap from here.
+  expect(screen.getByRole('header', { name: 'Alarm sounds' })).toBeTruthy();
+  expect(screen.getByText("Ravi's sound")).toBeTruthy();
   expect(screen.getByText('Delete Dolo')).toBeTruthy();
   expect(screen.getByRole('header', { name: 'Recent changes' })).toBeTruthy();
   expect(screen.getByText('✓ Done at 3:05 PM')).toBeTruthy();
@@ -174,6 +175,17 @@ test('a pill opens the pill page for her', async () => {
   );
   expect(await screen.findByText('Delete this pill')).toBeTruthy();
   expect(screen.getByText('Azee 500')).toBeTruthy();
+});
+
+test('a time under Alarm sounds opens its sound list for her', async () => {
+  await renderApp('ElderPills', { elderId: 'E' });
+  await fireEvent.press(
+    await screen.findByRole('button', { name: "8:00 AM, Ravi's sound" }),
+  );
+  await waitFor(() =>
+    expect(headerTitles()).toEqual(["Amma's pills", 'Sound for 8:00 AM']),
+  );
+  expect(await screen.findByText('Record a voice')).toBeTruthy();
 });
 
 test('Add a pill for Amma opens the five steps for her', async () => {

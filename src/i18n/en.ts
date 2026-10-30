@@ -514,6 +514,9 @@ export const en = {
     pillsTitle: (name: string) => `${name}'s pills`,
     pillTitle: (name: string) => `${name}'s pill`,
     recentHeading: 'Recent changes',
+    soundsHeading: 'Alarm sounds',
+    soundsNote: 'Tap a time to record your voice or pick a song for it.',
+    soundLabel: (time: string, sound: string) => `${time}, ${sound}`,
     cancel: 'Cancel',
     cancelLabel: (title: string) => `Cancel ${title}`,
     delayNote: (name: string) =>

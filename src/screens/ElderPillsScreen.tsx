@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import TimeTile from '../components/pill/TimeTile';
 import { useI18n } from '../i18n';
 import { formatAmount } from '../lib/amount';
 import type { PillForm } from '../lib/amount';
@@ -231,6 +232,50 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
               onPress={() => navigation.navigate('AddPill', { elderId })}
             />
 
+            {/* A sound belongs to a time, so her times are listed here as well as on each pill:
+                where a relative looks to record his voice for her. */}
+            {setup.times.length > 0 ? (
+              <>
+                <SectionLabel style={styles.label}>
+                  {t.remote.soundsHeading}
+                </SectionLabel>
+                <Card style={styles.list}>
+                  <Text style={styles.soundsNote}>{t.remote.soundsNote}</Text>
+                  {setup.times.map(time => {
+                    const clock = formatTime(time.hour, time.minute, is24h);
+                    const sound = time.soundName ?? t.common.defaultTone;
+                    return (
+                      <Pressable
+                        key={`${time.hour}:${time.minute}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t.remote.soundLabel(clock, sound)}
+                        onPress={() =>
+                          navigation.navigate('SoundPicker', {
+                            elderId,
+                            hour: time.hour,
+                            minute: time.minute,
+                            selectedSoundId: time.soundId,
+                          })
+                        }
+                        style={({ pressed }) => [
+                          styles.row,
+                          styles.rowAfter,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <TimeTile hour={time.hour} />
+                        <View style={styles.words}>
+                          <Text style={styles.name}>{clock}</Text>
+                          <Text style={styles.detail}>{sound}</Text>
+                        </View>
+                        <Icon name="chevron_right" color={colors.muted} />
+                      </Pressable>
+                    );
+                  })}
+                </Card>
+              </>
+            ) : null}
+
             {recent.length > 0 ? (
               <>
                 <SectionLabel style={styles.label}>
@@ -378,6 +423,14 @@ const styles = StyleSheet.create({
   name: { ...font(800), fontSize: 17, color: colors.navy },
   struck: { textDecorationLine: 'line-through' },
   detail: { ...font(700), fontSize: 14, color: colors.muted, marginTop: 1 },
+  soundsNote: {
+    ...font(600),
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.muted,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
   amber: { color: colors.amberText },
   label: { marginTop: spacing.sm, marginHorizontal: 2 },
   change: { paddingVertical: 10 },
