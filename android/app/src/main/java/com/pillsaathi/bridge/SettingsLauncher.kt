@@ -67,6 +67,7 @@ class SettingsLauncher(context: Context) {
       // The phone's text-to-speech voices; no public constant, but every Android has the page.
       "tts" -> Intent(TTS_SETTINGS)
       "alarmVolume" -> Intent(Settings.ACTION_SOUND_SETTINGS)
+      "display" -> Intent(Settings.ACTION_DISPLAY_SETTINGS)
       "backgroundRestricted",
       "appInfo" -> appInfo()
       else -> null

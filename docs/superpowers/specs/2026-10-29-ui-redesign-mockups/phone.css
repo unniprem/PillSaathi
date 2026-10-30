@@ -1,0 +1,35 @@
+/* Shared phone-mockup styles for the PillSaathi UI redesign pages. */
+.pg-row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; justify-content: center; margin: 12px 0 24px; }
+.pg-col { width: 296px; display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 18px; }
+.pg-col.card { cursor: pointer; }
+.pg-col.card.selected { box-shadow: 0 0 0 3px var(--selected-border); }
+.pg-ref { opacity: .92; }
+.cap h3 { margin: 6px 0 4px; font-size: 16px; }
+.cap p, .cap li { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+.cap ul { margin: 4px 0 0; padding-left: 18px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 8px; border-radius: 99px; background: var(--bg-tertiary); color: var(--text-secondary); }
+.ask { max-width: 760px; margin: 0 auto 10px; font-size: 15px; }
+
+.phone { width: 270px; height: 570px; margin: 0 auto; border: 7px solid #1b1b1b; border-radius: 30px; overflow: hidden; position: relative; display: flex; flex-direction: column; font-family: Roboto, "Noto Sans", system-ui, sans-serif; box-shadow: 0 6px 18px rgba(0,0,0,.15); background: var(--p-bg); color: var(--p-text); text-align: left; }
+.phone * { box-sizing: border-box; }
+.phone img.shot { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.phone .sb { height: 20px; flex: none; font-size: 10px; padding: 4px 14px 0; display: flex; justify-content: space-between; opacity: .65; }
+.phone .scr { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 6px 12px 10px; }
+.phone small { display: block; font-size: 11.5px; opacity: .72; font-weight: 400; }
+.phone svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.phone .ph { width: 30px; height: 30px; border-radius: 50%; flex: none; border: 2px solid rgba(0,0,0,.08); background: radial-gradient(circle at 35% 35%, #fff 0 18%, var(--c, #e9d3a4) 19%); }
+.phone .pill { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; }
+.phone .btn { display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; font-weight: 700; font-size: 14px; padding: 10px; }
+
+/* Bottom tab bar with words under icons */
+.phone .tabs { flex: none; display: flex; border-top: 1px solid var(--p-line); background: var(--p-card); padding: 6px 2px 10px; }
+.phone .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 600; color: var(--p-muted); }
+.phone .tab.on { color: var(--p-primary); }
+.phone .tab.on svg.i { background: var(--p-tint); border-radius: 99px; width: 44px; padding: 2px 12px; height: 24px; }
+
+/* Theme A: warm and calm */
+.th-a { --p-bg: #FBF6EE; --p-card: #FFFFFF; --p-text: #1E1B16; --p-muted: #6E675C; --p-line: #E8DFD0; --p-primary: #0E6E66; --p-tint: #D6EDEA; --ok: #2F7D32; --bad: #B3261E; --warn-bg: #FFF1CF; }
+/* Theme B: clear and bright */
+.th-b { --p-bg: #F3F5FA; --p-card: #FFFFFF; --p-text: #141826; --p-muted: #5B6275; --p-line: #DDE2EC; --p-primary: #2F48B5; --p-tint: #E3E8FA; --ok: #1E7B34; --bad: #C0262D; --warn-bg: #FFF0C7; }
+/* Theme C: extra big, plain, high contrast */
+.th-c { --p-bg: #FFFFFF; --p-card: #FFFFFF; --p-text: #000000; --p-muted: #333333; --p-line: #000000; --p-primary: #000000; --p-tint: #FFD84D; --ok: #136B1F; --bad: #A4161A; --warn-bg: #FFD84D; }

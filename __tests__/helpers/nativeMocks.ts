@@ -20,7 +20,7 @@ export const emptyToday: Today = {
   refills: [],
 };
 
-/** Defaults for a mocked `src/native/alarms`: no pills, nothing missed, healthy. */
+/** Defaults for a mocked `src/native/alarms`: a phone set up for her, no pills, nothing missed, healthy. */
 export function mockAlarmsDefaults() {
   jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
   jest.mocked(alarms.listPills).mockResolvedValue([]);
@@ -31,6 +31,7 @@ export function mockAlarmsDefaults() {
     seen: true,
     doneSteps: [],
   });
+  jest.mocked(alarms.markSetupSeen).mockResolvedValue();
   jest.mocked(alarms.setCardSound).mockResolvedValue();
   jest.mocked(alarms.markDoseTaken).mockResolvedValue();
   jest.mocked(alarms.getHistory).mockResolvedValue({
@@ -43,10 +44,12 @@ export function mockAlarmsDefaults() {
   jest.mocked(alarms.getSettings).mockResolvedValue({
     language: 'en',
     readAloud: true,
+    role: 'elder',
     languages: [{ code: 'en', label: 'English', draft: false }],
   });
   jest.mocked(alarms.setLanguage).mockResolvedValue();
   jest.mocked(alarms.setReadAloud).mockResolvedValue();
+  jest.mocked(alarms.setRole).mockResolvedValue();
   jest.mocked(alarms.tryReadAloud).mockResolvedValue('spoken');
 }
 

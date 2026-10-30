@@ -3,12 +3,14 @@
     <string name="default_alarm_tone">Default alarm tone</string>
     <string name="channel_ringing">Ringing alarms</string>
     <string name="channel_missed">Missed alarms</string>
-    <string name="action_snooze">Snooze 10 min</string>
-    <string name="action_taken">Taken</string>
+    <string name="action_snooze">Remind me in 10 min</string>
+    <!-- The same on the ringing notification, short enough for its row of buttons. -->
+    <string name="notification_snooze">In 10 min</string>
+    <string name="action_taken">I took it</string>
     <string name="action_skip">Skip this time</string>
     <string name="ringing_title">Time for your medicines</string>
     <string name="missed_alarm">Missed: %1$s, %2$s</string>
-    <string name="ringing_sound">🔊 %1$s</string>
+    <string name="ringing_sound">%1$s</string>
     <string name="channel_refill">Refill reminders</string>
     <string name="refill_low">%1$s: %2$s left · %3$s</string>
     <string name="refill_out">%1$s: none left</string>

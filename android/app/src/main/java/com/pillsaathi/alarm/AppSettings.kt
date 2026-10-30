@@ -11,8 +11,15 @@ enum class AppLanguage(val code: String, val label: String) {
   }
 }
 
-/** The app's own settings. A null [language] follows the phone's language. */
-data class AppSettings(val language: AppLanguage? = null, val readAloud: Boolean = true)
+/**
+ * The app's own settings. A null [language] follows the phone's language. [role] is who the phone
+ * is for, "elder" or "carer" as JS chose it; null until it has been asked.
+ */
+data class AppSettings(
+  val language: AppLanguage? = null,
+  val readAloud: Boolean = true,
+  val role: String? = null,
+)
 
 /** Which languages the app lists, and which one it speaks. Pure. */
 object LanguageRules {

@@ -1,0 +1,106 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{font-family:system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;padding:24px;--text-secondary:#6e6e73;--bg-tertiary:#e5e5e7;--selected-border:#0071e3}.subtitle{color:#6e6e73}</style>
+<link rel="stylesheet" href="phone.css">
+<link rel="stylesheet" href="sky.css">
+<style>
+  .sky.ring { background: linear-gradient(180deg, #0E1A3C 0%, #1F3368 55%, #3B5797 100%); color: #fff; position: relative; overflow: hidden; }
+  .sky.ring .sb { color: #fff; padding: 6px 16px 0; }
+  .sky.ring .stars i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .8; }
+  .sky.ring .moon { position: absolute; right: 26px; top: 44px; width: 54px; height: 54px; border-radius: 50%; box-shadow: inset -14px -6px 0 0 #FFF4C7; transform: rotate(-20deg); filter: drop-shadow(0 0 14px rgba(255,244,199,.5)); }
+  .sky.ring .in { position: relative; flex: 1; display: flex; flex-direction: column; padding: 22px 18px 18px; gap: 10px; }
+  .sky.ring .ttl { font-size: 18px; font-weight: 800; opacity: .85; margin-top: 24px; }
+  .sky.ring .tm { font-size: 62px; font-weight: 900; letter-spacing: -2px; line-height: .95; }
+  .sky.ring .tm em { font-style: normal; font-size: 26px; letter-spacing: 0; margin-left: 4px; }
+  .sky.ring .pc { background: #fff; color: var(--navy); border-radius: 22px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; }
+  .sky.ring .pc .ph2 { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .sky.ring .pc .ph2 .pi { width: 38px; height: 38px; }
+  .sky.ring .pc .grow { flex: 1; font-size: 19px; font-weight: 900; line-height: 1.2; }
+  .sky.ring .pc small { font-size: 14px; }
+  .sky.ring .snd { align-self: flex-start; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; background: rgba(255,255,255,.14); padding: 6px 12px; border-radius: 99px; }
+  .sky.ring .snd svg.i { width: 15px; height: 15px; }
+  .sky.ring .take { background: #34B36A; color: #fff; border-radius: 26px; padding: 20px; text-align: center; font-size: 22px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 26px rgba(20,120,60,.45); }
+  .sky.ring .take svg.i { width: 28px; height: 28px; stroke-width: 3.2; }
+  .sky.ring .ghost { background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.3); border-radius: 22px; padding: 14px; text-align: center; font-size: 17px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .sky.ring .link { text-align: center; font-size: 15px; font-weight: 800; opacity: .8; padding: 4px; }
+  .sky.ring .orb { width: 156px; height: 156px; border-radius: 50%; background: #34B36A; margin: 6px auto 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 19px; font-weight: 900;
+    box-shadow: 0 0 0 16px rgba(52,179,106,.22), 0 0 0 34px rgba(52,179,106,.10), 0 12px 30px rgba(0,0,0,.3); }
+  .sky.ring .orb svg.i { width: 46px; height: 46px; stroke-width: 3; }
+  .sky.ring .chiprow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sky.ring .pchip { background: #fff; color: var(--navy); border-radius: 18px; padding: 7px 12px 7px 7px; display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 15.5px; }
+  .sky.ring .pchip .pi { width: 28px; height: 28px; }
+  .sky.ring .pchip small { display: inline; font-size: 12.5px; margin-left: 2px; }
+  .sky.ring .two { display: flex; gap: 10px; } .sky.ring .two > * { flex: 1; }
+</style>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <radialGradient id="shine" cx="35%" cy="28%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <symbol id="p-oval" viewBox="0 0 40 40"><g transform="rotate(-30 20 20)"><ellipse cx="20" cy="20" rx="15.5" ry="10" fill="currentColor" stroke="rgba(0,0,0,.14)"/><ellipse cx="20" cy="20" rx="15.5" ry="10" fill="url(#shine)"/><path d="M20 12v16" stroke="rgba(0,0,0,.16)" stroke-width="1.6" stroke-linecap="round"/></g></symbol>
+    <symbol id="p-cap" viewBox="0 0 40 40"><g transform="rotate(-45 20 20)"><rect x="4.5" y="13" width="31" height="14" rx="7" fill="#fff"/><path d="M20 13h8.5a7 7 0 0 1 0 14H20z" fill="currentColor"/><rect x="4.5" y="13" width="31" height="14" rx="7" fill="url(#shine)" stroke="rgba(0,0,0,.14)"/></g></symbol>
+  </defs>
+</svg>
+
+<h2>6 · The ringing screen</h2>
+<p class="subtitle">What she sees when an alarm goes off, even on a locked phone. Shown at 9:00 PM, so the sky is night. In the morning it's a sunrise. Click A or B.</p>
+
+<div class="pg-row">
+
+  <!-- A -->
+  <div class="pg-col card" data-choice="ring-stacked" onclick="toggleSelect(this)">
+    <div class="phone sky ring">
+      <div class="stars"><i style="left:30px;top:40px"></i><i style="left:90px;top:70px;opacity:.5"></i><i style="left:160px;top:36px"></i><i style="left:210px;top:110px;opacity:.6"></i><i style="left:60px;top:120px;opacity:.4"></i><i style="left:250px;top:150px;opacity:.5"></i></div>
+      <div class="moon"></div>
+      <div class="sb"><span>9:00</span><span>● ● ▮</span></div>
+      <div class="in">
+        <div class="ttl">Time for your medicines</div>
+        <div class="tm">9:00<em>PM</em></div>
+        <div class="pc"><span class="ph2" style="background:#F3F1EC"><svg class="pi" style="color:#FBFAF6"><use href="#p-oval"/></svg></span><div class="grow">Metformin 500<small>1 tablet</small></div></div>
+        <div class="pc"><span class="ph2" style="background:#FDEBE4"><svg class="pi" style="color:#F0845F"><use href="#p-cap"/></svg></span><div class="grow">Atorvastatin 10<small>1 tablet</small></div></div>
+        <div class="snd"><svg class="i"><use href="icons.svg#i-volume"/></svg>Amma's voice</div>
+        <div style="flex:1"></div>
+        <div class="take"><svg class="i"><use href="icons.svg#i-check"/></svg>I took it</div>
+        <div class="ghost"><svg class="i"><use href="icons.svg#i-snooze"/></svg>Remind me in 10 min</div>
+        <div class="link">Skip this time</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">A</span>
+      <h3>Big buttons at the bottom</h3>
+      <ul>
+        <li>The pills as large white cards with their photos.</li>
+        <li>One wide green "I took it" at the bottom, where her thumb is. Snooze sits below it, and Skip is small text.</li>
+        <li>Like now, but much clearer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="pg-col card" data-choice="ring-orb" onclick="toggleSelect(this)">
+    <div class="phone sky ring">
+      <div class="stars"><i style="left:30px;top:40px"></i><i style="left:90px;top:70px;opacity:.5"></i><i style="left:160px;top:36px"></i><i style="left:210px;top:110px;opacity:.6"></i><i style="left:60px;top:120px;opacity:.4"></i><i style="left:250px;top:150px;opacity:.5"></i></div>
+      <div class="moon"></div>
+      <div class="sb"><span>9:00</span><span>● ● ▮</span></div>
+      <div class="in">
+        <div class="ttl">Time for your medicines</div>
+        <div class="tm">9:00<em>PM</em></div>
+        <div class="chiprow">
+          <span class="pchip"><svg class="pi" style="color:#FBFAF6"><use href="#p-oval"/></svg>Metformin 500<small>· 1</small></span>
+          <span class="pchip"><svg class="pi" style="color:#F0845F"><use href="#p-cap"/></svg>Atorvastatin 10<small>· 1</small></span>
+        </div>
+        <div style="flex:1"></div>
+        <div class="orb"><svg class="i"><use href="icons.svg#i-check"/></svg>I took it</div>
+        <div style="flex:1"></div>
+        <div class="two"><div class="ghost" style="font-size:15px">Remind in 10 min</div><div class="ghost" style="font-size:15px">Skip</div></div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">B</span>
+      <h3>One big round button</h3>
+      <ul>
+        <li>A big round green button in the middle with a soft pulse, like answering a call.</li>
+        <li>Pills shown smaller, as chips with their photos.</li>
+        <li>Snooze and Skip side by side at the bottom, the same size.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<p class="ask"><b>Both:</b> the screen still runs on its own, without the rest of the app, so it stays as reliable as today. Gradients, stars, the photo cards and a custom font can all be built that way. The buttons say "I took it" and "Remind me in 10 min" instead of "Taken" and "Snooze 10 min".</p>

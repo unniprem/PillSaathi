@@ -1,0 +1,153 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{font-family:system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;padding:24px;--text-secondary:#6e6e73;--bg-tertiary:#e5e5e7;--selected-border:#0071e3}.subtitle{color:#6e6e73}</style>
+<link rel="stylesheet" href="phone.css">
+<link rel="stylesheet" href="sky.css">
+<style>
+  .sky .av { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: #fff; flex: none; }
+  .sky .av.amma { background: linear-gradient(135deg, #F6A57C, #E07A5F); }
+  .sky .av.appa { background: linear-gradient(135deg, #7FB3E0, #4A86C5); }
+  .sky .av.lg { width: 60px; height: 60px; font-size: 26px; border: 3px solid #fff; }
+  .sky .pcard { background: #fff; border-radius: 22px; padding: 14px; box-shadow: 0 4px 14px rgba(21,50,74,.06); display: flex; flex-direction: column; gap: 10px; }
+  .sky .pcard .top { display: flex; align-items: center; gap: 12px; }
+  .sky .pcard .grow { flex: 1; font-size: 18px; font-weight: 900; line-height: 1.2; }
+  .sky .segs { display: flex; gap: 4px; } .sky .segs i { flex: 1; height: 8px; border-radius: 9px; background: #E3EAF0; display: block; }
+  .sky .segs i.g { background: var(--green); } .sky .segs i.r { background: var(--coral); }
+  .sky .pcard .alert { background: var(--coral-t); color: #8E2A1B; border-radius: 14px; padding: 9px 11px; font-size: 13.5px; font-weight: 800; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .sky .callb { width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; flex: none; box-shadow: 0 4px 10px rgba(46,158,91,.35); }
+  .sky .callb svg.i { width: 18px; height: 18px; }
+  .sky .top2 { position: relative; height: 196px; flex: none; padding: 0 18px; overflow: hidden; background: linear-gradient(180deg, #6DBBEA 0%, #A9D9F2 52%, #FBE2C4 100%); }
+  .sky .top2 .sb { padding: 6px 0 0; }
+  .sky .sun { position: absolute; right: -14px; top: 18px; width: 66px; height: 66px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #FFF2B0, #FFC93C 70%); box-shadow: 0 0 0 12px rgba(255,214,102,.30), 0 0 0 26px rgba(255,214,102,.14); }
+  .sky .hi { margin-top: 22px; font-size: 25px; font-weight: 900; letter-spacing: -.3px; max-width: 215px; line-height: 1.1; }
+  .sky .dt { font-size: 14px; font-weight: 700; opacity: .75; }
+  .sky .over { margin-top: -54px; position: relative; z-index: 1; }
+  .sky .dz { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
+  .sky .dz + .dz { border-top: 1px solid var(--line); }
+  .sky .dz .t { width: 64px; font-size: 15px; font-weight: 900; flex: none; }
+  .sky .dz .n { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--mut); line-height: 1.3; }
+  .sky .tiles2 { display: flex; gap: 10px; }
+  .sky .tiles2 div { flex: 1; background: #fff; border-radius: 18px; padding: 12px; font-weight: 900; font-size: 14.5px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .tiles2 .ico { width: 34px; height: 34px; border-radius: 11px; }
+  .sky .band.her { padding-bottom: 18px; }
+  .sky .herrow { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+</style>
+
+<h2>7 · Family, on the son's or daughter's phone</h2>
+<p class="subtitle">Where do the people you look after live? Click A or B. Her page on the right is the same for both.</p>
+
+<div class="pg-row">
+
+  <!-- A: family tab -->
+  <div class="pg-col card" data-choice="relative-family-tab" onclick="toggleSelect(this)">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow"><h1>Family</h1></div>
+      </div>
+      <div class="body">
+        <div class="lbl" style="margin:2px 2px -2px">People I look after</div>
+        <div class="pcard">
+          <div class="top"><span class="av amma">A</span><div class="grow">Amma<small>Heard from at 2:05 PM</small></div><span class="callb"><svg class="i"><use href="icons.svg#i-phone"/></svg></span></div>
+          <div class="segs"><i class="g"></i><i class="r"></i><i></i></div>
+          <div class="alert">Missed Iron at 1:30 PM<svg class="i" style="width:16px;height:16px"><use href="icons.svg#i-next"/></svg></div>
+        </div>
+        <div class="pcard">
+          <div class="top"><span class="av appa">A</span><div class="grow">Appa<small>Heard from at 1:50 PM</small></div><span class="callb"><svg class="i"><use href="icons.svg#i-phone"/></svg></span></div>
+          <div class="segs"><i class="g"></i><i class="g"></i></div>
+          <div class="note" style="color:var(--green);font-weight:800">2 of 2 taken today</div>
+        </div>
+        <div class="addrow"><svg class="i"><use href="icons.svg#i-plus"/></svg>Add family</div>
+      </div>
+      <div class="floatnav">
+        <div><svg class="i"><use href="icons.svg#i-home"/></svg>Today</div>
+        <div><svg class="i"><use href="icons.svg#i-cal"/></svg>History</div>
+        <div class="on"><svg class="i"><use href="icons.svg#i-users"/></svg>Family</div>
+        <div><svg class="i"><use href="icons.svg#i-gear"/></svg>Settings</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">A</span>
+      <h3>In the Family tab</h3>
+      <ul>
+        <li>Today shows only your own pills. Amma and Appa live in the Family tab.</li>
+        <li>Each person is a card: how today is going, a Call button, and anything missed.</li>
+        <li>A missed-dose alert opens her page directly.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- B: on Today -->
+  <div class="pg-col card" data-choice="relative-on-today" onclick="toggleSelect(this)">
+    <div class="phone sky">
+      <div class="top2">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="sun"></div>
+        <div class="hi">Good afternoon, Ravi</div>
+        <div class="dt">Thursday, 29 October</div>
+      </div>
+      <div class="body" style="padding-top:0;overflow:visible">
+        <div class="pcard over">
+          <div class="top"><span class="av amma">A</span><div class="grow">Amma<small>1 of 3 taken so far</small></div><span class="callb"><svg class="i"><use href="icons.svg#i-phone"/></svg></span></div>
+          <div class="segs"><i class="g"></i><i class="r"></i><i></i></div>
+          <div class="alert">Missed Iron at 1:30 PM<svg class="i" style="width:16px;height:16px"><use href="icons.svg#i-next"/></svg></div>
+        </div>
+        <div class="pcard">
+          <div class="top"><span class="av appa">A</span><div class="grow">Appa<small>2 of 2 taken today</small></div><span class="callb"><svg class="i"><use href="icons.svg#i-phone"/></svg></span></div>
+        </div>
+        <div class="lbl" style="margin:4px 2px -4px">My pills</div>
+        <div class="note">You have no pills of your own. <b style="color:var(--blue)">+ Add pill</b></div>
+      </div>
+      <div class="floatnav">
+        <div class="on"><svg class="i"><use href="icons.svg#i-home"/></svg>Today</div>
+        <div><svg class="i"><use href="icons.svg#i-cal"/></svg>History</div>
+        <div><svg class="i"><use href="icons.svg#i-users"/></svg>Family</div>
+        <div><svg class="i"><use href="icons.svg#i-gear"/></svg>Settings</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">B</span>
+      <h3>On Today, at the top</h3>
+      <ul>
+        <li>Open the app and Amma's day is the first thing you see.</li>
+        <li>Your own pills, if you have any, come below.</li>
+        <li>The Family tab is only for adding people and their settings.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- her page -->
+  <div class="pg-col pg-ref">
+    <div class="phone sky">
+      <div class="band her">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow" style="justify-content:space-between">
+          <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+          <span class="round"><svg class="i"><use href="icons.svg#i-gear"/></svg></span>
+        </div>
+        <div class="herrow">
+          <span class="av amma lg">A</span>
+          <div style="flex:1"><h1 style="font-size:26px">Amma</h1><div class="sub" style="margin:0">Heard from at 2:05 PM</div></div>
+          <span class="callb" style="width:48px;height:48px"><svg class="i"><use href="icons.svg#i-phone"/></svg></span>
+        </div>
+      </div>
+      <div class="body">
+        <div class="cardw" style="padding:4px 14px">
+          <div class="dz"><span class="t">8:00 AM</span><span class="n">Metformin 500, Amlodipine 5</span><span class="pill-t t-ok">✓ 8:04</span></div>
+          <div class="dz"><span class="t">1:30 PM</span><span class="n">Iron</span><span class="pill-t t-bad">Missed</span></div>
+          <div class="dz"><span class="t">9:00 PM</span><span class="n">Metformin 500, Atorvastatin 10</span><span class="pill-t t-blue">Later</span></div>
+        </div>
+        <div class="tiles2">
+          <div><span class="ico"><svg class="i"><use href="icons.svg#i-capsule"/></svg></span>Her pills</div>
+          <div><span class="ico"><svg class="i"><use href="icons.svg#i-cal"/></svg></span>History</div>
+        </div>
+        <div class="note" style="text-align:center">Times are Amma's time.</div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">BOTH</span>
+      <h3>Her page</h3>
+      <ul>
+        <li>Her name and when her phone was last heard from, with a big green Call button.</li>
+        <li>Her day in three lines.</li>
+        <li>"Her pills" opens the page for changing her pills from afar. The gear opens alerts and "Stop following".</li>
+      </ul>
+    </div>
+  </div>
+
+</div>

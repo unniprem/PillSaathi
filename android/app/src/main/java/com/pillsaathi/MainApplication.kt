@@ -10,6 +10,7 @@ import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.common.assets.ReactFontManager
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.pillsaathi.alarm.LOG_TAG
 import com.pillsaathi.alarm.Notifications
@@ -52,7 +53,20 @@ class MainApplication : Application(), ReactApplication {
   fun ensureReactNativeLoaded() {
     if (reactNativeLoaded || isRingingProcess) return
     reactNativeLoaded = true
+    registerFonts()
     loadReactNative(this)
+  }
+
+  /** The app's fonts, by the names its styles use. The ringing screen reads `R.font` itself. */
+  private fun registerFonts() {
+    try {
+      val fonts = ReactFontManager.getInstance()
+      fonts.addCustomFont(this, "Nunito", R.font.nunito)
+      fonts.addCustomFont(this, "Symbols", R.font.symbols_filled)
+      fonts.addCustomFont(this, "SymbolsOutlined", R.font.symbols_outlined)
+    } catch (e: Exception) {
+      Log.e(LOG_TAG, "Could not load the app's fonts", e)
+    }
   }
 
   private fun processName(): String =

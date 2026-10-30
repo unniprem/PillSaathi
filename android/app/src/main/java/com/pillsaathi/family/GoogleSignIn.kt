@@ -45,18 +45,26 @@ object GoogleSignIn {
           if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             done(Result.success(GoogleIdTokenCredential.createFrom(credential.data).idToken))
           } else {
-            done(Result.failure(FamilyException(FamilyCloud.OFFLINE, "Google sign-in gave no ID token")))
+            done(Result.failure(FamilyException(FamilyCloud.GOOGLE_FAILED, "Google sign-in gave no ID token")))
           }
         }
 
         override fun onError(e: GetCredentialException) {
-          when (e) {
-            // Closed the picker, or there is no account to pick: nothing happened.
-            is GetCredentialCancellationException, is NoCredentialException -> done(Result.success(null))
-            else -> done(Result.failure(FamilyException(FamilyCloud.OFFLINE, e.message ?: "Google sign-in failed", e)))
-          }
+          done(failureOf(e)?.let { Result.failure(it) } ?: Result.success(null))
         }
       },
     )
   }
+
+  /**
+   * What a failed Google sign-in means: null when nothing happened (the picker was closed, or
+   * there is no account to pick), else GOOGLE_FAILED. Not OFFLINE: Google turns a phone down for
+   * its own reasons (on an emulator with no account, "Caller could not be verified"), and "No
+   * internet" on a phone that's online sends the person looking for the wrong fault.
+   */
+  internal fun failureOf(e: GetCredentialException): FamilyException? =
+    when (e) {
+      is GetCredentialCancellationException, is NoCredentialException -> null
+      else -> FamilyException(FamilyCloud.GOOGLE_FAILED, e.message ?: "Google sign-in failed", e)
+    }
 }

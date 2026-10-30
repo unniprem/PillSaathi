@@ -1,0 +1,156 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{font-family:system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;padding:24px;--text-secondary:#6e6e73;--bg-tertiary:#e5e5e7;--selected-border:#0071e3}.subtitle{color:#6e6e73}</style>
+<link rel="stylesheet" href="phone.css">
+<link rel="stylesheet" href="sky.css">
+<style>
+  .sky .photo { width: 84px; height: 84px; border-radius: 24px; background: linear-gradient(135deg, #F8ECE8, #EFD6CF); display: flex; align-items: center; justify-content: center; position: relative; flex: none; }
+  .sky .photo .pi { width: 54px; height: 54px; }
+  .sky .cam { position: absolute; right: -6px; bottom: -6px; width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; }
+  .sky .cam svg.i { width: 16px; height: 16px; }
+  .sky .namebox { display: flex; gap: 14px; align-items: center; }
+  .sky .namebox .field { flex: 1; }
+  .sky .q { font-size: 25px; font-weight: 900; letter-spacing: -.3px; line-height: 1.2; margin: 4px 2px 0; }
+  .sky .pick { background: #fff; border-radius: 20px; padding: 12px; display: flex; align-items: center; gap: 12px; border: 2.5px solid transparent; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .pick.on { border-color: var(--blue); }
+  .sky .pick .grow { flex: 1; font-size: 17px; font-weight: 900; line-height: 1.2; }
+  .sky .tick { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid #CFDCE6; display: flex; align-items: center; justify-content: center; flex: none; }
+  .sky .pick.on .tick { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .sky .tick svg.i { width: 16px; height: 16px; stroke-width: 3.2; }
+  .sky .hero { text-align: center; padding: 6px 0 4px; }
+  .sky .hero .pbig { width: 96px; height: 96px; border-radius: 50%; background: #fff; margin: 4px auto 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(21,50,74,.15); }
+  .sky .hero .pbig .pi { width: 60px; height: 60px; }
+  .sky .hero .nm { font-size: 28px; font-weight: 900; letter-spacing: -.4px; }
+  .sky .hero .sub { font-size: 14.5px; font-weight: 700; opacity: .75; }
+  .sky .val { font-size: 13px; color: var(--mut); font-weight: 700; margin-top: 1px; }
+  .sky .band .hrow.top { margin-top: 10px; justify-content: space-between; }
+</style>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <radialGradient id="shine" cx="35%" cy="28%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <symbol id="p-tab" viewBox="0 0 40 40"><circle cx="20" cy="20" r="13" fill="currentColor" stroke="rgba(0,0,0,.12)"/><circle cx="20" cy="20" r="13" fill="url(#shine)"/><path d="M11.5 20h17" stroke="rgba(0,0,0,.2)" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<h2>2 · The pill page (adding or changing a medicine)</h2>
+<p class="subtitle">Usually the son or daughter fills this in. Should it be one page, or one question at a time? Click one.</p>
+
+<div class="pg-row">
+
+  <!-- ONE PAGE -->
+  <div class="pg-col card" data-choice="pill-onepage" onclick="toggleSelect(this)">
+    <div class="phone sky tall">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow">
+          <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+          <div style="flex:1"><h1>Iron</h1><div class="sub" style="margin:0">Change pill</div></div>
+          <span class="round danger"><svg class="i"><use href="icons.svg#i-trash"/></svg></span>
+        </div>
+      </div>
+      <div class="body">
+        <div class="cardw namebox">
+          <div class="photo"><svg class="pi" style="color:#9B3D2E"><use href="#p-tab"/></svg><span class="cam"><svg class="i"><use href="icons.svg#i-camera"/></svg></span></div>
+          <div class="field">Iron</div>
+        </div>
+        <div class="cardw">
+          <div class="lbl">Type</div>
+          <div class="chips">
+            <span class="chip on"><svg class="i"><use href="icons.svg#i-tablet"/></svg>Tablet</span>
+            <span class="chip"><svg class="i"><use href="icons.svg#i-capsule"/></svg>Capsule</span>
+            <span class="chip"><svg class="i"><use href="icons.svg#i-bottle"/></svg>Syrup</span>
+            <span class="chip"><svg class="i"><use href="icons.svg#i-drop"/></svg>Drops</span>
+          </div>
+        </div>
+        <div class="cardw">
+          <div class="lbl">How much each time</div>
+          <div class="stepper"><span class="sbtn"><svg class="i"><use href="icons.svg#i-minus"/></svg></span><div class="v">1<small>tablet</small></div><span class="sbtn"><svg class="i"><use href="icons.svg#i-plus"/></svg></span></div>
+        </div>
+        <div class="cardw">
+          <div class="lbl">When it rings</div>
+          <div class="row"><span class="ico sun"><svg class="i"><use href="icons.svg#i-sun"/></svg></span><div class="grow">8:00 AM<div class="val">♪ Default tone</div></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="row"><span class="ico moon"><svg class="i"><use href="icons.svg#i-moon"/></svg></span><div class="grow">9:00 PM<div class="val">♪ Amma's voice</div></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="addrow" style="margin-top:6px"><svg class="i"><use href="icons.svg#i-plus"/></svg>Add a time</div>
+        </div>
+        <div class="cardw">
+          <div class="lbl">For how long <em>day 12 of 30</em></div>
+          <div class="chips">
+            <span class="chip">5 days</span><span class="chip">10 days</span><span class="chip on">30 days</span><span class="chip">No end</span><span class="chip">Other…</span>
+          </div>
+        </div>
+        <div class="cardw">
+          <div class="lbl">Tablets left <em>optional</em></div>
+          <div class="stepper"><span class="sbtn"><svg class="i"><use href="icons.svg#i-minus"/></svg></span><div class="v">4<small>about 4 days</small></div><span class="sbtn"><svg class="i"><use href="icons.svg#i-plus"/></svg></span></div>
+        </div>
+      </div>
+      <div class="foot"><div class="primary">Save</div></div>
+    </div>
+    <div class="cap"><span class="tag">ONE PAGE</span>
+      <h3>Everything on one page, in clear cards</h3>
+      <ul>
+        <li>The same page for adding and changing. Shown here scrolled all the way down.</li>
+        <li>Each time has its own sound under it, so the "♪" line leaves Today.</li>
+        <li>Fast for someone who already knows the app.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STEPS + SUMMARY -->
+  <div class="pg-col wide card" data-choice="pill-steps" onclick="toggleSelect(this)">
+    <div class="pg-pair">
+      <div class="phone sky">
+        <div class="band">
+          <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+          <div class="hrow top">
+            <span class="round"><svg class="i"><use href="icons.svg#i-x"/></svg></span>
+            <div class="dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span></div>
+            <span style="width:40px;font-size:13px;font-weight:800;opacity:.7;text-align:right">3 of 5</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="q">When should Iron ring?</div>
+          <div class="note" style="margin:-4px 2px 4px;font-size:14px">Pick one or more.</div>
+          <div class="pick on"><span class="ico sun"><svg class="i"><use href="icons.svg#i-sun"/></svg></span><div class="grow">Morning<div class="val">8:00 AM · change</div></div><span class="tick"><svg class="i"><use href="icons.svg#i-check"/></svg></span></div>
+          <div class="pick"><span class="ico noon"><svg class="i"><use href="icons.svg#i-sunlow"/></svg></span><div class="grow">Afternoon<div class="val">1:30 PM</div></div><span class="tick"></span></div>
+          <div class="pick on"><span class="ico moon"><svg class="i"><use href="icons.svg#i-moon"/></svg></span><div class="grow">Night<div class="val">9:00 PM · change</div></div><span class="tick"><svg class="i"><use href="icons.svg#i-check"/></svg></span></div>
+          <div class="addrow"><svg class="i"><use href="icons.svg#i-plus"/></svg>Another time</div>
+        </div>
+        <div class="foot"><div class="secondary">Back</div><div class="primary">Next</div></div>
+      </div>
+
+      <div class="phone sky">
+        <div class="band" style="padding-bottom:18px">
+          <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+          <div class="hrow top">
+            <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+            <span class="round"><svg class="i"><use href="icons.svg#i-camera"/></svg></span>
+          </div>
+          <div class="hero">
+            <div class="pbig"><svg class="pi" style="color:#9B3D2E"><use href="#p-tab"/></svg></div>
+            <div class="nm">Iron</div>
+            <div class="sub">Tablet · 1 each time</div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="cardw" style="padding:4px 14px">
+            <div class="row"><span class="ico"><svg class="i"><use href="icons.svg#i-clock"/></svg></span><div class="grow">Rings at<div class="val">8:00 AM and 9:00 PM</div></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+            <div class="row"><span class="ico"><svg class="i"><use href="icons.svg#i-music"/></svg></span><div class="grow">Sound<div class="val">Default tone · Amma's voice</div></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+            <div class="row"><span class="ico"><svg class="i"><use href="icons.svg#i-cal"/></svg></span><div class="grow">For how long<div class="val">30 days · day 12 of 30</div></div><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+            <div class="row"><span class="ico" style="background:var(--amber-t);color:var(--amber)"><svg class="i"><use href="icons.svg#i-box"/></svg></span><div class="grow">Tablets left<div class="val" style="color:var(--amber)">4 · about 4 days</div></div><span class="pill-t t-blue">+ Add</span></div>
+          </div>
+          <div style="text-align:center;font-weight:900;color:var(--coral);font-size:14.5px;margin-top:4px">Delete this pill</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">STEPS + SUMMARY</span>
+      <h3>One question at a time, then a clean summary</h3>
+      <ul>
+        <li>Adding asks five short questions, one per screen: name and photo → type and amount → times → how long → check and save.</li>
+        <li>Opening a pill shows a summary with her photo. Tap any line to change just that line.</li>
+        <li>Harder to get wrong. Easier for a first-timer, or for her.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<p class="ask"><b>Either way:</b> times show as morning, afternoon and night with the sun and moon. A sound belongs to a time, so changing the 9:00 PM sound changes it for every pill at 9:00 PM, because they ring together. The same page opens on a relative's phone as "Amma's pill".</p>

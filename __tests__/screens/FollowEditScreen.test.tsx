@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, DeviceEventEmitter, StyleSheet } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as family from '../../src/native/family';
 import type { FamilyCard } from '../../src/native/family';
@@ -32,6 +32,28 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+});
+
+// The keyboard covers the page rather than shrinking it, so the page makes room for it.
+test('the fields and Save stay above the keyboard', async () => {
+  await renderApp('FollowEdit', { elderId: 'E' });
+  await screen.findByLabelText('What do you call them?');
+  // Each card's label is a heading, for TalkBack to jump between.
+  expect(
+    screen.getByRole('header', { name: 'Tell me if a dose is missed' }),
+  ).toBeTruthy();
+  const bottom = () =>
+    StyleSheet.flatten(screen.getByTestId('follow-edit-page').props.style)
+      .paddingBottom ?? 0;
+  const closed = bottom();
+  await act(() =>
+    DeviceEventEmitter.emit('keyboardDidShow', {
+      endCoordinates: { height: 300, width: 411, screenX: 0, screenY: 534 },
+    }),
+  );
+  expect(bottom()).toBe(closed + 300);
+  await act(() => DeviceEventEmitter.emit('keyboardDidHide', null));
+  expect(bottom()).toBe(closed);
 });
 
 test('edits the name, number and delay', async () => {

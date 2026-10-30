@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import type { Follow } from '../native/family';
-import { colors, spacing } from '../theme';
+import { colors, font, spacing } from '../theme';
+import Button from '../ui/Button';
+import Card from '../ui/Card';
+import Chip from '../ui/Chip';
+import SectionLabel from '../ui/SectionLabel';
 
 const DELAYS: (number | null)[] = [15, 30, 60, null];
 
@@ -26,7 +30,10 @@ type Props = {
   submitLabel: string;
 };
 
-/** What the relative calls an elder, her number for Call, and how long after a dose to ping. */
+/**
+ * What the relative calls an elder, her number for Call, and how long after a dose to ping: a
+ * card each, then the submit button, which waits for a name.
+ */
 export default function FollowForm({ initial, onSubmit, submitLabel }: Props) {
   const { t } = useI18n();
   const [name, setName] = useState(initial.name);
@@ -47,95 +54,70 @@ export default function FollowForm({ initial, onSubmit, submitLabel }: Props) {
   };
 
   return (
-    <View>
-      <Text style={styles.label}>{t.family.callThem}</Text>
-      <TextInput
-        accessibilityLabel={t.family.callThem}
-        value={name}
-        onChangeText={setName}
-        maxLength={40}
-        style={styles.input}
-      />
-      <Text style={styles.label}>{t.family.phone}</Text>
-      <TextInput
-        accessibilityLabel={t.family.phone}
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        maxLength={20}
-        style={styles.input}
-      />
-      <Text style={styles.hint}>{t.family.phoneHint}</Text>
-      <Text style={styles.label}>{t.family.pingWhen}</Text>
-      <View style={styles.chips}>
-        {DELAYS.map(minutes => {
-          const selected = minutes === delay;
-          return (
-            <Pressable
+    <View style={styles.form}>
+      <Card style={styles.card}>
+        <SectionLabel>{t.family.callThem}</SectionLabel>
+        <TextInput
+          accessibilityLabel={t.family.callThem}
+          value={name}
+          onChangeText={setName}
+          maxLength={40}
+          style={styles.field}
+        />
+      </Card>
+      <Card style={styles.card}>
+        <SectionLabel>
+          {t.family.phone}
+          <Text style={styles.why}>{`  ${t.family.forCall}`}</Text>
+        </SectionLabel>
+        <TextInput
+          accessibilityLabel={t.family.phone}
+          accessibilityHint={t.family.forCall}
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          maxLength={20}
+          style={[styles.field, styles.number]}
+        />
+      </Card>
+      <Card style={styles.card}>
+        <SectionLabel>{t.family.pingWhen}</SectionLabel>
+        <View style={styles.chips}>
+          {DELAYS.map(minutes => (
+            <Chip
               key={String(minutes)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
+              label={delayLabel(minutes, t)}
+              on={minutes === delay}
               onPress={() => setDelay(minutes)}
-              style={[styles.chip, selected && styles.chipSelected]}
-            >
-              <Text
-                style={[styles.chipText, selected && styles.chipTextSelected]}
-              >
-                {delayLabel(minutes, t)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !ready }}
-        onPress={submit}
-        style={[styles.primary, !ready && styles.disabled]}
-      >
-        <Text style={styles.primaryText}>{submitLabel}</Text>
-      </Pressable>
+            />
+          ))}
+        </View>
+      </Card>
+      <Button label={submitLabel} onPress={submit} disabled={!ready} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  label: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+  form: { gap: 12 },
+  card: { padding: 14, gap: 10 },
+  why: {
+    ...font(700),
+    fontSize: 13,
+    letterSpacing: 0,
+    textTransform: 'none',
+    color: colors.muted,
   },
-  hint: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: spacing.md,
-    fontSize: 18,
-    color: colors.text,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingHorizontal: spacing.md,
+  field: {
+    ...font(800),
+    minHeight: 52,
+    paddingHorizontal: 14,
     paddingVertical: spacing.sm,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.soft,
+    fontSize: 19,
+    color: colors.navy,
   },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: { fontSize: 16, color: colors.text },
-  chipTextSelected: { color: colors.onPrimary },
-  primary: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  disabled: { opacity: 0.5 },
-  primaryText: { fontSize: 18, color: colors.onPrimary, fontWeight: '600' },
+  number: { fontSize: 17 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

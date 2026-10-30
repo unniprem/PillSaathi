@@ -1,5 +1,11 @@
-import { Alert, AppState, Share } from 'react-native';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Alert, AppState, Share, StyleSheet } from 'react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import * as alarms from '../../src/native/alarms';
 import type { History, HistoryDose } from '../../src/native/alarms';
 import * as family from '../../src/native/family';
@@ -49,8 +55,22 @@ const october: History = {
   ],
 };
 
+/** Today, the 26th, with its morning taken and its evening missed. */
+const withEveningMissedToday = (): History => ({
+  ...october,
+  doses: [
+    ...october.doses,
+    dose('2026-10-26', 8, 'taken'),
+    dose('2026-10-26', 21, 'missed'),
+  ],
+});
+
 const isDisabled = (label: string) =>
   screen.getByLabelText(label).props.accessibilityState?.disabled === true;
+
+/** The coloured circle of the day TalkBack calls [label], inside today's ring if it has one. */
+const face = (label: string) =>
+  within(screen.getByLabelText(label)).getByTestId('day-face');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -66,22 +86,101 @@ it('shows the month, its share taken and each day’s colour', async () => {
   jest.mocked(alarms.getHistory).mockResolvedValue(october);
   await renderApp('History');
   expect(await screen.findByText('60% taken')).toBeTruthy();
-  expect(screen.getByText('3 of 5 doses')).toBeTruthy();
+  expect(screen.getByText('3 of 5 doses since 6 Oct')).toBeTruthy();
   expect(screen.getByText('Oct 2026')).toBeTruthy();
-  expect(screen.getByLabelText('Tue 6 Oct: Some not taken')).toHaveStyle({
-    backgroundColor: colors.warning,
+  expect(face('Tue 6 Oct: Some not taken')).toHaveStyle({
+    borderColor: colors.amber,
   });
-  expect(screen.getByLabelText('Wed 7 Oct: All taken')).toHaveStyle({
-    backgroundColor: colors.success,
+  expect(face('Wed 7 Oct: All taken')).toHaveStyle({
+    backgroundColor: colors.green,
   });
-  expect(screen.getByLabelText('Thu 8 Oct: None taken')).toHaveStyle({
-    backgroundColor: colors.danger,
+  expect(face('Thu 8 Oct: None taken')).toHaveStyle({
+    backgroundColor: colors.coral,
   });
   expect(screen.getByLabelText('Fri 9 Oct')).toBeTruthy();
-  expect(screen.getByText('All taken')).toBeTruthy();
-  expect(screen.getByText('Some not taken')).toBeTruthy();
-  expect(screen.getByText('None taken')).toBeTruthy();
+  // The legend says what TalkBack says for each day.
+  const legend = within(screen.getByTestId('legend'));
+  expect(legend.getByText('All taken')).toBeTruthy();
+  expect(legend.getByText('Some not taken')).toBeTruthy();
+  expect(legend.getByText('None taken')).toBeTruthy();
   expect(headerTitles()).toEqual(['History']);
+});
+
+it('the month card shows the percent and the dose count', async () => {
+  jest.mocked(alarms.getHistory).mockResolvedValue({
+    ...october,
+    // Records began on the 18th; the count says since when, whatever the order.
+    doses: [
+      dose('2026-10-20', 8, 'missed'),
+      dose('2026-10-18', 8, 'taken'),
+      dose('2026-10-19', 8, 'taken'),
+    ],
+  });
+  await renderApp('History');
+  expect(await screen.findByText('66% taken')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Oct' })).toBeTruthy();
+  expect(screen.getByTestId('month-bar')).toHaveStyle({ width: '66%' });
+  expect(screen.getByText('2 of 3 doses since 18 Oct')).toBeTruthy();
+});
+
+it('days are coloured by what happened', async () => {
+  jest.mocked(alarms.getHistory).mockResolvedValue({
+    ...october,
+    doses: [...october.doses, dose('2026-10-26', 8, 'taken')],
+  });
+  await renderApp('History');
+  await screen.findByText('66% taken');
+  const day = (label: string) => screen.getByLabelText(label);
+  const number = (label: string) =>
+    within(day(label)).getByText(label.split(' ')[1]);
+  // Every dose taken is green, none is coral, both with white numbers.
+  expect(face('Wed 7 Oct: All taken')).toHaveStyle({
+    backgroundColor: colors.green,
+  });
+  expect(number('Wed 7 Oct: All taken')).toHaveStyle({ color: colors.onFill });
+  expect(face('Thu 8 Oct: None taken')).toHaveStyle({
+    backgroundColor: colors.coral,
+  });
+  expect(number('Thu 8 Oct: None taken')).toHaveStyle({ color: colors.onFill });
+  // Some not taken is an amber ring on cream.
+  expect(face('Tue 6 Oct: Some not taken')).toHaveStyle({
+    backgroundColor: colors.amberTint,
+    borderColor: colors.amber,
+  });
+  expect(number('Tue 6 Oct: Some not taken')).toHaveStyle({
+    color: colors.navy,
+  });
+  // Today keeps its colour, inside a navy ring.
+  expect(face('Mon 26 Oct: All taken')).toHaveStyle({
+    backgroundColor: colors.green,
+  });
+  expect(day('Mon 26 Oct: All taken')).toHaveStyle({
+    borderColor: colors.navy,
+  });
+  // A day with nothing recorded is plain and still opens; a day to come doesn't.
+  expect(number('Fri 9 Oct')).toHaveStyle({ color: colors.muted });
+  expect(isDisabled('Fri 9 Oct')).toBe(false);
+  expect(isDisabled('Tue 27 Oct')).toBe(true);
+});
+
+// The navy ring goes round today's own look, so a today with a dose missed still shows amber.
+it("today's ring keeps the amber ring of a day with some not taken", async () => {
+  jest.mocked(alarms.getHistory).mockResolvedValue(withEveningMissedToday());
+  await renderApp('History');
+  await screen.findByText('57% taken');
+  expect(screen.getByLabelText('Mon 26 Oct: Some not taken')).toHaveStyle({
+    borderColor: colors.navy,
+  });
+  expect(face('Mon 26 Oct: Some not taken')).toHaveStyle({
+    backgroundColor: colors.amberTint,
+    borderColor: colors.amber,
+  });
+  // A day that isn't today has no ring of its own round its look.
+  expect(
+    StyleSheet.flatten(
+      screen.getByLabelText('Tue 6 Oct: Some not taken').props.style,
+    ).borderWidth ?? 0,
+  ).toBe(0);
 });
 
 it('moves between months within the kept records', async () => {
@@ -161,7 +260,7 @@ it('shares the month as text', async () => {
   jest.mocked(alarms.getHistory).mockResolvedValue(october);
   await renderApp('History');
   await screen.findByText('60% taken');
-  await fireEvent.press(screen.getByText('Share'));
+  await fireEvent.press(screen.getByLabelText('Share'));
   await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
   const { message } = share.mock.calls[0][0] as { message: string };
   expect(message.startsWith('PillSaathi · 1–26 Oct 2026\n')).toBe(true);
@@ -174,7 +273,7 @@ it('says so when the report cannot be shared', async () => {
   jest.spyOn(Share, 'share').mockRejectedValue(new Error('no sheet'));
   await renderApp('History');
   await screen.findByText('No doses recorded');
-  await fireEvent.press(screen.getByText('Share'));
+  await fireEvent.press(screen.getByLabelText('Share'));
   await waitFor(() =>
     expect(alert).toHaveBeenCalledWith(
       'Could not share the report',
@@ -209,7 +308,7 @@ it('shares what is recorded now, not what was loaded', async () => {
   await renderApp('History');
   await screen.findByText('60% taken');
   jest.mocked(alarms.getHistory).mockResolvedValue(withEveningMissed);
-  await fireEvent.press(screen.getByText('Share'));
+  await fireEvent.press(screen.getByLabelText('Share'));
   await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
   const { message } = share.mock.calls[0][0] as { message: string };
   expect(message).toContain('Taken 3 of 6 doses (50%)');
@@ -232,7 +331,7 @@ it('reloads the month when the app comes back', async () => {
   expect(screen.getByLabelText('Mon 26 Oct: None taken')).toBeTruthy();
 });
 
-it('History for an elder reads her history and hides Mark as taken', async () => {
+it('History for an elder reads her history and hides I took it', async () => {
   mockFamilyDefaults();
   jest.mocked(family.getElderHistory).mockResolvedValue(october);
   jest
@@ -240,7 +339,7 @@ it('History for an elder reads her history and hides Mark as taken', async () =>
     .mockResolvedValue([
       { elderId: 'E', name: 'Amma', phone: null, delayMinutes: 30 },
     ]);
-  await renderApp('History', { elderId: 'E' });
+  await renderApp('ElderHistory', { elderId: 'E' });
   expect(await screen.findByText('60% taken')).toBeTruthy();
   expect(family.getElderHistory).toHaveBeenCalledWith(
     'E',
@@ -250,7 +349,7 @@ it('History for an elder reads her history and hides Mark as taken', async () =>
   expect(alarms.getHistory).not.toHaveBeenCalled();
   await waitFor(() => expect(headerTitles()).toEqual(['Amma · History']));
 
-  // Her day page reads her history too, and offers no Mark as taken.
+  // Her day page reads her history too, and offers no I took it.
   await fireEvent.press(screen.getByLabelText(/^Tue 6 Oct/));
   expect((await screen.findAllByText('Missed')).length).toBeGreaterThan(0);
   expect(family.getElderHistory).toHaveBeenCalledWith(
@@ -258,5 +357,5 @@ it('History for an elder reads her history and hides Mark as taken', async () =>
     '2026-10-06',
     '2026-10-06',
   );
-  expect(screen.queryByText('Mark as taken')).toBeNull();
+  expect(screen.queryByText('I took it')).toBeNull();
 });

@@ -285,6 +285,21 @@ class FamilyRulesTest {
     assertFalse(FamilyRules.afterRefresh(amma, doc, emptyList(), "S")!!.editor)
   }
 
+  @Test fun withHers_takesHerWholeCopyAndKeepsHisSettings() {
+    // He edited his settings while her copy was being read from the follow as it was before.
+    val now = amma.copy(name = "Ammachi", phone = "+919800000000", delayMinutes = 15, since = 2L)
+    val fresh = amma.copy(
+      zone = "Europe/London", heardAt = 9L, oldest = "2026-02-01", pills = listOf(azee),
+      recent = listOf(record(DoseOutcome.TAKEN)), photos = mapOf("p1" to "a.jpg"), since = 1L, editor = true,
+      cards = listOf(CardSound(14, 0, null, null)), sounds = listOf(SoundRef("s1", "Bell")),
+      health = ElderHealth(true, true, true, true, true, true, true),
+    )
+    assertEquals(
+      fresh.copy(name = "Ammachi", phone = "+919800000000", delayMinutes = 15, since = 2L),
+      FamilyRules.withHers(now, fresh),
+    )
+  }
+
   @Test fun healthProblem_namesTheFirstProblemInOrder() {
     val fine = ElderHealth(true, true, true, true, true, true, true)
     assertNull(FamilyRules.healthProblem(null))

@@ -35,13 +35,83 @@ export const ml: Strings = {
     tryAgain: 'വീണ്ടും ശ്രമിക്കുക.',
     openSettings: 'ക്രമീകരണങ്ങൾ തുറക്കുക',
     defaultTone: 'സാധാരണ അലാറം ശബ്ദം',
+    back: 'തിരികെ',
+    close: 'അടയ്ക്കുക',
+    next: 'അടുത്തത്',
+    continue: 'തുടരുക',
+  },
+  steps: {
+    of: (n: number, total: number) => `${total}-ൽ ${n}`,
+  },
+  tabs: {
+    Today: 'ഇന്ന്',
+    History: 'ചരിത്രം',
+    Family: 'കുടുംബം',
+    Settings: 'ക്രമീകരണങ്ങൾ',
+  },
+  login: {
+    tagline: 'മരുന്നുകൾ സമയത്ത്.\nകുടുംബം അരികെ.',
+    welcome: 'സ്വാഗതം',
+    intro:
+      'മരുന്നുകൾ സുരക്ഷിതമായി സൂക്ഷിക്കാനും കുടുംബത്തോട് അടുത്തിരിക്കാനും ലോഗിൻ ചെയ്യുക.',
+    google: 'Google ഉപയോഗിച്ച് തുടരുക',
+    oneTap: 'ഒറ്റ ടാപ്പ്. പുതിയ പാസ്‌വേഡ് വേണ്ട.',
+    offline: 'ഓഫ്‌ലൈനായി തുടരുക',
+  },
+  who: {
+    hi: (first: string | null) => (first ? `നമസ്കാരം ${first}!` : 'നമസ്കാരം!'),
+    question: 'ഈ ഫോൺ ആർക്കുവേണ്ടിയാണ്?',
+    elder: 'ഞാൻ മരുന്ന് കഴിക്കുന്നു',
+    elderSub: 'എന്റെ അലാറങ്ങൾ ഈ ഫോണിൽ മുഴങ്ങട്ടെ',
+    carer: 'ഞാൻ ഒരാളെ നോക്കുന്നു',
+    carerSub: 'അവരുടെ ദിവസം കാണുക, അവരുടെ മരുന്നുകൾ ക്രമീകരിക്കുക',
+    both: 'രണ്ടും പിന്നീട് ചെയ്യാം. ആർക്കും സ്വന്തം മരുന്നുകളോ കുടുംബത്തെയോ ചേർക്കാം.',
   },
   today: {
-    title: 'ഇന്ന്',
-    titleOn: (day: string) => `ഇന്ന് · ${day}`,
-    addPill: '+ മരുന്ന് ചേർക്കുക',
-    empty:
-      'ഇതുവരെ മരുന്നുകളൊന്നുമില്ല. ചേർക്കാൻ + മരുന്ന് ചേർക്കുക അമർത്തുക.',
+    greeting: {
+      morning: 'സുപ്രഭാതം',
+      afternoon: 'ശുഭ ഉച്ച',
+      evening: 'ശുഭ സന്ധ്യ',
+    },
+    greetingTo: (greeting: string, name: string) => `${greeting}, ${name}`,
+    progress: (taken: number, total: number) => `${total}-ൽ ${taken} കഴിഞ്ഞു`,
+    nextDose: 'അടുത്ത ഡോസ്',
+    when: {
+      morning: 'ഇന്ന് രാവിലെ',
+      afternoon: 'ഇന്ന് ഉച്ചയ്ക്ക്',
+      tonight: 'ഇന്ന് രാത്രി',
+    },
+    until: (hours: number, minutes: number) =>
+      hours === 0
+        ? minutes === 0
+          ? 'ഇപ്പോൾ'
+          : `${minutes} മിനിറ്റിൽ`
+        : minutes === 0
+        ? `${hours} മണിക്കൂറിൽ`
+        : `${hours} മണിക്കൂർ ${minutes} മിനിറ്റിൽ`,
+    allDone: 'ഇന്നത്തേത് എല്ലാം കഴിഞ്ഞു',
+    noMore: 'ഇന്ന് ഇനി ഒന്നുമില്ല',
+    tomorrowAt: (time: string) => `നാളെ, ${time}`,
+    onDayAt: (day: string, time: string) => `${day}, ${time}`,
+    laterToday: 'ഇന്ന് പിന്നീട്',
+    otherDays: 'മറ്റു ദിവസങ്ങളിൽ',
+    myPills: 'എന്റെ മരുന്നുകൾ',
+    noOwnPills: 'നിങ്ങൾക്ക് സ്വന്തം മരുന്നുകളൊന്നുമില്ല.',
+    allTaken: (pills: number) =>
+      pills <= 1
+        ? 'കഴിച്ചു'
+        : pills === 2
+        ? 'രണ്ടും കഴിച്ചു'
+        : 'എല്ലാം കഴിച്ചു',
+    missed: 'നഷ്ടമായി',
+    skipped: 'ഒഴിവാക്കി',
+    tookIt: 'ഞാൻ കഴിച്ചു',
+    tookItAt: (time: string) => `ഞാൻ കഴിച്ചു, ${time}`,
+    addPill: 'മരുന്ന് ചേർക്കുക',
+    empty: 'ഇതുവരെ മരുന്നുകളൊന്നുമില്ല',
+    emptyBody:
+      'ആദ്യത്തെ മരുന്ന് ചേർക്കുക. അല്ലെങ്കിൽ മകനോ മകളോ അവരുടെ ഫോണിൽ നിന്ന് ചേർക്കാം.',
+    showCode: 'എന്റെ കോഡ് കാണിക്കുക',
     loadFailed:
       'മരുന്നുകൾ ലോഡ് ചെയ്യാനായില്ല. ആപ്പ് വീണ്ടും തുറന്ന് ശ്രമിക്കുക.',
     missedTitle: 'കഴിക്കാതെ പോയ മരുന്നുകൾ',
@@ -84,25 +154,18 @@ export const ml: Strings = {
       `${start} · അവസാന ഡോസ് ${last}`,
   },
   pill: {
-    addTitle: 'മരുന്ന് ചേർക്കുക',
-    editTitle: 'മരുന്ന് മാറ്റുക',
     name: 'പേര്',
     namePlaceholder: 'മരുന്നിന്റെ പേര്',
     loadFailed: 'ഈ മരുന്ന് ലോഡ് ചെയ്യാനായില്ല.',
     photo: 'ഫോട്ടോ',
-    takePhoto: 'ഫോട്ടോ എടുക്കുക',
-    chooseGallery: 'ഗാലറിയിൽ നിന്ന് തിരഞ്ഞെടുക്കുക',
-    retake: 'വീണ്ടും എടുക്കുക',
     removePhoto: 'നീക്കുക',
     photoFailed: 'ഫോട്ടോ ചേർക്കാനായില്ല',
     type: 'തരം',
     howMuch: 'ഓരോ തവണയും എത്ര',
     less: 'കുറയ്ക്കുക',
     more: 'കൂട്ടുക',
-    when: 'എപ്പോൾ ഓർമ്മിപ്പിക്കണം',
     change: 'മാറ്റുക',
     removeTime: (time: string) => `${time} നീക്കുക`,
-    addTime: '+ ഒരു സമയം ചേർക്കുക',
     timeTaken: 'ആ സമയം ഇതിനകം ചേർത്തിട്ടുണ്ട്.',
     howLong: 'എത്ര ദിവസം',
     nDays: (days: number) => `${days} ദിവസം`,
@@ -123,6 +186,42 @@ export const ml: Strings = {
     tabletsLeft: 'ബാക്കിയുള്ള ഗുളികകൾ',
     capsulesLeft: 'ബാക്കിയുള്ള ക്യാപ്സ്യൂളുകൾ',
     countNote: 'നിർബന്ധമില്ല. ഓരോ തവണ കഴിക്കുമ്പോഴും ആ അളവ് കുറയും.',
+    ringsAt: 'മുഴങ്ങുന്ന സമയം',
+    soundShared: 'ഒരേ സമയത്തുള്ള എല്ലാ മരുന്നുകളും ഒരേ ശബ്ദത്തിൽ മുഴങ്ങും.',
+    deletePill: 'ഈ മരുന്ന് നീക്കം ചെയ്യുക',
+    changePhoto: 'ഫോട്ടോ മാറ്റുക',
+    basics: 'പേര്, തരം, അളവ്',
+    daysLeft: (days: number) =>
+      days === 0 ? 'ഒരു ദിവസത്തിൽ കുറവ്' : `ഏകദേശം ${days} ദിവസം`,
+    noneLeft: 'ഒന്നും ബാക്കിയില്ല',
+    waitingChange: (name: string, change: string) =>
+      `${name}-ന്റെ ഫോണിനായി കാത്തിരിക്കുന്നു: ${change}`,
+  },
+  addPill: {
+    titleFor: (name: string) => `${name}-യ്ക്ക് ഒരു മരുന്ന് ചേർക്കുക`,
+    nameQuestion: 'മരുന്നിന്റെ പേര് എന്താണ്?',
+    addPhoto: 'സ്ട്രിപ്പിന്റെ ഫോട്ടോ ചേർക്കുക',
+    photoNote: 'നിർബന്ധമില്ല. മരുന്നുകൾ തിരിച്ചറിയാൻ സഹായിക്കും.',
+    camera: 'ക്യാമറ',
+    gallery: 'ഗാലറി',
+    kindQuestion: 'ഏത് തരം, എത്ര അളവ്?',
+    eachTimeLabel: 'ഓരോ തവണയും',
+    whenQuestion: (name: string) => `${name} എപ്പോൾ ഓർമ്മിപ്പിക്കണം?`,
+    pickSome: 'ഒന്നോ അതിലധികമോ തിരഞ്ഞെടുക്കുക.',
+    morning: 'രാവിലെ',
+    afternoon: 'ഉച്ചയ്ക്ക്',
+    night: 'രാത്രി',
+    changeTime: (time: string) => `${time} മാറ്റുക`,
+    anotherTime: 'മറ്റൊരു സമയം',
+    maxTimes: (max: number) =>
+      `ഒരു മരുന്ന് ദിവസം ${max} തവണ വരെ മാത്രമേ ഓർമ്മിപ്പിക്കൂ. ആദ്യം ഒന്നിന്റെ ടിക്ക് മാറ്റുക.`,
+    howLongQuestion: 'എത്ര ദിവസത്തേക്ക്?',
+    checkQuestion: 'ഇത് ശരിയാണോ?',
+    eachTime: (kind: string, amount: string) =>
+      `${kind} · ഓരോ തവണയും ${amount}`,
+    joinTimes: (times: string[]) => times.join(', '),
+    optional: 'നിർബന്ധമില്ല',
+    addCount: '+ ചേർക്കുക',
   },
   health: {
     notifications:
@@ -130,25 +229,31 @@ export const ml: Strings = {
     alarmChannel: 'അലാറം അറിയിപ്പുകൾ ഓഫാണ്. ഓണാക്കാൻ അമർത്തുക.',
     exactAlarm:
       'അലാറം വെക്കാൻ PillSaathi-ക്ക് അനുമതിയില്ല. അനുവദിക്കാൻ അമർത്തുക.',
-    fullScreen:
-      'ലോക്ക് സ്ക്രീനിൽ അലാറം കാണിക്കാനാവില്ല. അനുവദിക്കാൻ അമർത്തുക.',
+    fullScreen: 'ലോക്ക് സ്ക്രീനിൽ അലാറം കാണിക്കാനാവില്ല. അനുവദിക്കാൻ അമർത്തുക.',
     backgroundRestricted:
       'പശ്ചാത്തല ഉപയോഗം നിയന്ത്രിച്ചിരിക്കുന്നു, അതിനാൽ അലാറം മുഴങ്ങിയേക്കില്ല. ശരിയാക്കാൻ അമർത്തുക.',
     alarmVolume: 'അലാറം ശബ്ദം ഓഫാണ്. കൂട്ടാൻ അമർത്തുക.',
     batteryOptimization:
       'ബാറ്ററി ലാഭിക്കൽ അലാറങ്ങൾ നിർത്തിയേക്കാം. നിയന്ത്രണമില്ലാത്ത ബാറ്ററി ഉപയോഗം അനുവദിക്കാൻ അമർത്തുക.',
-    setup:
-      'ഈ ഫോണിൽ അലാറങ്ങൾ മുടങ്ങാതെ മുഴങ്ങാൻ സജ്ജീകരണം പൂർത്തിയാക്കുക.',
+    setup: 'ഈ ഫോണിൽ അലാറങ്ങൾ മുടങ്ങാതെ മുഴങ്ങാൻ സജ്ജീകരണം പൂർത്തിയാക്കുക.',
     more: (count: number) => ` (+${count} കൂടി)`,
+    title: 'അലാറങ്ങൾ മുഴങ്ങിയേക്കില്ല',
+    fix: 'ഇപ്പോൾ ശരിയാക്കുക',
   },
   sound: {
     title: 'ശബ്ദം',
-    record: '● റെക്കോർഡ്',
-    import: '⇪ ഇംപോർട്ട്',
+    titleAt: (time: string) => `${time}-ലെ ശബ്ദം`,
+    ringTogether: (names: string[]) =>
+      names.length === 1
+        ? `ഈ സമയത്ത് ${names[0]} മുഴങ്ങും`
+        : `${names.join(', ')} ഒരുമിച്ച് മുഴങ്ങും`,
+    record: 'ശബ്ദം റെക്കോർഡ് ചെയ്യുക',
+    import: 'പാട്ടോ ഫയലോ എടുക്കുക',
     importing: 'ഇംപോർട്ട് ചെയ്യുന്നു…',
-    yourSounds: 'നിങ്ങളുടെ ശബ്ദങ്ങൾ',
     recorded: 'റെക്കോർഡ് ചെയ്തത്',
-    imported: 'ഇംപോർട്ട് ചെയ്തത്',
+    imported: 'പാട്ട്',
+    phoneAlarm: 'ഫോണിന്റെ അലാറം',
+    hint: 'ഉപയോഗിക്കാൻ ഒരു ശബ്ദം അമർത്തുക. നീക്കം ചെയ്യാൻ അമർത്തിപ്പിടിക്കുക.',
     play: (name: string) => `${name} പ്ലേ ചെയ്യുക`,
     stop: (name: string) => `${name} നിർത്തുക`,
     changeFailed: 'ശബ്ദം മാറ്റാനായില്ല',
@@ -162,36 +267,40 @@ export const ml: Strings = {
     deleteFailed: 'ശബ്ദം നീക്കം ചെയ്യാനായില്ല',
   },
   record: {
-    title: 'റെക്കോർഡ്',
+    title: 'ശബ്ദം റെക്കോർഡ് ചെയ്യുക',
+    recording: 'റെക്കോർഡ് ചെയ്യുന്നു…',
     upTo: '2:00 വരെ',
     start: 'റെക്കോർഡിംഗ് തുടങ്ങുക',
     stop: 'റെക്കോർഡിംഗ് നിർത്തുക',
     tapToStop: 'നിർത്താൻ അമർത്തുക',
-    listen: '▶ കേൾക്കുക',
-    stopListening: '■ നിർത്തുക',
-    redo: '↺ വീണ്ടും',
+    listen: 'കേൾക്കുക',
+    stopListening: 'നിർത്തുക',
+    redo: 'വീണ്ടും റെക്കോർഡ് ചെയ്യുക',
     name: 'പേര്',
     defaultName: 'എന്റെ റെക്കോർഡിംഗ്',
     use: 'ഈ ശബ്ദം ഉപയോഗിക്കുക',
     micOffTitle: 'മൈക്രോഫോൺ അനുമതി ഓഫാണ്',
-    micMessage:
-      'അലാറം ശബ്ദം റെക്കോർഡ് ചെയ്യാൻ PillSaathi-ക്ക് മൈക്രോഫോൺ വേണം.',
+    micMessage: 'അലാറം ശബ്ദം റെക്കോർഡ് ചെയ്യാൻ PillSaathi-ക്ക് മൈക്രോഫോൺ വേണം.',
     allowMic: 'മൈക്രോഫോൺ അനുവദിക്കുക',
     notSaved: 'ആ റെക്കോർഡിംഗ് സേവ് ചെയ്യാനായില്ല. വീണ്ടും ശ്രമിക്കുക.',
     startFailed: 'റെക്കോർഡിംഗ് തുടങ്ങാനായില്ല',
     tooShort: 'ആ റെക്കോർഡിംഗ് വളരെ ചെറുതാണ്. വീണ്ടും ശ്രമിക്കുക.',
     saveFailed: 'റെക്കോർഡിംഗ് സേവ് ചെയ്യാനായില്ല',
     playFailed: 'റെക്കോർഡിംഗ് പ്ലേ ചെയ്യാനായില്ല',
-    changeFailed: 'ശബ്ദം മാറ്റാനായില്ല',
   },
   setup: {
-    title: 'അലാറങ്ങൾ മുടങ്ങാതിരിക്കാൻ',
+    title: 'അലാറങ്ങൾ എപ്പോഴും മുഴങ്ങാൻ',
+    firstTitle: 'അലാറങ്ങൾ മുഴങ്ങുമെന്ന് ഉറപ്പാക്കാം',
     intro:
       'ചില ഫോണുകൾ പശ്ചാത്തലത്തിലുള്ള ആപ്പുകൾ നിർത്തും. അലാറങ്ങൾ എപ്പോഴും മുഴങ്ങാൻ ഈ ഘട്ടങ്ങൾ ഒരിക്കൽ ചെയ്യുക.',
-    done: 'ചെയ്തു',
-    doneTick: 'ചെയ്തു ✓',
-    allowed: '✓ അനുവദിച്ചു',
+    progress: (done: number, total: number, maker: string) =>
+      `${total}-ൽ ${done} കഴിഞ്ഞു${maker ? ` · ${maker} ഫോൺ` : ''}`,
+    ticked: 'ചെയ്തു',
+    done: 'ഞാൻ ഇത് ചെയ്തു',
+    doneTick: 'ഞാൻ ഇത് ചെയ്തു ✓',
+    allowed: 'അനുവദിച്ചു',
     finish: 'പൂർത്തിയായി',
+    later: 'പിന്നീട് ചെയ്യാം',
     steps: {
       lockRecents: {
         title: 'സമീപകാല ആപ്പുകളിൽ PillSaathi ലോക്ക് ചെയ്യുക',
@@ -238,14 +347,17 @@ export const ml: Strings = {
   settings: {
     title: 'ക്രമീകരണങ്ങൾ',
     language: 'ഭാഷ',
-    draft: ' (കരട്)',
-    whenItRings: 'മുഴങ്ങുമ്പോൾ',
+    draft: 'കരട്',
     readAloud: 'മരുന്നുകളുടെ പേര് ഉറക്കെ വായിക്കുക',
+    readAloudNote: 'അലാറം മുഴങ്ങുമ്പോൾ',
+    hear: 'എങ്ങനെയുണ്ടെന്ന് കേൾക്കുക',
     tryIt: 'കേട്ടുനോക്കുക',
     textSize: 'അക്ഷര വലുപ്പം',
-    textSizeNote: 'PillSaathi നിങ്ങളുടെ ഫോണിലെ അക്ഷര വലുപ്പം പിന്തുടരുന്നു.',
-    reliability: 'വിശ്വാസ്യത',
-    makeReliable: 'അലാറങ്ങൾ മുടങ്ങാതിരിക്കാൻ',
+    textSizeNote: 'ഫോണിലെ അക്ഷര വലുപ്പം പിന്തുടരുന്നു',
+    alarmSetup: 'അലാറം സജ്ജീകരണം',
+    stepsLeft: (steps: number) =>
+      steps === 1 ? '1 ഘട്ടം ബാക്കി' : `${steps} ഘട്ടങ്ങൾ ബാക്കി`,
+    allSet: 'എല്ലാം ശരിയായി',
     saveFailed: 'സേവ് ചെയ്യാനായില്ല',
     noVoice: (language: string) =>
       `നിങ്ങളുടെ ഫോണിൽ ${language} ശബ്ദമില്ല, അതിനാൽ ഇംഗ്ലീഷിൽ വായിച്ചു.`,
@@ -268,9 +380,9 @@ export const ml: Strings = {
     previousMonth: 'മുൻ മാസം',
     nextMonth: 'അടുത്ത മാസം',
     month: (month: string, year: number) => `${month} ${year}`,
-    percentTaken: (percent: number) => `${percent}% കഴിച്ചു`,
-    doseCount: (taken: number, total: number) =>
-      `${total} ഡോസിൽ ${taken} എണ്ണം`,
+    taken: 'കഴിച്ചു',
+    since: (taken: number, total: number, day: string) =>
+      `${day} മുതൽ ${total} ഡോസിൽ ${taken} എണ്ണം`,
     noDoses: 'ഡോസുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല',
     allTaken: 'എല്ലാം കഴിച്ചു',
     someNotTaken: 'ചിലത് കഴിച്ചില്ല',
@@ -279,6 +391,9 @@ export const ml: Strings = {
     shareFailed: 'റിപ്പോർട്ട് പങ്കിടാനായില്ല',
     loadFailed: 'ചരിത്രം കാണിക്കാനായില്ല.',
     dayEmpty: 'ഈ ദിവസം ഒന്നും രേഖപ്പെടുത്തിയിട്ടില്ല.',
+    dayTaken: (taken: number, total: number) =>
+      `${total} ഡോസിൽ ${taken} എണ്ണം കഴിച്ചു`,
+    tookIt: 'ഞാൻ കഴിച്ചു',
     takenMarked: (day: string, time: string) =>
       `✓ കഴിച്ചു (പിന്നീട് രേഖപ്പെടുത്തി: ${day}, ${time})`,
   },
@@ -305,17 +420,19 @@ export const ml: Strings = {
     title: 'കുടുംബം',
     canSee: 'എന്റെ മരുന്നുകൾ കാണാൻ കഴിയുന്നവർ',
     noOne: 'ആരുമില്ല.',
-    showCode: 'കുടുംബാംഗത്തിന് ഒരു കോഡ് കാണിക്കുക',
+    showCode: 'എന്റെ കോഡ് കാണിക്കുക',
+    howToAdd: 'ആരെയെങ്കിലും ചേർക്കാൻ, അവരെ നിങ്ങളുടെ കോഡ് കാണിക്കുക.',
     remove: 'നീക്കുക',
     removeLabel: (name: string) => `${name} നീക്കുക`,
     removeConfirm: (name: string) =>
       `${name} നിങ്ങളുടെ മരുന്നുകൾ കാണുന്നത് നിർത്തണോ?`,
-    codeTitle: 'കുടുംബ കോഡ്',
-    codeBody:
-      'ഇത് ഒരു കുടുംബാംഗത്തെ കാണിക്കുക, അല്ലെങ്കിൽ അയയ്ക്കുക. ഇത് 15 മിനിറ്റ് പ്രവർത്തിക്കും.',
+    codeTitle: 'എന്റെ കുടുംബ കോഡ്',
+    codeBody: 'ഇത് നിങ്ങളുടെ മകനെയോ മകളെയോ കാണിക്കുക',
+    worksFor: (minutes: number) =>
+      `ഇനി ${minutes} മിനിറ്റ് കൂടി പ്രവർത്തിക്കും`,
     sendCode: 'കോഡ് അയയ്ക്കുക',
     shareMessage: (code: string) =>
-      `PillSaathi തുറന്ന്, Add family ടാപ്പ് ചെയ്ത്, ${code} ടൈപ്പ് ചെയ്യുക. ഇത് 15 മിനിറ്റ് പ്രവർത്തിക്കും.`,
+      `PillSaathi തുറന്ന്, Family ടാപ്പ് ചെയ്ത്, + Add family ടാപ്പ് ചെയ്ത്, ${code} ടൈപ്പ് ചെയ്യുക. ഇത് 15 മിനിറ്റ് പ്രവർത്തിക്കും.`,
     scanCode: 'സ്കാൻ കോഡ്',
     opening: 'സ്കാനർ തുറക്കുന്നു…',
     noScanner:
@@ -324,28 +441,39 @@ export const ml: Strings = {
     newCode: 'പുതിയ കോഡ്',
     allowTitle: (name: string) =>
       `${name} നിങ്ങളുടെ മരുന്നുകൾ കാണുകയും മാറ്റുകയും ചെയ്യട്ടെ?`,
-    allowBody: (email: string) =>
-      `${email} നിങ്ങളുടെ മരുന്നുകളും നിങ്ങൾ അവ കഴിച്ചോ എന്നും കാണും, മരുന്നുകളും അലാറം ശബ്ദങ്ങളും ചേർക്കാനും മാറ്റാനും കഴിയും. ഓരോ തവണയും നിങ്ങൾക്ക് അറിയിപ്പ് ലഭിക്കും.`,
+    allowSees: (name: string) =>
+      `${name} നിങ്ങളുടെ മരുന്നുകളും നിങ്ങൾ അവ കഴിച്ചോ എന്നും കാണും`,
+    allowEdits: (name: string) =>
+      `${name} മരുന്നുകളും ശബ്ദങ്ങളും ചേർക്കുകയോ മാറ്റുകയോ ചെയ്യാം`,
+    allowNotice: (name: string) =>
+      `ഓരോ തവണ ${name} അങ്ങനെ ചെയ്യുമ്പോഴും നിങ്ങൾക്ക് അറിയിപ്പ് ലഭിക്കും`,
     canChange: 'എന്റെ മരുന്നുകൾ മാറ്റാം',
     canChangeLabel: (name: string) => `എന്റെ മരുന്നുകൾ മാറ്റാം: ${name}`,
     no: 'വേണ്ട',
     allow: 'അനുവദിക്കുക',
     offline: 'ഇന്റർനെറ്റ് ഇല്ല. വീണ്ടും ശ്രമിക്കുക.',
+    googleFailed: 'ഈ ഫോണിൽ Google ഉപയോഗിച്ച് ലോഗിൻ ചെയ്യാനായില്ല.',
     failed: 'എന്തോ പിശക് സംഭവിച്ചു. കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.',
     notSetUp: 'ഈ പതിപ്പിൽ കുടുംബം സജ്ജമാക്കിയിട്ടില്ല.',
     lookAfter: 'ഞാൻ നോക്കുന്നവർ',
-    addFamily: '+ കുടുംബാംഗത്തെ ചേർക്കുക',
     addTitle: 'കുടുംബാംഗത്തെ ചേർക്കുക',
-    signIn: 'Google ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക',
+    logInFirst:
+      'കുടുംബാംഗത്തെ ചേർക്കാൻ, ആദ്യം Google ഉപയോഗിച്ച് ലോഗിൻ ചെയ്യുക.',
+    loggedInAs: (email: string) => `${email} ആയി ലോഗിൻ ചെയ്തു`,
+    whereCode:
+      'അവരുടെ ഫോണിൽ: PillSaathi തുറന്ന്, കുടുംബം ടാപ്പ് ചെയ്ത്, എന്റെ കോഡ് കാണിക്കുക അമർത്തുക.',
+    scanTheirs: 'അവരുടെ കോഡ് സ്കാൻ ചെയ്യുക',
     typeDigits: 'അല്ലെങ്കിൽ 6 അക്കങ്ങൾ ടൈപ്പ് ചെയ്യുക',
-    next: 'അടുത്തത്',
+    skip: 'ഇപ്പോൾ വേണ്ട',
     waiting: 'അവരുടെ ഫോണിൽ അനുവദിക്കുക അമർത്താൻ കാത്തിരിക്കുന്നു…',
+    keepOpen: 'ഇത് തുറന്നുവെക്കുക. ഇത് തനിയെ മുന്നോട്ട് പോകും.',
     refused: 'അവർ വേണ്ട എന്ന് അമർത്തി.',
     badCode:
       'ആ കോഡ് പ്രവർത്തിച്ചില്ല. 6 അക്കങ്ങൾ പരിശോധിക്കുക, അല്ലെങ്കിൽ പുതിയ കോഡ് ചോദിക്കുക.',
+    almostDone: 'ഏകദേശം കഴിഞ്ഞു',
     callThem: 'നിങ്ങൾ അവരെ എന്ത് വിളിക്കുന്നു?',
     phone: 'അവരുടെ ഫോൺ നമ്പർ',
-    phoneHint: 'ആവശ്യമെങ്കിൽ. വിളിക്കുക ബട്ടണിനായി.',
+    forCall: 'വിളിക്കാൻ',
     pingWhen: 'ഒരു ഡോസ് മുടങ്ങിയാൽ എന്നെ അറിയിക്കുക',
     after15: '15 മിനിറ്റിന് ശേഷം',
     after30: '30 മിനിറ്റിന് ശേഷം',
@@ -358,12 +486,14 @@ export const ml: Strings = {
     notReported: (n: number) => `${n} അറിയിച്ചിട്ടില്ല`,
     later: (n: number) => `${n} പിന്നീട്`,
     nothingDue: 'ഇന്ന് ഒന്നുമില്ല',
+    missedToday: (n: number) => `ഇന്ന് ${n} മുടങ്ങി`,
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `${time} മുതൽ വിവരമില്ല`,
-    notHeardYet: (name: string) =>
-      `${name}-യുടെ ഫോണിൽ നിന്ന് ഇതുവരെ വിവരമില്ല`,
+    notHeardYet: (name: string) => `${name}-യുടെ ഫോണിൽ നിന്ന് ഇതുവരെ വിവരമില്ല`,
     lastHeard: (time: string) => `അവസാനം വിവരം കിട്ടിയത് ${time}`,
     herTime: (name: string) => `സമയങ്ങൾ ${name}-യുടെ സമയമാണ്.`,
+    tookAt: (time: string) => `✓ ${time}`,
+    dueLater: 'പിന്നീട്',
     call: 'വിളിക്കുക',
     edit: 'മാറ്റുക',
     historyOf: (name: string) => `${name} · ചരിത്രം`,
@@ -374,19 +504,16 @@ export const ml: Strings = {
     keep: 'വേണ്ട',
   },
   remote: {
-    changePills: 'മരുന്നുകൾ മാറ്റുക',
+    herPills: 'അവരുടെ മരുന്നുകൾ',
     pillsTitle: (name: string) => `${name}-ന്റെ മരുന്നുകൾ`,
     pillTitle: (name: string) => `${name}-ന്റെ മരുന്ന്`,
-    addPill: '+ മരുന്ന് ചേർക്കുക',
-    soundsHeading: 'അലാറം ശബ്ദങ്ങൾ',
-    waitingHeading: 'കാത്തിരിക്കുന്നു',
-    recentHeading: 'അടുത്തിടെ',
+    recentHeading: 'അടുത്തിടെയുള്ള മാറ്റങ്ങൾ',
     cancel: 'റദ്ദാക്കുക',
     cancelLabel: (title: string) => `റദ്ദാക്കുക: ${title}`,
     delayNote: (name: string) =>
       `${name}-ന്റെ ഫോൺ ഏകദേശം മണിക്കൂറിൽ ഒരിക്കലും അലാറം അടിക്കുമ്പോഴും പരിശോധിക്കും. ഇപ്പോൾ തന്നെ എത്തിക്കാൻ, PillSaathi തുറക്കാൻ പറയുക.`,
     notEditor: (name: string) =>
-      `${name}-ന്റെ ഫോൺ മരുന്നുകൾ മാറ്റാൻ നിങ്ങളെ അനുവദിച്ചിട്ടില്ല. അവരുടെ ഫോണിൽ: ക്രമീകരണങ്ങൾ → കുടുംബം → നിങ്ങളുടെ പേരിനടുത്തുള്ള "എന്റെ മരുന്നുകൾ മാറ്റാം" ഓണാക്കുക.`,
+      `${name}-ന്റെ ഫോൺ മരുന്നുകൾ മാറ്റാൻ നിങ്ങളെ അനുവദിച്ചിട്ടില്ല. അവരുടെ ഫോണിൽ: PillSaathi തുറന്ന്, കുടുംബം ടാപ്പ് ചെയ്ത്, നിങ്ങളുടെ കാർഡിലെ "എന്റെ മരുന്നുകൾ മാറ്റാം" ഓണാക്കുക.`,
     tooBig: 'ഈ ശബ്ദം അയയ്ക്കാൻ വളരെ വലുതാണ് (5 MB-ൽ കൂടുതൽ).',
     alreadyTaken: (name: string) => `${name}-ന്റെ ഫോണിൽ ഇത് ഇതിനകം എത്തി.`,
     add: (pill: string) => `${pill} ചേർക്കുക`,
@@ -396,8 +523,8 @@ export const ml: Strings = {
     unreadable: 'ഫോണിന് വായിക്കാൻ കഴിയാത്ത ഒരു മാറ്റം',
     defaultTone: 'സാധാരണ ടോൺ',
     waiting: (name: string) => `${name}-ന്റെ ഫോണിനായി കാത്തിരിക്കുന്നു`,
-    done: (time: string) => `${time}-ന് ചെയ്തു`,
-    doneNow: 'ചെയ്തു',
+    done: (time: string) => `✓ ${time}-ന് ചെയ്തു`,
+    doneNow: '✓ ചെയ്തു',
     notDone: (why: string) => `ചെയ്തില്ല: ${why}`,
     reasons: {
       notAllowed: 'ഇപ്പോൾ മരുന്നുകൾ മാറ്റാൻ നിങ്ങൾക്ക് അനുവാദമില്ല',
@@ -408,7 +535,7 @@ export const ml: Strings = {
       fileBroken: 'ഫോട്ടോയോ ശബ്ദമോ മുഴുവനായി എത്തിയില്ല',
     },
     problem: (name: string, what: string) =>
-      `${name}-ന്റെ ഫോണിൽ അലാറം അടിക്കാതിരിക്കാം: ${what}. അവരുടെ ഫോണിൽ PillSaathi തുറന്ന് മഞ്ഞ ബാനറിൽ തൊടുക.`,
+      `${name}-ന്റെ ഫോണിൽ അലാറം അടിക്കാതിരിക്കാം: ${what}. അവരുടെ ഫോണിൽ PillSaathi തുറന്ന് "ഇപ്പോൾ ശരിയാക്കുക" അമർത്തുക.`,
     problems: {
       notifications: 'അറിയിപ്പുകൾ ഓഫാണ്',
       alarmChannel: 'അലാറം അറിയിപ്പുകൾ ഓഫാണ്',

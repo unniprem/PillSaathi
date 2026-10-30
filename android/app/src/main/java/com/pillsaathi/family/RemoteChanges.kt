@@ -126,6 +126,19 @@ object RemoteRules {
   fun revoked(changes: List<RemoteChange>, uid: String): List<RemoteChange> =
     changes.filter { it.by == uid && (it.status == PENDING || it.status == APPLYING) }
 
+  /**
+   * Whether a relative's copy of her pills, read from her upload at [heardAt], doesn't show
+   * [change] yet: it still waits, or her phone applied it after that upload. Until then his next
+   * change to that pill starts from it, so as not to undo it. Her phone uploads after applying,
+   * under the same lock, so any later upload has it.
+   */
+  fun ahead(change: RemoteChange, heardAt: Long?): Boolean =
+    when (change.status) {
+      PENDING, APPLYING -> true
+      APPLIED -> heardAt == null || change.doneAt == null || change.doneAt > heardAt
+      else -> false
+    }
+
   /** The day a new pill starts: the one he meant, or [today] once that has passed. */
   fun startDate(requested: LocalDate?, today: LocalDate): LocalDate =
     if (requested == null || requested < today) today else requested

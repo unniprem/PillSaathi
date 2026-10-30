@@ -84,18 +84,7 @@ object FamilyRefresh {
           photoDir(context, elderId).deleteRecursively()
           FamilyRules.withoutFollow(local, elderId)
         } else {
-          local.copy(
-            follows = local.follows.map {
-              if (it.elderId != elderId) {
-                it
-              } else {
-                it.copy(
-                  zone = fresh.zone, heardAt = fresh.heardAt, oldest = fresh.oldest, pills = fresh.pills,
-                  recent = fresh.recent, photos = fresh.photos,
-                )
-              }
-            },
-          )
+          local.copy(follows = local.follows.map { if (it.elderId != elderId) it else FamilyRules.withHers(it, fresh) })
         }
       }
       store.saveFamily(local)

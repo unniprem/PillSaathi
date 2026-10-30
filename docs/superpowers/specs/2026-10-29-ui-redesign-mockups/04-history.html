@@ -1,0 +1,147 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{font-family:system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;padding:24px;--text-secondary:#6e6e73;--bg-tertiary:#e5e5e7;--selected-border:#0071e3}.subtitle{color:#6e6e73}</style>
+<link rel="stylesheet" href="phone.css">
+<link rel="stylesheet" href="sky.css">
+<style>
+  .sky .sumc { background: #fff; border-radius: 22px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .sumc .big { font-size: 32px; font-weight: 900; letter-spacing: -.8px; line-height: 1; }
+  .sky .sumc .big small { display: inline; font-size: 14px; letter-spacing: 0; margin-left: 4px; }
+  .sky .bar { height: 10px; border-radius: 99px; background: #EEF2F6; overflow: hidden; margin: 10px 0 6px; }
+  .sky .bar i { display: block; height: 100%; width: 89%; background: linear-gradient(90deg, #2E9E5B, #4CC27C); border-radius: 99px; }
+  .sky .mnav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .sky .mnav b { font-size: 17px; font-weight: 900; }
+  .sky .mnav .round { background: var(--soft); width: 34px; height: 34px; }
+  .sky .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px 0; text-align: center; }
+  .sky .grid .h { font-size: 11px; font-weight: 800; color: var(--mut); padding-bottom: 2px; }
+  .sky .grid .d { width: 34px; height: 34px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 800; color: #A8B6C2; }
+  .sky .grid .ok { background: var(--green); color: #fff; }
+  .sky .grid .some { box-shadow: inset 0 0 0 3px #F0A030; color: var(--navy); background: #FFF8EA; }
+  .sky .grid .none { background: var(--coral); color: #fff; }
+  .sky .grid .now { box-shadow: inset 0 0 0 2.5px var(--navy); color: var(--navy); }
+  .sky .grid .fut { color: #CBD5DD; }
+  .sky .legend { display: flex; gap: 12px; justify-content: center; font-size: 11.5px; font-weight: 700; color: var(--mut); margin-top: 8px; }
+  .sky .legend span { display: flex; align-items: center; gap: 4px; }
+  .sky .legend i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .sky .dayrow { display: flex; align-items: center; gap: 12px; padding: 11px 0; }
+  .sky .dayrow + .dayrow { border-top: 1px solid var(--line); }
+  .sky .dayrow .grow { flex: 1; font-size: 15.5px; font-weight: 900; }
+  .sky .mini { display: flex; gap: 4px; margin-top: 4px; }
+  .sky .mini i { width: 16px; height: 6px; border-radius: 9px; display: block; background: #DDE5EC; }
+  .sky .mini i.g { background: var(--green); } .sky .mini i.r { background: var(--coral); }
+  .sky .tl { display: flex; gap: 12px; }
+  .sky .tl .rail { display: flex; flex-direction: column; align-items: center; }
+  .sky .tl .rail .ln { flex: 1; width: 2px; background: #DDE5EC; margin: 4px 0; }
+  .sky .tl .content { flex: 1; background: #fff; border-radius: 18px; padding: 11px 13px; margin-bottom: 10px; box-shadow: 0 4px 14px rgba(21,50,74,.06); }
+  .sky .tl .top { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 900; }
+  .sky .tl .names { font-size: 13.5px; font-weight: 700; color: var(--mut); margin-top: 3px; }
+</style>
+
+<h2>4 · History</h2>
+<p class="subtitle">For looking back, and for sharing with the doctor. Calendar or list? Click A or B. The day page on the right is the same for both.</p>
+
+<div class="pg-row">
+
+  <!-- A: calendar -->
+  <div class="pg-col card" data-choice="history-calendar" onclick="toggleSelect(this)">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow"><h1>History</h1><span class="round"><svg class="i"><use href="icons.svg#i-share"/></svg></span></div>
+      </div>
+      <div class="body">
+        <div class="sumc">
+          <div style="font-size:12px;font-weight:900;letter-spacing:.09em;color:var(--blue)">OCTOBER</div>
+          <div class="big">89%<small>taken</small></div>
+          <div class="bar"><i></i></div>
+          <div class="note">31 of 35 doses since 18 Oct</div>
+        </div>
+        <div class="cardw" style="padding:12px 10px">
+          <div class="mnav"><span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span><b>October 2026</b><span class="round"><svg class="i"><use href="icons.svg#i-next"/></svg></span></div>
+          <div class="grid">
+            <div class="h">S</div><div class="h">M</div><div class="h">T</div><div class="h">W</div><div class="h">T</div><div class="h">F</div><div class="h">S</div>
+            <div></div><div></div><div></div><div></div><div class="d">1</div><div class="d">2</div><div class="d">3</div>
+            <div class="d">4</div><div class="d">5</div><div class="d">6</div><div class="d">7</div><div class="d">8</div><div class="d">9</div><div class="d">10</div>
+            <div class="d">11</div><div class="d">12</div><div class="d">13</div><div class="d">14</div><div class="d">15</div><div class="d">16</div><div class="d">17</div>
+            <div class="d ok">18</div><div class="d ok">19</div><div class="d ok">20</div><div class="d some">21</div><div class="d ok">22</div><div class="d ok">23</div><div class="d ok">24</div>
+            <div class="d some">25</div><div class="d ok">26</div><div class="d ok">27</div><div class="d some">28</div><div class="d now">29</div><div class="d fut">30</div><div class="d fut">31</div>
+          </div>
+          <div class="legend"><span><i style="background:var(--green)"></i>All taken</span><span><i style="box-shadow:inset 0 0 0 2.5px #F0A030"></i>Some missed</span><span><i style="background:var(--coral)"></i>None</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">A</span>
+      <h3>Month calendar</h3>
+      <ul>
+        <li>A big percentage for the month, then the calendar.</li>
+        <li>Green day: everything taken. Orange ring: some missed. Red: none taken.</li>
+        <li>Share (top right) sends the report to WhatsApp, as now. The 📅 "July 17" icon is gone.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- B: list -->
+  <div class="pg-col card" data-choice="history-list" onclick="toggleSelect(this)">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow"><h1>History</h1><span class="round"><svg class="i"><use href="icons.svg#i-share"/></svg></span></div>
+      </div>
+      <div class="body">
+        <div class="sumc" style="display:flex;align-items:center;gap:14px">
+          <div><div style="font-size:12px;font-weight:900;letter-spacing:.09em;color:var(--blue)">LAST 7 DAYS</div><div class="big">86%<small>taken</small></div></div>
+          <div class="note" style="flex:1;text-align:right">18 of 21 doses<br>3 missed</div>
+        </div>
+        <div class="cardw" style="padding:2px 14px">
+          <div class="dayrow"><div class="grow">Today<small>Thu 29 Oct</small><div class="mini"><i class="g"></i><i class="r"></i><i></i></div></div><span class="pill-t t-blue">1 of 3 so far</span><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="dayrow"><div class="grow">Yesterday<small>Wed 28 Oct</small><div class="mini"><i class="g"></i><i class="r"></i><i class="g"></i></div></div><span class="pill-t t-amb">1 missed</span><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="dayrow"><div class="grow">Tue 27 Oct<div class="mini"><i class="g"></i><i class="g"></i><i class="g"></i></div></div><span class="pill-t t-ok">All taken</span><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="dayrow"><div class="grow">Mon 26 Oct<div class="mini"><i class="g"></i><i class="g"></i><i class="g"></i></div></div><span class="pill-t t-ok">All taken</span><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="dayrow"><div class="grow">Sun 25 Oct<div class="mini"><i class="g"></i><i class="g"></i><i class="r"></i></div></div><span class="pill-t t-amb">1 missed</span><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+          <div class="dayrow"><div class="grow">Sat 24 Oct<div class="mini"><i class="g"></i><i class="g"></i><i class="g"></i></div></div><span class="pill-t t-ok">All taken</span><svg class="i go"><use href="icons.svg#i-next"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">B</span>
+      <h3>A list of days</h3>
+      <ul>
+        <li>Newest day first, in words: "Yesterday · 1 missed".</li>
+        <li>A small bar per dose: green taken, red missed.</li>
+        <li>Easier to read than a calendar. Scroll down for older days.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- day page -->
+  <div class="pg-col pg-ref">
+    <div class="phone sky">
+      <div class="band">
+        <div class="sb"><span>2:10</span><span>● ● ▮</span></div>
+        <div class="hrow">
+          <span class="round"><svg class="i"><use href="icons.svg#i-back"/></svg></span>
+          <div style="flex:1"><h1>Wednesday, 28 Oct</h1><div class="sub" style="margin:0">2 of 3 taken</div></div>
+        </div>
+      </div>
+      <div class="body" style="padding-top:16px;gap:0">
+        <div class="tl">
+          <div class="rail"><span class="ico sun"><svg class="i"><use href="icons.svg#i-sun"/></svg></span><span class="ln"></span></div>
+          <div class="content"><div class="top">8:00 AM<span class="pill-t t-ok">✓ Taken 8:06</span></div><div class="names">Metformin 500, Amlodipine 5</div></div>
+        </div>
+        <div class="tl">
+          <div class="rail"><span class="ico noon"><svg class="i"><use href="icons.svg#i-sunlow"/></svg></span><span class="ln"></span></div>
+          <div class="content" style="background:var(--coral-t)"><div class="top">1:30 PM<span class="pill-t t-bad" style="background:#fff">Missed</span></div><div class="names">Iron</div></div>
+        </div>
+        <div class="tl">
+          <div class="rail"><span class="ico moon"><svg class="i"><use href="icons.svg#i-moon"/></svg></span></div>
+          <div class="content"><div class="top">9:00 PM<span class="pill-t t-ok">✓ Taken 9:20</span></div><div class="names">Metformin 500, Atorvastatin 10</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><span class="tag">BOTH</span>
+      <h3>One day</h3>
+      <ul>
+        <li>The day as a timeline, with morning, afternoon and night icons.</li>
+        <li>A missed dose stands out in soft red.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>

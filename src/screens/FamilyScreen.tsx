@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import AllowDialog from '../components/AllowDialog';
 import { useFollowRequests } from '../hooks/useFollowRequests';
 import { useI18n } from '../i18n';
 import { familyMessage } from '../lib/family';
@@ -20,14 +20,21 @@ import {
   setCanChange,
 } from '../native/family';
 import type { Follow, Follower, Person } from '../native/family';
-import type { RootStackParamList } from '../navigation/RootNavigator';
-import { colors, spacing } from '../theme';
+import type { TabProps } from '../navigation/RootNavigator';
+import { colors, font, radius, shadow, spacing } from '../theme';
+import AddRow from '../ui/AddRow';
+import Avatar from '../ui/Avatar';
+import Button from '../ui/Button';
+import Card from '../ui/Card';
+import Icon from '../ui/Icon';
+import SectionLabel from '../ui/SectionLabel';
+import SkyBand from '../ui/SkyBand';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Family'>;
+type Props = TabProps<'Family'>;
 
 /**
- * Both sides of Family on this phone: who can see its pills (each with Remove, and a code for
- * someone new), and the people it looks after (with Add family).
+ * Both sides of Family on this phone: who can see its pills (each with Remove and Can change my
+ * pills, and her code for someone new), then the people it looks after, if any, and Add family.
  */
 export default function FamilyScreen({ navigation }: Props) {
   const { t } = useI18n();
@@ -73,7 +80,7 @@ export default function FamilyScreen({ navigation }: Props) {
     }, [load, loadFollows]),
   );
 
-  useFollowRequests(() => load());
+  const { asking, answer } = useFollowRequests(() => load());
 
   const remove = (person: Person) => {
     Alert.alert(t.family.removeConfirm(person.name), undefined, [
@@ -105,103 +112,142 @@ export default function FamilyScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>{t.family.canSee}</Text>
-      {failed ? (
-        <Text style={styles.note}>{familyMessage(failed, t)}</Text>
-      ) : null}
-      {followers?.length === 0 ? (
-        <Text style={styles.note}>{t.family.noOne}</Text>
-      ) : null}
-      {followers?.map(person => (
-        <View key={person.uid} style={styles.row}>
-          <View style={styles.who}>
-            <Text style={styles.name}>{person.name}</Text>
-            <Text style={styles.email}>{person.email}</Text>
+    <View style={styles.page}>
+      <SkyBand title={t.family.title} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <SectionLabel style={styles.label}>{t.family.canSee}</SectionLabel>
+        {failed ? (
+          <Text style={styles.note}>{familyMessage(failed, t)}</Text>
+        ) : null}
+        {followers?.length === 0 ? (
+          <Text style={styles.note}>{t.family.noOne}</Text>
+        ) : null}
+        {followers?.map(person => (
+          <Card key={person.uid} style={styles.person}>
+            <View style={styles.top}>
+              <Avatar name={person.name} />
+              <View style={styles.who}>
+                <Text style={styles.name}>{person.name}</Text>
+                <Text style={styles.email}>{person.email}</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t.family.removeLabel(person.name)}
+                onPress={() => remove(person)}
+                style={({ pressed }) => [
+                  styles.remove,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.removeText}>{t.family.remove}</Text>
+              </Pressable>
+            </View>
             <View style={styles.canChange}>
+              <Text style={styles.canChangeText}>{t.family.canChange}</Text>
               <Switch
                 accessibilityLabel={t.family.canChangeLabel(person.name)}
                 value={person.canChange}
                 onValueChange={on => allowChanges(person, on)}
+                trackColor={{ false: colors.switchOff, true: colors.green }}
+                thumbColor={colors.card}
               />
-              <Text style={styles.canChangeText}>{t.family.canChange}</Text>
             </View>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.family.removeLabel(person.name)}
-            onPress={() => remove(person)}
-            style={styles.remove}
-          >
-            <Text style={styles.removeText}>{t.family.remove}</Text>
-          </Pressable>
+          </Card>
+        ))}
+        <View style={styles.showCode}>
+          <Button
+            label={t.family.showCode}
+            icon="qr_code_2"
+            onPress={() => navigation.navigate('ShareCode')}
+          />
         </View>
-      ))}
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('ShareCode')}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>{t.family.showCode}</Text>
-      </Pressable>
+        <Text style={styles.hint}>{t.family.howToAdd}</Text>
 
-      <Text style={styles.heading}>{t.family.lookAfter}</Text>
-      {follows?.length === 0 ? (
-        <Text style={styles.note}>{t.family.noOne}</Text>
-      ) : null}
-      {follows?.map(follow => (
-        <View key={follow.elderId} style={styles.row}>
-          <Text style={styles.name}>{follow.name}</Text>
-        </View>
-      ))}
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('AddFamily')}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>{t.family.addFamily}</Text>
-      </Pressable>
-    </ScrollView>
+        {follows?.length ? (
+          <>
+            <SectionLabel style={[styles.label, styles.second]}>
+              {t.family.lookAfter}
+            </SectionLabel>
+            {follows.map(follow => (
+              <Pressable
+                key={follow.elderId}
+                accessibilityRole="button"
+                // Her name, without the avatar's letter or the arrow's glyph.
+                accessibilityLabel={follow.name}
+                onPress={() =>
+                  navigation.navigate('Elder', { elderId: follow.elderId })
+                }
+                style={({ pressed }) => [
+                  styles.elder,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Avatar name={follow.name} />
+                <Text style={[styles.name, styles.who]}>{follow.name}</Text>
+                <Icon name="chevron_right" color={colors.muted} />
+              </Pressable>
+            ))}
+          </>
+        ) : null}
+        <AddRow
+          label={t.family.addTitle}
+          onPress={() => navigation.navigate('AddFamily')}
+        />
+      </ScrollView>
+      <AllowDialog person={asking} onAnswer={answer} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, paddingBottom: spacing.lg * 2 },
-  heading: {
-    fontSize: 16,
-    color: colors.textMuted,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  note: { fontSize: 18, color: colors.text, paddingVertical: spacing.sm },
-  row: {
+  page: { flex: 1, backgroundColor: colors.page },
+  content: { padding: spacing.md, paddingBottom: spacing.lg, gap: 12 },
+  label: { marginHorizontal: 2 },
+  second: { marginTop: spacing.md },
+  note: { ...font(700), fontSize: 17, color: colors.navy },
+  person: { paddingVertical: 12, paddingHorizontal: 14 },
+  top: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
+    gap: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
   },
   who: { flex: 1 },
-  name: { fontSize: 20, color: colors.text },
-  email: { fontSize: 16, color: colors.textMuted },
+  name: { ...font(900), fontSize: 18, lineHeight: 22, color: colors.navy },
+  email: { ...font(700), fontSize: 14, color: colors.muted, marginTop: 2 },
+  remove: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  removeText: { ...font(900), fontSize: 15, color: colors.coralText },
   canChange: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: 10,
+    paddingTop: 10,
   },
-  canChangeText: { fontSize: 16, color: colors.text },
-  remove: { padding: spacing.sm },
-  removeText: { fontSize: 18, color: colors.danger },
-  button: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.primary,
+  canChangeText: { ...font(800), flex: 1, fontSize: 16, color: colors.navy },
+  showCode: { marginTop: spacing.xs },
+  hint: {
+    ...font(600),
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.muted,
+    textAlign: 'center',
+  },
+  elder: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+    boxShadow: shadow.card,
   },
-  buttonText: { fontSize: 18, color: colors.primary, fontWeight: '600' },
+  pressed: { opacity: 0.7 },
 });

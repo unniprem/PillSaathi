@@ -112,6 +112,7 @@ export type LanguageOption = { code: string; label: string; draft: boolean };
 export type AppSettings = {
   language: string; // the one the app speaks now
   readAloud: boolean;
+  role: string | null; // who the phone is for: elder | carer; null = not asked yet
   languages: LanguageOption[]; // the ones to offer, in order
 };
 
@@ -137,6 +138,7 @@ export interface Spec extends TurboModule {
   currentLanguage(): string; // never throws; read without waiting on the store
   setLanguage(code: string): Promise<void>; // INVALID_LANGUAGE
   setReadAloud(on: boolean): Promise<void>;
+  setRole(role: string): Promise<void>; // elder | carer
   // spoken | english (no voice for the app's language) | none (no voice at all)
   tryReadAloud(): Promise<string>;
 }

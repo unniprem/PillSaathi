@@ -170,6 +170,7 @@ test('names the error codes the module rejects with', () => {
   expect(family.FamilyErrors).toEqual({
     NotSetUp: 'NOT_SET_UP',
     Offline: 'OFFLINE',
+    GoogleFailed: 'GOOGLE_FAILED',
     BadCode: 'BAD_CODE',
     NotSignedIn: 'NOT_SIGNED_IN',
     NoActivity: 'NO_ACTIVITY',

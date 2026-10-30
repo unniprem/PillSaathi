@@ -1,4 +1,4 @@
-import { Alert, Share } from 'react-native';
+import { Share } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as family from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
@@ -13,6 +13,11 @@ const MINUTE = 60_000;
 function failing(code: string) {
   return Object.assign(new Error(code), { code });
 }
+
+/** The code's boxes, which TalkBack reads out digit by digit. */
+const findCode = (code: string) => screen.findByLabelText([...code].join(' '));
+const queryCode = (code: string) =>
+  screen.queryByLabelText([...code].join(' '));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -31,43 +36,43 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('the code screen shows the code, the QR and Send code', async () => {
+test('the code screen shows the code, the QR and Send the code', async () => {
   const share = jest
     .spyOn(Share, 'share')
     .mockResolvedValue({ action: 'sharedAction', activityType: undefined });
   await renderApp('ShareCode');
-  expect(headerTitles()).toEqual(['Family code']);
-  expect(await screen.findByText('482 913')).toBeTruthy();
-  expect(
-    screen.getByText(
-      'Show this to a family member, or send it. It works for 15 minutes.',
-    ),
-  ).toBeTruthy();
+  expect(headerTitles()).toEqual(['My family code']);
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+  const digits = await findCode('482913');
+  expect(digits).toHaveTextContent('482913');
+  expect(screen.getByText('Show this to your son or daughter')).toBeTruthy();
+  expect(screen.getByText('Works for 15 more minutes')).toBeTruthy();
   const qr = screen.getByLabelText('Scan code');
   expect(qr.props.source).toEqual({
     uri: 'file:///cache/family/qr-482913.png',
   });
-  await fireEvent.press(screen.getByText('Send code'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Send the code' }));
   expect(share).toHaveBeenCalledWith({
     message:
-      'Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes.',
+      'Open PillSaathi, tap Family, then + Add family, and type 482 913. It works for 15 minutes.',
   });
 });
 
 test('after 15 minutes it says the code has expired and offers New code', async () => {
   jest.useFakeTimers();
   await renderApp('ShareCode');
-  expect(await screen.findByText('482 913')).toBeTruthy();
+  expect(await findCode('482913')).toBeTruthy();
   await act(async () => jest.advanceTimersByTime(15 * MINUTE));
   expect(await screen.findByText('This code has expired.')).toBeTruthy();
-  expect(screen.queryByText('482 913')).toBeNull();
+  expect(queryCode('482913')).toBeNull();
+  expect(screen.queryByText(/^Works for/)).toBeNull();
   jest.mocked(family.createLinkCode).mockResolvedValueOnce({
     code: '111222',
     expiresAt: Date.now() + 15 * MINUTE,
     qrUri: 'file:///cache/family/qr-111222.png',
   });
   await fireEvent.press(screen.getByText('New code'));
-  expect(await screen.findByText('111 222')).toBeTruthy();
+  expect(await findCode('111222')).toBeTruthy();
   expect(family.createLinkCode).toHaveBeenCalledTimes(2);
 });
 
@@ -91,7 +96,7 @@ test('OFFLINE shows its message, and New code tries again', async () => {
     await screen.findByText('No internet. Please try again.'),
   ).toBeTruthy();
   await fireEvent.press(screen.getByText('New code'));
-  expect(await screen.findByText('482 913')).toBeTruthy();
+  expect(await findCode('482913')).toBeTruthy();
 });
 
 test('a refusal is not called no internet, and New code tries again', async () => {
@@ -104,23 +109,51 @@ test('a refusal is not called no internet, and New code tries again', async () =
   ).toBeTruthy();
   expect(screen.queryByText('No internet. Please try again.')).toBeNull();
   await fireEvent.press(screen.getByText('New code'));
-  expect(await screen.findByText('482 913')).toBeTruthy();
+  expect(await findCode('482913')).toBeTruthy();
+});
+
+test('the countdown counts down', async () => {
+  jest.useFakeTimers();
+  await renderApp('ShareCode');
+  expect(await screen.findByText('Works for 15 more minutes')).toBeTruthy();
+  await act(async () => jest.advanceTimersByTime(30_000));
+  expect(screen.getByText('Works for 15 more minutes')).toBeTruthy();
+  await act(async () => jest.advanceTimersByTime(30_000));
+  expect(screen.getByText('Works for 14 more minutes')).toBeTruthy();
+  await act(async () => jest.advanceTimersByTime(13 * MINUTE));
+  expect(screen.getByText('Works for 1 more minute')).toBeTruthy();
 });
 
 test('Allow on the code screen goes back to the Family page', async () => {
   jest.useFakeTimers();
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await renderApp('Family');
   await fireEvent.press(
-    await screen.findByText('Show a code to a family member'),
+    await screen.findByRole('button', { name: 'Show my code' }),
   );
-  expect(await screen.findByText('482 913')).toBeTruthy();
+  expect(await findCode('482913')).toBeTruthy();
   jest
     .mocked(family.pendingRequests)
     .mockResolvedValue([{ uid: 'R', name: 'Ravi', email: 'ravi@gmail.com' }]);
   await act(async () => jest.advanceTimersByTime(2000));
-  await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
-  await act(async () => alert.mock.calls[0][2]![1].onPress!());
+  expect(
+    await screen.findByText('Let Ravi see and change your pills?'),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Allow' }));
   expect(family.answerRequest).toHaveBeenCalledWith('R', true);
   await waitFor(() => expect(headerTitles()).toEqual(['Family']));
+});
+
+test('No on the code screen keeps the code showing', async () => {
+  jest.useFakeTimers();
+  await renderApp('ShareCode');
+  expect(await findCode('482913')).toBeTruthy();
+  jest
+    .mocked(family.pendingRequests)
+    .mockResolvedValue([{ uid: 'R', name: 'Ravi', email: 'ravi@gmail.com' }]);
+  await act(async () => jest.advanceTimersByTime(2000));
+  await fireEvent.press(await screen.findByRole('button', { name: 'No' }));
+  expect(family.answerRequest).toHaveBeenCalledWith('R', false);
+  expect(screen.queryByText('Let Ravi see and change your pills?')).toBeNull();
+  expect(headerTitles()).toEqual(['My family code']);
+  expect(queryCode('482913')).toBeTruthy();
 });

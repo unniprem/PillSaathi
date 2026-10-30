@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Remind me in 10 min on a light sky (dawn, day, evening), under navy words: thicker glass. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#2215324A">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#B3FFFFFF" />
+            <stroke android:width="2dp" android:color="#FFFFFF" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+</ripple>

@@ -5,12 +5,13 @@
     <string name="default_alarm_tone">സാധാരണ അലാറം ശബ്ദം</string>
     <string name="channel_ringing">മുഴങ്ങുന്ന അലാറങ്ങൾ</string>
     <string name="channel_missed">നഷ്ടമായ അലാറങ്ങൾ</string>
-    <string name="action_snooze">10 മിനിറ്റ് കഴിഞ്ഞ്</string>
-    <string name="action_taken">കഴിച്ചു</string>
+    <string name="action_snooze">10 മിനിറ്റിൽ വീണ്ടും ഓർമ്മിപ്പിക്കൂ</string>
+    <string name="notification_snooze">10 മിനിറ്റ് കഴിഞ്ഞ്</string>
+    <string name="action_taken">ഞാൻ കഴിച്ചു</string>
     <string name="action_skip">ഇത്തവണ ഒഴിവാക്കുക</string>
     <string name="ringing_title">മരുന്ന് കഴിക്കാൻ സമയമായി</string>
     <string name="missed_alarm">നഷ്ടമായി: %1$s, %2$s</string>
-    <string name="ringing_sound">🔊 %1$s</string>
+    <string name="ringing_sound">%1$s</string>
     <string name="channel_refill">മരുന്ന് തീരാറായ ഓർമ്മപ്പെടുത്തലുകൾ</string>
     <string name="refill_low">%1$s: %2$s ബാക്കി · %3$s</string>
     <string name="refill_out">%1$s: ഒന്നും ബാക്കിയില്ല</string>

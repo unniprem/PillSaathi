@@ -105,6 +105,7 @@ object AlarmJson {
     JSONObject()
       .put("language", s.language?.code ?: JSONObject.NULL)
       .put("readAloud", s.readAloud)
+      .put("role", s.role ?: JSONObject.NULL)
       .toString()
 
   /** Missing values take their defaults; a language the app doesn't know follows the phone. */
@@ -114,6 +115,7 @@ object AlarmJson {
     return AppSettings(
       language = if (o.isNull("language")) null else AppLanguage.fromCode(o.getString("language")),
       readAloud = o.optBoolean("readAloud", true),
+      role = if (o.isNull("role")) null else o.getString("role"),
     )
   }
 

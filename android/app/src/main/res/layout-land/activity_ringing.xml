@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ringing screen turned sideways: the dose (ringing_dose: title, time, pills, sound) scrolls on
+     the left with the full height, and the three buttons sit at the bottom on the right. The
+     buttons scroll only if they alone are taller than the screen (the largest text in Malayalam),
+     so none of them is ever cut off and I took it, at the top, always shows. Otherwise as upright
+     (layout/activity_ringing). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ringing_sky"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/ringing_sky_night"
+    android:clipToPadding="false"
+    android:fitsSystemWindows="true">
+
+    <include layout="@layout/ringing_sky_marks" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="8dp">
+
+        <include
+            layout="@layout/ringing_dose"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ScrollView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="18dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <include layout="@layout/ringing_buttons" />
+        </ScrollView>
+    </LinearLayout>
+</FrameLayout>

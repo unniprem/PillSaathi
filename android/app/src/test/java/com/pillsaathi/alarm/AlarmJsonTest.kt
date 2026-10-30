@@ -87,6 +87,17 @@ class AlarmJsonTest {
   @Test fun settings_unknownLanguage_followsPhone() =
     assertEquals(AppSettings(null, true), AlarmJson.settingsFromJson("{\"language\":\"ta\"}"))
 
+  @Test fun settings_keepTheirRole() {
+    val s = AppSettings(role = "carer")
+    assertEquals(s, AlarmJson.settingsFromJson(AlarmJson.settingsToJson(s)))
+  }
+
+  @Test fun settings_writtenBeforeRoles_readWithNoRole() =
+    assertEquals(
+      null,
+      AlarmJson.settingsFromJson("{\"language\":\"en\",\"readAloud\":false}").role,
+    )
+
   @Test fun ringingMarker_writtenBeforeQueues_readsWithEmptyQueue() =
     assertEquals(
       RingingMarker("a1", 5L, emptyList()),

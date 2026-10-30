@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The sun, or the moon and stars, on the ringing screen's sky (activity_ringing, both ways up).
+     RingingActivity shows one or the other by the hour. They sit behind the words and buttons. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- By day: the sun in the top corner, partly off the screen, its light under the status bar. -->
+    <View
+        android:id="@+id/ringing_sun"
+        android:layout_width="116dp"
+        android:layout_height="116dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-22dp"
+        android:layout_marginEnd="-40dp"
+        android:background="@drawable/ringing_sun"
+        android:visibility="gone" />
+
+    <!-- By night: a few stars and the moon. The stars keep clear of the title and the time
+         (title 44-67 dp down, the time's digits 85-126 dp down and up to about 220 dp across). -->
+    <FrameLayout
+        android:id="@+id/ringing_night"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="16dp"
+            android:alpha="0.8"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="90dp"
+            android:layout_marginTop="46dp"
+            android:alpha="0.5"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="150dp"
+            android:layout_marginTop="12dp"
+            android:alpha="0.8"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="232dp"
+            android:layout_marginTop="34dp"
+            android:alpha="0.6"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="290dp"
+            android:layout_marginTop="96dp"
+            android:alpha="0.4"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="3dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="250dp"
+            android:layout_marginTop="126dp"
+            android:alpha="0.5"
+            android:background="@drawable/ringing_star" />
+
+        <View
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="-4dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/ringing_moon" />
+    </FrameLayout>
+</merge>

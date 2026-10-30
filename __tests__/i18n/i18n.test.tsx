@@ -4,6 +4,7 @@ import * as alarms from '../../src/native/alarms';
 import { en } from '../../src/i18n/en';
 import { hi } from '../../src/i18n/hi';
 import { ml } from '../../src/i18n/ml';
+import type { Strings } from '../../src/i18n/en';
 import { mockAlarmsDefaults } from '../helpers/nativeMocks';
 import { headerTitles, renderApp } from '../helpers/renderApp';
 
@@ -32,6 +33,12 @@ beforeEach(() => {
   mockAlarmsDefaults();
 });
 
+/** Today's sky greets in [t]'s language, and names the day in it. */
+function expectTodayIn(t: Strings, day: string) {
+  expect(Object.values(t.today.greeting)).toContain(headerTitles()[0]);
+  expect(screen.getByText(day)).toBeTruthy();
+}
+
 afterEach(() => {
   jest.restoreAllMocks();
 });
@@ -45,11 +52,18 @@ test('has every key in every language', () => {
   }
 });
 
+// Empty Today and the Family tab offer the same button, so it reads the same in both places.
+test('Show my code is spelt one way', () => {
+  for (const t of [en, ml, hi]) {
+    expect(t.today.showCode).toBe(t.family.showCode);
+  }
+});
+
 test('starts in the language native reports', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
   await renderApp();
   expect(await screen.findByText(hi.today.addPill)).toBeTruthy();
-  expect(headerTitles()).toEqual(['आज · सोम 26 अक्टू']);
+  expectTodayIn(hi, 'सोम 26 अक्टू');
 });
 
 // A language chosen on a debug build is hidden in a release build: native then reports the
@@ -57,8 +71,8 @@ test('starts in the language native reports', async () => {
 test('starts in English when native reports an unlisted language', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('ta');
   await renderApp();
-  expect(await screen.findByText('+ Add pill')).toBeTruthy();
-  expect(headerTitles()).toEqual(['Today · Mon 26 Oct']);
+  expect(await screen.findByText('Add a pill')).toBeTruthy();
+  expectTodayIn(en, 'Mon 26 Oct');
 });
 
 test('starts in English when native cannot say', async () => {
@@ -66,8 +80,8 @@ test('starts in English when native cannot say', async () => {
     throw new Error('no module');
   });
   await renderApp();
-  expect(await screen.findByText('+ Add pill')).toBeTruthy();
-  expect(headerTitles()).toEqual(['Today · Mon 26 Oct']);
+  expect(await screen.findByText('Add a pill')).toBeTruthy();
+  expectTodayIn(en, 'Mon 26 Oct');
 });
 
 // Following the phone: the ringing process reads the phone's language at every ring, so the app
@@ -79,9 +93,9 @@ test('reads the language again when the app comes back', async () => {
     return { remove: jest.fn() } as never;
   });
   await renderApp();
-  expect(await screen.findByText('+ Add pill')).toBeTruthy();
+  expect(await screen.findByText('Add a pill')).toBeTruthy();
   jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
   await act(async () => listeners.forEach(l => l('active')));
   await waitFor(() => expect(screen.getByText(hi.today.addPill)).toBeTruthy());
-  expect(headerTitles()).toEqual(['आज · सोम 26 अक्टू']);
+  expectTodayIn(hi, 'सोम 26 अक्टू');
 });

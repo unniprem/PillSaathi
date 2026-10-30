@@ -4,6 +4,84 @@ Session log, newest first.
 
 ---
 
+## 2026-10-30 11:15 IST — Session: Task 18 on the Redmi
+
+### Summary
+
+The user unlocked the Redmi ("unlocked redmi phone lets test") and turned on MIUI's "USB debugging (Security settings)" so adb could tap. The Redmi (Ravi) was updated in place, then installed fresh and walked through C1–C11 against `10-journeys.html`, with the emulator as Amma; the Fix B checks, the code paste, the keyboard, font scale 2.0, and the pending Redmi items from the remote setup were run too. Six bugs were found and fixed (one from PR #10, already on main), and origin/main's README change (#12) was merged in.
+
+### Changes Made
+
+| Commit    | Type  | Description                                                                                         |
+| --------- | ----- | --------------------------------------------------------------------------------------------------- |
+| `c3feeda` | fix   | His phone keeps her editor right and setup; photo and count survive; 3-button bar; 2.0; code paste |
+| `3f14549` | merge | origin/main (#12: rules deployed)                                                                   |
+
+### Key Decisions
+
+- **Her copy on his phone is merged with `FamilyRules.withHers`**: everything of hers from the read, only his name, number, delay and link time kept, so a field added to her copy can't be dropped again (`editor`, sounds and health were, since PR #10).
+- **A relative's Save sends photo "keep" whenever the photo is as his copy has it, even none**: "none" now only when he removed one. A new pill still sends "none".
+- **The stack pads every page above the system bar** (`contentStyle`), except Login, Main, Add pill and Setup, which already do; one place instead of eleven screens.
+- **Her page's dose row at a large text size is laid out explicitly** (names under the time and chip at `fontScale >= 1.3`); flex-wrap with a basis on the names' Text, or on a View round it, still squeezed them to a letter a line on the Redmi.
+- **SkyBand titles grow at most 1.5x**, as the tab bar's words do.
+
+### Issues Encountered
+
+- MIUI refuses adb taps and `settings put system` until "USB debugging (Security settings)" is on; turning it on restarts adbd, which drops wireless debugging until it is switched on again (the pairing holds). Rotation can be locked with `adb shell cmd window user-rotation lock 0` (`free` to undo).
+- Google sign-in failed once on the fresh install with Play services error 20 and worked on the next tap.
+- `adb shell input keyevent 279` (Paste) fills the code boxes even without the long-press menu, so it doesn't prove a person can paste.
+
+---
+
+## 2026-10-29 22:15 IST — Session: Sky UI redesign, Tasks 1–17
+
+### Summary
+
+The user asked to "execute latest plan", the 18-task Sky UI redesign (`docs/superpowers/plans/2026-10-29-ui-redesign.md`), and partway through asked to run independent tasks in parallel with separate agents. Task 1 was done inline; Tasks 2–6 ran one fresh agent each, checked by the orchestrator between tasks (`SUMMARY.md` carries progress, decisions and deviations). From Task 7 the rest ran in waves in separate git worktrees (`ui/task-N`), cherry-picked onto `feature/ui-redesign`: 7, 8, 12, 13, 15, 17, then 9, 10, 14, then 11 and 16. Every screen is now in the Sky look: login and "Who is this phone for?" on every phone, alarm setup one step at a time, Today leading with the next dose (and the people he looks after first), adding a pill in five steps, a pill summary with one sheet per line, sounds with recording in a pop-up, History as a month, Settings in cards, Family with a clearer Allow, the relative's pages, and the native ringing screen. 468 JS tests, `tsc`, `eslint .`, the Android build and 298 Kotlin tests pass. Nothing has been seen on a device. A three-way review found 2 Critical (the app-open re-arm waits behind the login page; a relative's second sheet Save undoes the first) and 9 Important issues; the fixes are planned in `SUMMARY.md` but not started, because the user stopped for the night. The user chose fresh installs on both phones for Task 18.
+
+### Changes Made
+
+| Commit    | Type     | Description                                                                 |
+| --------- | -------- | --------------------------------------------------------------------------- |
+| `c96e014` | feat     | Sky fonts (Nunito, Material Symbols), colours, sky and pill-colour rules     |
+| `30df61f` | style    | Format the sky test                                                          |
+| `b352a52` | feat     | Icon font, pill pictures and letter avatars                                  |
+| `1438c76` | feat     | Sky headers, buttons, cards, sheet, dose bars and tab bar                    |
+| `7e08f1b` | feat     | Bottom tabs and a sky band on every page                                     |
+| `f673619` | feat     | Remember who the phone is for; open display settings                         |
+| `366e264` | feat     | A login page on every phone, then who the phone is for                       |
+| `2f80b4e` | docs     | Run the next plan tasks in parallel                                          |
+| `6037367` | feat     | Family on her phone, a clearer Allow, a code with a countdown                |
+| `5a818e1` | feat     | History as a month at a glance, each day as a timeline                       |
+| `8bcab3a` | feat     | Alarm setup one step at a time, and once on first open                       |
+| `1f5d579` | feat     | Sound list with big buttons, recording in a pop-up                           |
+| `cacaa89` | feat     | Today leads with the next dose, then anything missed                         |
+| `5934206` | feat     | Settings in plain cards, with alarm setup's steps left                       |
+| `1ec195a` | feat     | The ringing screen in the Sky look, with I took it                           |
+| `0b22ce3` | feat     | The people you look after come first on Today                                |
+| `c0fde47` | feat     | Add a pill in five short steps                                               |
+| `5ac2626` | feat     | A pill opens to a summary; change one line at a time                         |
+| `5521fee` | feat     | Adding family, her page and her pills in the Sky look                        |
+| `dd72795` | refactor | Her sounds live on each pill's page (ElderPills' Alarm sounds removed)       |
+
+### Key Decisions
+
+- **Parallel waves in worktrees**: the user asked for speed; tasks were grouped by dependency and shared files, each agent got its own worktree (node_modules APFS-cloned, outside the repo so jest doesn't see it) and was told which files the others own. Cherry-picks kept one commit per task in a straight line; conflicts (test files, `SkyBand`, ElderPills) were resolved by hand.
+- **Task 16 split around Task 11**: ElderPills' pill-row link and its Alarm sounds removal waited for Task 11's `Pill` route and sound row, so 11 and 16 could run together.
+- **Fonts registered only when React Native loads**, so the `:ringing` process never loads them; the ringing screen loads them in code with fallbacks.
+- **Shadows need `px`**: React Native drops a unitless shadow length unless it is 0 (read in `processBoxShadow.js`).
+- **"I took it" on the ringing screen uses `#2E9E5B`**, not the plan's `#34B36A`, for 3:1 contrast with white text.
+- **A role but no login shows the login at every open**, as the spec says; noted for the user to revisit.
+
+### Issues Encountered
+
+- Load averages near 47 with several jest runs at once caused one-off 5 s timeouts (each passed alone).
+- The emulator closed during Task 17's build, so the ringing screen has never been rendered; it waits for Task 18.
+- `android/app/google-services.json` was missing from this checkout, so every build since Task 1 had no Firebase; the `pillsaathi` config is now copied in (gitignored).
+- Review: 2 Critical and 9 Important findings, fixes planned in `SUMMARY.md` (groups A–D), not started.
+
+---
+
 ## 2026-10-29 15:44 IST — Session: Scan fix and Remote setup (stage 2)
 
 ### Summary

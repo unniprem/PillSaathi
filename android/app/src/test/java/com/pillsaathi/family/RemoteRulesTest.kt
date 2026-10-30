@@ -6,6 +6,7 @@ import com.pillsaathi.alarm.PillDraft
 import com.pillsaathi.alarm.PillForm
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -123,6 +124,17 @@ class RemoteRulesTest {
     val done = mine.copy(id = "c3", status = RemoteRules.APPLIED)
     val hers = change(ChangeBody.DeletePill("p1"), id = "c4", by = "S")
     assertEquals(listOf("c1", "c2"), RemoteRules.revoked(listOf(mine, claimed, done, hers), "R").map { it.id })
+  }
+
+  @Test fun `a change is ahead of her copy while it waits, and once done until she uploads again`() {
+    val waiting = change(ChangeBody.DeletePill("p1"))
+    assertTrue(RemoteRules.ahead(waiting, heardAt = 10L))
+    assertTrue(RemoteRules.ahead(waiting.copy(status = RemoteRules.APPLYING), heardAt = 10L))
+    val done = waiting.copy(status = RemoteRules.APPLIED, doneAt = 20L)
+    assertTrue(RemoteRules.ahead(done, heardAt = 10L))
+    assertTrue(RemoteRules.ahead(done, heardAt = null))
+    assertFalse(RemoteRules.ahead(done, heardAt = 30L))
+    assertFalse(RemoteRules.ahead(done.copy(status = RemoteRules.REJECTED), heardAt = 10L))
   }
 
   /** [value] with every Int turned into a Long, as Firestore gives numbers back. */

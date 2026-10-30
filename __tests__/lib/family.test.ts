@@ -1,5 +1,6 @@
 import {
   familyMessage,
+  firstName,
   formatCode,
   heardText,
   shareMessage,
@@ -11,7 +12,7 @@ test('formatCode and shareMessage', () => {
   expect(formatCode('482913')).toBe('482 913');
   expect(formatCode('000042')).toBe('000 042');
   expect(shareMessage('482913', en)).toBe(
-    'Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes.',
+    'Open PillSaathi, tap Family, then + Add family, and type 482 913. It works for 15 minutes.',
   );
 });
 
@@ -25,6 +26,10 @@ test('familyMessage calls only OFFLINE no internet', () => {
   );
   expect(familyMessage(failing('PERMISSION'), en)).toBe(
     'Something went wrong. Please try again later.',
+  );
+  // Google's own refusal (no account it can use, say) isn't the internet's fault.
+  expect(familyMessage(failing('GOOGLE_FAILED'), en)).toBe(
+    "Couldn't log in with Google on this phone.",
   );
   expect(familyMessage(new Error('boom'), en)).toBe(
     'Something went wrong. Please try again later.',
@@ -49,4 +54,11 @@ test('tallyText and heardText', () => {
   expect(heardText(at, '2026-10-28', false, en)).toBe('1:12 PM');
   expect(heardText(at, '2026-10-29', false, en)).toBe('Wed 28 Oct, 1:12 PM');
   expect(heardText(at, '2026-10-29', true, en)).toBe('Wed 28 Oct, 13:12');
+});
+
+test('firstName is the first word of the Google name', () => {
+  expect(firstName('Ravi Kumar')).toBe('Ravi');
+  expect(firstName('  Ravi  ')).toBe('Ravi');
+  expect(firstName('')).toBeNull();
+  expect(firstName('   ')).toBeNull();
 });

@@ -24,6 +24,8 @@ export function familyMessage(e: unknown, t: Strings): string {
   switch (errorCode(e)) {
     case FamilyErrors.Offline:
       return t.family.offline;
+    case FamilyErrors.GoogleFailed:
+      return t.family.googleFailed;
     case FamilyErrors.NotSetUp:
       return t.family.notSetUp;
     default:
@@ -44,6 +46,11 @@ export function tallyText(tally: FamilyTally, t: Strings): string {
     tally.later && t.family.later(tally.later),
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : t.family.nothingDue;
+}
+
+/** "Ravi" from the Google account's "Ravi Kumar", for Today's greeting; null when it has no name. */
+export function firstName(name: string): string | null {
+  return name.trim().split(/\s+/)[0] || null;
 }
 
 /** When her phone was heard from: "1:12 PM" today ([today], YYYY-MM-DD), else "Tue 27 Oct, 8:05 AM". */

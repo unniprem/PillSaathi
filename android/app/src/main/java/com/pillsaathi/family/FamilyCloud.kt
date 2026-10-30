@@ -524,6 +524,7 @@ class FamilyCloud private constructor(context: Context) {
   companion object {
     const val NOT_SET_UP = "NOT_SET_UP"
     const val OFFLINE = "OFFLINE"
+    const val GOOGLE_FAILED = "GOOGLE_FAILED"
     const val BAD_CODE = "BAD_CODE"
     const val NOT_SIGNED_IN = "NOT_SIGNED_IN"
     const val NO_ACTIVITY = "NO_ACTIVITY"

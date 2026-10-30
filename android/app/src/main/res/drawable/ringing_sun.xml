@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The sun, 64 dp, in two soft rings of light (116 dp across): as on Today's sky (SkyTop.tsx). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#24FFD666" />
+        </shape>
+    </item>
+    <item android:bottom="14dp" android:left="14dp" android:right="14dp" android:top="14dp">
+        <shape android:shape="oval">
+            <solid android:color="#4DFFD666" />
+        </shape>
+    </item>
+    <item android:bottom="26dp" android:left="26dp" android:right="26dp" android:top="26dp">
+        <shape android:shape="oval">
+            <gradient
+                android:centerX="0.4"
+                android:centerY="0.4"
+                android:endColor="#FFC93C"
+                android:gradientRadius="70%"
+                android:startColor="#FFF2B0"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

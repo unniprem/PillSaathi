@@ -1,10 +1,23 @@
 import React from 'react';
+import type {
+  CompositeScreenProps,
+  NavigatorScreenParams,
+} from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type {
+  BottomTabBarProps,
+  BottomTabScreenProps,
+} from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { I18nProvider, useI18n } from '../i18n';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { I18nProvider } from '../i18n';
+import LoginScreen from '../screens/LoginScreen';
+import WhoScreen from '../screens/WhoScreen';
 import TodayScreen from '../screens/TodayScreen';
-import PillEditScreen from '../screens/PillEditScreen';
+import AddPillScreen from '../screens/AddPillScreen';
+import PillScreen from '../screens/PillScreen';
 import SoundPickerScreen from '../screens/SoundPickerScreen';
-import RecordScreen from '../screens/RecordScreen';
 import SetupScreen from '../screens/SetupScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
@@ -15,13 +28,35 @@ import AddFamilyScreen from '../screens/AddFamilyScreen';
 import ElderScreen from '../screens/ElderScreen';
 import FollowEditScreen from '../screens/FollowEditScreen';
 import ElderPillsScreen from '../screens/ElderPillsScreen';
-import { formatDay } from '../lib/course';
+import { colors } from '../theme';
+import TabBar from '../ui/TabBar';
+
+/** The main pages, one per bottom tab. History is this phone's own. */
+export type TabParamList = {
+  Today: undefined;
+  History: undefined;
+  Family: undefined;
+  Settings: undefined;
+};
+
+export const TAB_ROUTES: (keyof TabParamList)[] = [
+  'Today',
+  'History',
+  'Family',
+  'Settings',
+];
 
 export type RootStackParamList = {
-  Today: undefined;
-  // focusCount opens at Tablets left, from the running-low banner. elderId edits her pill, on a
-  // relative's phone: Save sends the change to her phone.
-  PillEdit: { pillId?: string; focusCount?: boolean; elderId?: string };
+  // again: the phone was asked who it is for before, so the login goes straight to Today.
+  Login: { again?: boolean } | undefined;
+  // first: the Google first name to greet, or null without a login.
+  Who: { first: string | null };
+  Main: NavigatorScreenParams<TabParamList> | undefined;
+  // elderId adds a pill for her, on a relative's phone: Save sends it to her phone.
+  AddPill: { elderId?: string } | undefined;
+  // A pill's summary. focusCount opens Tablets left, from the running-low card. elderId shows her
+  // pill, on a relative's phone: each Save sends the change to her phone.
+  Pill: { pillId: string; elderId?: string; focusCount?: boolean };
   // The sound chosen here is set on card alarmId, or, with elderId, sent for her dose at
   // hour:minute.
   SoundPicker: {
@@ -31,26 +66,27 @@ export type RootStackParamList = {
     hour?: number;
     minute?: number;
   };
-  Record: {
-    alarmId?: string;
-    elderId?: string;
-    hour?: number;
-    minute?: number;
-  };
-  Setup: undefined;
-  Settings: undefined;
-  // elderId shows an elder's History, read-only, on a relative's phone.
-  History: { elderId?: string } | undefined;
+  // firstRun: shown once after the login, with no page behind it.
+  Setup: { firstRun?: boolean } | undefined;
+  // An elder's History, read-only, on a relative's phone.
+  ElderHistory: { elderId: string };
   HistoryDay: { date: string; elderId?: string }; // YYYY-MM-DD
-  Family: undefined;
   ShareCode: undefined;
-  AddFamily: undefined;
+  // fromLogin: straight after the login, with no page behind it.
+  AddFamily: { fromLogin?: boolean } | undefined;
   Elder: { elderId: string };
   ElderPills: { elderId: string };
   FollowEdit: { elderId: string };
 };
 
+/** A tab's props: from a tab, every page of the stack around it can be opened too. */
+export type TabProps<T extends keyof TabParamList> = CompositeScreenProps<
+  BottomTabScreenProps<TabParamList, T>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
 
 type Props = {
   initialRouteName?: keyof RootStackParamList;
@@ -66,71 +102,94 @@ export function RootNavigator(props: Props) {
   );
 }
 
-function RootStack({ initialRouteName = 'Today', initialParams }: Props) {
-  const { t } = useI18n();
+const renderTabBar = (props: BottomTabBarProps) => <TabBar {...props} />;
+
+/** The four main pages under the tab bar. Each page draws its own sky, so none has a header. */
+function Main() {
+  return (
+    <Tab.Navigator tabBar={renderTabBar} screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="Today" component={TodayScreen} />
+      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen name="Family" component={FamilyScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
+    </Tab.Navigator>
+  );
+}
+
+function RootStack({ initialRouteName = 'Main', initialParams }: Props) {
   // Only the first screen takes params from outside (tests open any screen first).
   const paramsFor = (name: keyof RootStackParamList) =>
     name === initialRouteName ? (initialParams as never) : undefined;
+  // The app draws edge to edge, so a phone's three-button bar would cover a page's foot: every
+  // page stops above it, but those that already make that room themselves (the tab bar, the
+  // login's sheet, Add pill's and Setup's buttons).
+  const insets = useSafeAreaInsets();
+  const ownFoot = { contentStyle: { backgroundColor: colors.page } };
   return (
-    <Stack.Navigator initialRouteName={initialRouteName}>
+    <Stack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: colors.page,
+          paddingBottom: insets.bottom,
+        },
+      }}
+    >
       <Stack.Screen
-        name="Today"
-        component={TodayScreen}
-        options={{ title: t.today.title }}
+        name="Login"
+        component={LoginScreen}
+        initialParams={paramsFor('Login')}
+        options={ownFoot}
       />
       <Stack.Screen
-        name="PillEdit"
-        component={PillEditScreen}
-        initialParams={paramsFor('PillEdit')}
+        name="Who"
+        component={WhoScreen}
+        initialParams={paramsFor('Who')}
+      />
+      <Stack.Screen
+        name="Main"
+        component={Main}
+        initialParams={paramsFor('Main')}
+        options={ownFoot}
+      />
+      <Stack.Screen
+        name="AddPill"
+        component={AddPillScreen}
+        initialParams={paramsFor('AddPill')}
+        options={ownFoot}
+      />
+      <Stack.Screen
+        name="Pill"
+        component={PillScreen}
+        initialParams={paramsFor('Pill')}
       />
       <Stack.Screen
         name="SoundPicker"
         component={SoundPickerScreen}
-        options={{ title: t.sound.title }}
         initialParams={paramsFor('SoundPicker')}
-      />
-      <Stack.Screen
-        name="Record"
-        component={RecordScreen}
-        options={{ title: t.record.title }}
-        initialParams={paramsFor('Record')}
       />
       <Stack.Screen
         name="Setup"
         component={SetupScreen}
-        options={{ title: t.setup.title }}
+        initialParams={paramsFor('Setup')}
+        options={ownFoot}
       />
       <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ title: t.settings.title }}
-      />
-      <Stack.Screen
-        name="History"
+        name="ElderHistory"
         component={HistoryScreen}
-        options={{ title: t.history.title }}
-        initialParams={paramsFor('History')}
+        initialParams={paramsFor('ElderHistory')}
       />
       <Stack.Screen
         name="HistoryDay"
         component={HistoryDayScreen}
-        options={({ route }) => ({ title: formatDay(route.params.date, t) })}
         initialParams={paramsFor('HistoryDay')}
       />
-      <Stack.Screen
-        name="Family"
-        component={FamilyScreen}
-        options={{ title: t.family.title }}
-      />
-      <Stack.Screen
-        name="ShareCode"
-        component={ShareCodeScreen}
-        options={{ title: t.family.codeTitle }}
-      />
+      <Stack.Screen name="ShareCode" component={ShareCodeScreen} />
       <Stack.Screen
         name="AddFamily"
         component={AddFamilyScreen}
-        options={{ title: t.family.addTitle }}
+        initialParams={paramsFor('AddFamily')}
       />
       <Stack.Screen
         name="Elder"

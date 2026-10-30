@@ -33,12 +33,87 @@ export const en = {
     tryAgain: 'Please try again.',
     openSettings: 'Open settings',
     defaultTone: 'Default alarm tone',
+    back: 'Back',
+    close: 'Close',
+    next: 'Next',
+    continue: 'Continue',
+  },
+  /** A page that is one of several steps. */
+  steps: {
+    of: (n: number, total: number) => `${n} of ${total}`,
+  },
+  /** The bottom tabs, by route name. */
+  tabs: {
+    Today: 'Today',
+    History: 'History',
+    Family: 'Family',
+    Settings: 'Settings',
+  },
+  /** The first page on every phone. */
+  login: {
+    tagline: 'Your medicines on time.\nYour family close by.',
+    welcome: 'Welcome',
+    intro: 'Log in to keep your pills safe and stay close to family.',
+    google: 'Continue with Google',
+    oneTap: 'One tap. No new password.',
+    offline: 'Continue offline',
+  },
+  /** Asked once, after the login: who the phone is for. */
+  who: {
+    hi: (first: string | null) => (first ? `Hi ${first}!` : 'Hi!'),
+    question: 'Who is this phone for?',
+    elder: 'I take medicines',
+    elderSub: 'Ring my alarms on this phone',
+    carer: 'I look after someone',
+    carerSub: 'See their day, set up their pills',
+    both: 'You can do both later. Anyone can add their own pills or add family.',
   },
   today: {
-    title: 'Today',
-    titleOn: (day: string) => `Today · ${day}`,
-    addPill: '+ Add pill',
-    empty: 'No pills yet. Tap + Add pill to add one.',
+    greeting: {
+      morning: 'Good morning',
+      afternoon: 'Good afternoon',
+      evening: 'Good evening',
+    },
+    // The relative's first name after the greeting, on a phone that looks after someone.
+    greetingTo: (greeting: string, name: string) => `${greeting}, ${name}`,
+    progress: (taken: number, total: number) => `${taken} of ${total} done`,
+    nextDose: 'Next dose',
+    when: {
+      morning: 'This morning',
+      afternoon: 'This afternoon',
+      tonight: 'Tonight',
+    },
+    until: (hours: number, minutes: number) =>
+      hours === 0
+        ? minutes === 0
+          ? 'now'
+          : `in ${minutes} min`
+        : minutes === 0
+        ? `in ${hours} hr`
+        : `in ${hours} hr ${minutes} min`,
+    allDone: 'All done for today',
+    noMore: 'Nothing more today',
+    tomorrowAt: (time: string) => `Tomorrow, ${time}`,
+    // When nothing rings tomorrow: "Wed 28 Oct, 9:00 AM".
+    onDayAt: (day: string, time: string) => `${day}, ${time}`,
+    laterToday: 'Later today',
+    // Times next due on another day, such as a pill that starts tomorrow.
+    otherDays: 'Other days',
+    myPills: 'My pills',
+    noOwnPills: 'You have no pills of your own.',
+    // A string, not the three words, so the other languages can say it their own way.
+    allTaken: (pills: number): string =>
+      pills <= 1 ? 'taken' : pills === 2 ? 'both taken' : 'all taken',
+    missed: 'missed',
+    skipped: 'skipped',
+    tookIt: 'I took it',
+    // For TalkBack, on a skipped dose's line: which dose it is.
+    tookItAt: (time: string) => `I took it, ${time}`,
+    addPill: 'Add a pill',
+    empty: 'No pills yet',
+    emptyBody:
+      'Add your first medicine. Or your son or daughter can add them from their own phone.',
+    showCode: 'Show my code',
     loadFailed: "Couldn't load your pills. Reopen the app to try again.",
     missedTitle: 'Missed medicines',
     missedBody: (lines: string) =>
@@ -80,25 +155,18 @@ export const en = {
       `${start} · last dose ${last}`,
   },
   pill: {
-    addTitle: 'Add pill',
-    editTitle: 'Edit pill',
     name: 'Name',
     namePlaceholder: 'Medicine name',
     loadFailed: "Couldn't load this pill.",
     photo: 'Photo',
-    takePhoto: 'Take a photo',
-    chooseGallery: 'Choose from gallery',
-    retake: 'Retake',
     removePhoto: 'Remove',
     photoFailed: "Couldn't add the photo",
     type: 'Type',
     howMuch: 'How much each time',
     less: 'Less',
     more: 'More',
-    when: 'When to remind',
     change: 'Change',
     removeTime: (time: string) => `Remove ${time}`,
-    addTime: '+ Add a time',
     timeTaken: 'That time is already added.',
     howLong: 'For how long',
     nDays: (days: number) => `${days} days`,
@@ -118,6 +186,49 @@ export const en = {
     tabletsLeft: 'Tablets left',
     capsulesLeft: 'Capsules left',
     countNote: 'Optional. It goes down by the amount at each Taken.',
+    ringsAt: 'Rings at',
+    soundShared: 'Every pill at the same time rings with the same sound.',
+    deletePill: 'Delete this pill',
+    changePhoto: 'Change the photo',
+    basics: 'Name, type and amount',
+    daysLeft: (days: number) =>
+      days === 0
+        ? 'less than a day'
+        : days === 1
+        ? 'about 1 day'
+        : `about ${days} days`,
+    noneLeft: 'None left',
+    waitingChange: (name: string, change: string) =>
+      `Waiting for ${name}'s phone: ${change}`,
+  },
+  /** Adding a pill: one question to a page, five pages. */
+  addPill: {
+    titleFor: (name: string) => `Add a pill for ${name}`,
+    nameQuestion: "What's the medicine called?",
+    addPhoto: 'Add a photo of the strip',
+    photoNote: 'Optional. Helps tell pills apart.',
+    camera: 'Camera',
+    gallery: 'Gallery',
+    kindQuestion: 'What kind, and how much?',
+    eachTimeLabel: 'Each time',
+    whenQuestion: (name: string) => `When should ${name} ring?`,
+    pickSome: 'Pick one or more.',
+    morning: 'Morning',
+    afternoon: 'Afternoon',
+    night: 'Night',
+    changeTime: (time: string) => `Change ${time}`,
+    anotherTime: 'Another time',
+    maxTimes: (max: number) =>
+      `A pill can ring at most ${max} times a day. Untick one first.`,
+    howLongQuestion: 'For how long?',
+    checkQuestion: 'Does this look right?',
+    eachTime: (kind: string, amount: string) => `${kind} · ${amount} each time`,
+    joinTimes: (times: string[]) =>
+      times.length < 2
+        ? times.join('')
+        : `${times.slice(0, -1).join(', ')} and ${times[times.length - 1]}`,
+    optional: 'Optional',
+    addCount: '+ Add',
   },
   health: {
     notifications:
@@ -132,21 +243,30 @@ export const en = {
       'Battery saving may stop alarms. Tap to allow unrestricted battery use.',
     setup: 'Finish setting up so alarms ring reliably on this phone.',
     more: (count: number) => ` (+${count} more)`,
+    title: 'Alarms may not ring',
+    fix: 'Fix now',
   },
   sound: {
     title: 'Sound',
-    record: '● Record',
-    import: '⇪ Import',
+    titleAt: (time: string) => `Sound for ${time}`,
+    ringTogether: (names: string[]) =>
+      names.length === 1
+        ? `${names[0]} rings at this time`
+        : `${names.slice(0, -1).join(', ')} and ${
+            names[names.length - 1]
+          } ring together`,
+    record: 'Record a voice',
+    import: 'Pick a song or file',
     importing: 'Importing…',
-    yourSounds: 'Your sounds',
     recorded: 'Recorded',
-    imported: 'Imported',
+    imported: 'Song',
+    phoneAlarm: "The phone's alarm",
+    hint: 'Tap a sound to use it. Hold one to delete it.',
     play: (name: string) => `Play ${name}`,
     stop: (name: string) => `Stop ${name}`,
     changeFailed: 'Could not change the sound',
     playFailed: 'Could not play the sound',
-    unsupported:
-      "That file can't be played. Try an mp3, m4a, wav or ogg file.",
+    unsupported: "That file can't be played. Try an mp3, m4a, wav or ogg file.",
     importFailed: 'Could not import the file',
     deleteTitle: (name: string) => `Delete “${name}”?`,
     usedBy: (names: string) =>
@@ -154,14 +274,15 @@ export const en = {
     deleteFailed: 'Could not delete the sound',
   },
   record: {
-    title: 'Record',
+    title: 'Record a voice',
+    recording: 'Recording…',
     upTo: 'Up to 2:00',
     start: 'Start recording',
     stop: 'Stop recording',
     tapToStop: 'Tap to stop',
-    listen: '▶ Listen',
-    stopListening: '■ Stop',
-    redo: '↺ Redo',
+    listen: 'Listen',
+    stopListening: 'Stop',
+    redo: 'Record again',
     name: 'Name',
     defaultName: 'My recording',
     use: 'Use this sound',
@@ -173,16 +294,22 @@ export const en = {
     tooShort: 'That recording was too short. Try again.',
     saveFailed: 'Could not save the recording',
     playFailed: 'Could not play the recording',
-    changeFailed: 'Could not change the sound',
   },
   setup: {
-    title: 'Make alarms reliable',
+    title: 'Make alarms ring every time',
+    firstTitle: "Let's make sure alarms ring",
     intro:
       'Some phones stop apps in the background. Do these steps once so your alarms always ring.',
-    done: 'Done',
-    doneTick: 'Done ✓',
-    allowed: '✓ Allowed',
+    /** "2 of 4 done · Xiaomi phone"; [maker] is '' when the phone doesn't say. */
+    progress: (done: number, total: number, maker: string) =>
+      `${done} of ${total} done${maker ? ` · ${maker} phone` : ''}`,
+    /** The tick on a done step, for TalkBack. */
+    ticked: 'Done',
+    done: 'I did this',
+    doneTick: 'I did this ✓',
+    allowed: 'Allowed',
     finish: 'Finish',
+    later: 'Do this later',
     steps: {
       lockRecents: {
         title: 'Lock PillSaathi in recent apps',
@@ -229,14 +356,18 @@ export const en = {
   settings: {
     title: 'Settings',
     language: 'Language',
-    draft: ' (draft)',
-    whenItRings: 'When it rings',
-    readAloud: 'Read the pill names aloud',
+    /** The tag on a language whose words are still a draft. */
+    draft: 'draft',
+    readAloud: 'Read pill names aloud',
+    readAloudNote: 'When an alarm rings',
+    hear: 'Hear how it sounds',
     tryIt: 'Try it',
     textSize: 'Text size',
-    textSizeNote: "PillSaathi follows your phone's text size.",
-    reliability: 'Reliability',
-    makeReliable: 'Make alarms reliable',
+    textSizeNote: "Follows the phone's text size",
+    alarmSetup: 'Alarm setup',
+    stepsLeft: (steps: number) =>
+      steps === 1 ? '1 step left' : `${steps} steps left`,
+    allSet: 'All set',
     saveFailed: 'Could not save',
     noVoice: (language: string) =>
       `Your phone has no ${language} voice, so this was read in English.`,
@@ -259,8 +390,10 @@ export const en = {
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     month: (month: string, year: number) => `${month} ${year}`,
-    percentTaken: (percent: number) => `${percent}% taken`,
-    doseCount: (taken: number, total: number) => `${taken} of ${total} doses`,
+    // The word beside the month's percent: "89% taken".
+    taken: 'taken',
+    since: (taken: number, total: number, day: string) =>
+      `${taken} of ${total} doses since ${day}`,
     noDoses: 'No doses recorded',
     allTaken: 'All taken',
     someNotTaken: 'Some not taken',
@@ -269,6 +402,8 @@ export const en = {
     shareFailed: 'Could not share the report',
     loadFailed: "Couldn't load the history.",
     dayEmpty: 'Nothing was recorded on this day.',
+    dayTaken: (taken: number, total: number) => `${taken} of ${total} taken`,
+    tookIt: 'I took it',
     takenMarked: (day: string, time: string) =>
       `✓ Taken (marked ${day}, ${time})`,
   },
@@ -293,18 +428,22 @@ export const en = {
   },
   family: {
     title: 'Family',
-    canSee: 'People who can see my pills',
+    canSee: 'Who can see my pills',
     noOne: 'No one yet.',
-    showCode: 'Show a code to a family member',
+    showCode: 'Show my code',
+    howToAdd: 'To add someone, show them your code.',
     remove: 'Remove',
     removeLabel: (name: string) => `Remove ${name}`,
     removeConfirm: (name: string) => `Stop ${name} seeing your pills?`,
-    codeTitle: 'Family code',
-    codeBody:
-      'Show this to a family member, or send it. It works for 15 minutes.',
-    sendCode: 'Send code',
+    codeTitle: 'My family code',
+    codeBody: 'Show this to your son or daughter',
+    worksFor: (minutes: number) =>
+      minutes === 1
+        ? 'Works for 1 more minute'
+        : `Works for ${minutes} more minutes`,
+    sendCode: 'Send the code',
     shareMessage: (code: string) =>
-      `Open PillSaathi, tap Add family, and type ${code}. It works for 15 minutes.`,
+      `Open PillSaathi, tap Family, then + Add family, and type ${code}. It works for 15 minutes.`,
     scanCode: 'Scan code',
     opening: 'Opening the scanner…',
     noScanner:
@@ -312,28 +451,36 @@ export const en = {
     expired: 'This code has expired.',
     newCode: 'New code',
     allowTitle: (name: string) => `Let ${name} see and change your pills?`,
-    allowBody: (email: string) =>
-      `${email} will see your pills and whether you took them, and can add or change pills and alarm sounds. You'll get a notice each time.`,
+    allowSees: (name: string) =>
+      `${name} sees your pills and whether you took them`,
+    allowEdits: (name: string) => `${name} can add or change pills and sounds`,
+    allowNotice: (name: string) => `You get a notice each time ${name} does`,
     canChange: 'Can change my pills',
     canChangeLabel: (name: string) => `Can change my pills: ${name}`,
     no: 'No',
     allow: 'Allow',
     offline: 'No internet. Please try again.',
+    googleFailed: "Couldn't log in with Google on this phone.",
     failed: 'Something went wrong. Please try again later.',
     notSetUp: "Family isn't set up in this build.",
     lookAfter: 'People I look after',
-    addFamily: '+ Add family',
     addTitle: 'Add family',
-    signIn: 'Sign in with Google',
+    logInFirst: 'To add family, log in with Google first.',
+    loggedInAs: (email: string) => `Logged in as ${email}`,
+    whereCode:
+      'On their phone: open PillSaathi, tap Family, then Show my code.',
+    scanTheirs: 'Scan their code',
     typeDigits: 'or type the 6 digits',
-    next: 'Next',
+    skip: 'Skip for now',
     waiting: 'Waiting for them to tap Allow on their phone…',
+    keepOpen: 'Keep this open. It moves on by itself.',
     refused: 'They tapped No.',
     badCode:
       "That code didn't work. Check the 6 digits, or ask for a new code.",
+    almostDone: 'Almost done',
     callThem: 'What do you call them?',
     phone: 'Their phone number',
-    phoneHint: 'Optional. For the Call button.',
+    forCall: 'for Call',
     pingWhen: 'Tell me if a dose is missed',
     after15: 'After 15 min',
     after30: 'After 30 min',
@@ -346,11 +493,14 @@ export const en = {
     notReported: (n: number) => `${n} not reported`,
     later: (n: number) => `${n} later`,
     nothingDue: 'Nothing due today',
+    missedToday: (n: number) => `${n} missed today`,
     dayAndTime: (day: string, time: string) => `${day}, ${time}`,
     silentSince: (time: string) => `Not heard from since ${time}`,
     notHeardYet: (name: string) => `Not heard from ${name}'s phone yet`,
     lastHeard: (time: string) => `Last heard from at ${time}`,
     herTime: (name: string) => `Times are ${name}'s time.`,
+    tookAt: (time: string) => `✓ ${time}`,
+    dueLater: 'Later',
     call: 'Call',
     edit: 'Edit',
     historyOf: (name: string) => `${name} · History`,
@@ -360,19 +510,16 @@ export const en = {
     keep: 'Keep',
   },
   remote: {
-    changePills: 'Change pills',
+    herPills: 'Her pills',
     pillsTitle: (name: string) => `${name}'s pills`,
     pillTitle: (name: string) => `${name}'s pill`,
-    addPill: '+ Add pill',
-    soundsHeading: 'Alarm sounds',
-    waitingHeading: 'Waiting',
-    recentHeading: 'Recent',
+    recentHeading: 'Recent changes',
     cancel: 'Cancel',
     cancelLabel: (title: string) => `Cancel ${title}`,
     delayNote: (name: string) =>
       `${name}'s phone checks in about once an hour, and when an alarm rings. To send it now, ask her to open PillSaathi.`,
     notEditor: (name: string) =>
-      `${name}'s phone hasn't allowed you to change her pills. On her phone: Settings → Family → turn on Can change my pills next to your name.`,
+      `${name}'s phone hasn't allowed you to change her pills. On her phone: open PillSaathi, tap Family, then turn on Can change my pills on your card.`,
     tooBig: 'This sound is too big to send (over 5 MB).',
     alreadyTaken: (name: string) => `${name}'s phone already has it.`,
     add: (pill: string) => `Add ${pill}`,
@@ -382,8 +529,8 @@ export const en = {
     unreadable: 'A change her phone could not read',
     defaultTone: 'Default tone',
     waiting: (name: string) => `Waiting for ${name}'s phone`,
-    done: (time: string) => `Done at ${time}`,
-    doneNow: 'Done',
+    done: (time: string) => `✓ Done at ${time}`,
+    doneNow: '✓ Done',
     notDone: (why: string) => `Not done: ${why}`,
     reasons: {
       notAllowed: "you're not allowed to change her pills now",
@@ -394,7 +541,7 @@ export const en = {
       fileBroken: "the photo or sound didn't arrive whole",
     },
     problem: (name: string, what: string) =>
-      `${name}'s phone may not ring alarms: ${what}. On her phone, open PillSaathi and tap the yellow banner.`,
+      `${name}'s phone may not ring alarms: ${what}. On her phone, open PillSaathi and tap Fix now.`,
     problems: {
       notifications: 'notifications are off',
       alarmChannel: 'the alarm notifications are off',

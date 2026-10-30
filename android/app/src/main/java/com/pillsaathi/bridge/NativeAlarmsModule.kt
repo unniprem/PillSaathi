@@ -46,8 +46,8 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Pills and their photos, today's doses, card sounds, the app's language and read-aloud settings,
- * health checks, settings links, first-run setup and the time picker for JS.
+ * Pills and their photos, today's doses, card sounds, the app's settings (language, read-aloud,
+ * who the phone is for), health checks, settings links, first-run setup and the time picker for JS.
  *
  * The engine and store are used fresh on every call, never cached, because the `:ringing` process
  * changes the same data. They can wait on the store lock, so they only ever run on one background
@@ -180,6 +180,7 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
       Arguments.createMap().apply {
         putString("language", speaking.code)
         putBoolean("readAloud", settings.readAloud)
+        putString("role", settings.role)
         putArray(
           "languages",
           Arguments.createArray().apply {
@@ -225,6 +226,12 @@ class NativeAlarmsModule(reactContext: ReactApplicationContext) : NativeAlarmsSp
   override fun setReadAloud(on: Boolean, promise: Promise) =
     onWorker(promise) {
       engine.updateSettings { it.copy(readAloud = on) }
+      null
+    }
+
+  override fun setRole(role: String, promise: Promise) =
+    onWorker(promise) {
+      engine.updateSettings { it.copy(role = role) }
       null
     }
 

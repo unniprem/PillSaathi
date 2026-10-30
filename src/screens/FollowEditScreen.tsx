@@ -1,24 +1,36 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useI18n } from '../i18n';
 import { familyMessage } from '../lib/family';
 import { getFamily, saveFollow, unfollow } from '../native/family';
 import type { FamilyCard, Follow } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { colors, spacing } from '../theme';
+import { colors, font, radius, spacing } from '../theme';
+import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FollowEdit'>;
 
 /**
- * What the relative calls an elder, her number and his ping delay, and Stop following, which asks
- * first and, for a copy silent for 30 days, whether to delete it too.
+ * The gear on her page: what the relative calls an elder, her number and his ping delay, and
+ * Stop following, which asks first and, for a copy silent for 30 days, whether to delete it too.
  */
 export default function FollowEditScreen({ navigation, route }: Props) {
   const { elderId } = route.params;
   const { t } = useI18n();
   const [card, setCard] = useState<FamilyCard | null>(null);
+  // The keyboard covers the page instead of shrinking it (edge to edge), so the page ends above
+  // it while it is open, and the fields and Save scroll into view.
+  const keyboardHeight = useKeyboardHeight();
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -34,11 +46,6 @@ export default function FollowEditScreen({ navigation, route }: Props) {
       mounted.current = false;
     };
   }, [elderId]);
-
-  const name = card?.name ?? '';
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: name });
-  }, [navigation, name]);
 
   const save = async (follow: Follow) => {
     try {
@@ -85,39 +92,67 @@ export default function FollowEditScreen({ navigation, route }: Props) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
+    <View
+      testID="follow-edit-page"
+      style={[styles.page, { paddingBottom: keyboardHeight }]}
     >
-      {card ? (
-        <>
-          <FollowForm
-            initial={{
-              elderId,
-              name: card.name,
-              phone: card.phone,
-              delayMinutes: card.delayMinutes,
-            }}
-            submitLabel={t.common.save}
-            onSubmit={save}
-          />
-          <Pressable
-            accessibilityRole="button"
-            onPress={askStop}
-            style={styles.stop}
-          >
-            <Text style={styles.stopText}>{t.family.stopFollowing}</Text>
-          </Pressable>
-        </>
-      ) : null}
-    </ScrollView>
+      <SkyBand title={card?.name ?? ''} onBack={() => navigation.goBack()} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {card ? (
+          <>
+            <FollowForm
+              initial={{
+                elderId,
+                name: card.name,
+                phone: card.phone,
+                delayMinutes: card.delayMinutes,
+              }}
+              submitLabel={t.common.save}
+              onSubmit={save}
+            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={askStop}
+              style={({ pressed }) => [styles.stop, pressed && styles.pressed]}
+            >
+              <Text style={styles.stopText}>{t.family.stopFollowing}</Text>
+            </Pressable>
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, paddingBottom: spacing.lg * 2 },
-  stop: { marginTop: spacing.lg, padding: spacing.md, alignItems: 'center' },
-  stopText: { fontSize: 18, color: colors.danger, fontWeight: '600' },
+  page: { flex: 1, backgroundColor: colors.page },
+  content: {
+    padding: spacing.md,
+    paddingTop: 14,
+    paddingBottom: spacing.lg,
+    gap: 12,
+  },
+  // Coral words on white, set apart below the form and its Save.
+  stop: {
+    marginTop: spacing.md,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.button,
+    borderWidth: 2,
+    borderColor: colors.coralTint,
+    backgroundColor: colors.card,
+  },
+  pressed: { opacity: 0.7 },
+  stopText: {
+    ...font(900),
+    flexShrink: 1,
+    fontSize: 17,
+    color: colors.coralText,
+    textAlign: 'center',
+  },
 });

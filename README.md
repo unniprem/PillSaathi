@@ -139,6 +139,31 @@ Useful while testing: `adb shell dumpsys alarm | grep -A6 com.pillsaathi`, `adb 
 
 ## Device test matrix
 
+### Sky redesign
+
+Last run: 2026-10-30, debug build with Metro. Amma on emulator `Medium_Phone_API_34` (no Google account, so Continue offline), Ravi on the Redmi Note 10 (M2101K7AI, MIUI 14 / Android 12, three-button navigation, wireless adb with "USB debugging (Security settings)" on, so adb can tap). Each screen was compared with `10-journeys.html`.
+
+- [x] In place over the old build: the emulator showed the login once and kept its 5 pills, 7 records and follower. The signed-in Redmi went straight to Who, then Today kept Amma's card and his own pill.
+- [x] Fresh install, E1–E14 on the emulator and C1–C11 on the Redmi. Google's first try on the Redmi failed with Play services error 20 ("connection … lost") and worked on the second tap.
+- [x] Linking: typed code, E13 Allow, C5 Waiting, C6 Almost done; again after clearing the Redmi's data (re-link).
+- [x] C8: "Ammachi Kunjamma Varghese hasn't taken Telma (10:33 am)." at 11:03:11, 30 minutes after a ring left unanswered.
+- [x] C10/C11: Add a pill for her waits, her open app applies it within seconds, her notice says "unni scrapbook added Vitamin D (8:00 AM).", and the waiting card turns into Recent changes.
+- [x] Two quick Saves (capsules left, then 10 days), her app open: both kept. A new photo then 10 days, her app in the background: both kept on her next open, photo included.
+- [x] The ringing screen over the lock screen, landscape, font scale 2.0, Malayalam (emulator).
+- [x] Font scale 2.0 on the Redmi: Today, her page with a long name, her pills, Settings' language tiles.
+- [x] The code boxes: "156 667" typed (space dropped); "482 913" pasted from a long press.
+- [x] Almost done and FollowEdit with the keyboard open: the page scrolls to Save and Stop following, no doubled gap.
+- [x] Every page's foot clears the Redmi's three-button bar (Who's Continue, her pills, her page).
+
+Found and fixed on the Redmi: his phone never kept her editor right, sounds or health; a Save after a new photo removed it; the count sheet opened empty after a later change; pages ran under the three-button bar; her page squeezed the pill names at 2.0; a long press on the code boxes had no Paste.
+
+**Pending:**
+
+- [ ] TalkBack: one read per pill card on the ringing screen; the pill-name links on Today; MissedCard's "I took it".
+- [ ] Today left open across a dose time and across midnight.
+- [ ] Force-stop with a dose overdue, reopen at the login page: alarms mended, the Missed alert only once Today shows.
+- [ ] Scan her QR code with the Redmi's camera.
+
 ### Remote setup
 
 Last run: 2026-10-29, emulator `Medium_Phone_API_34` as the elder (linked to the Redmi, sharing on), with `DEBUG_FAMILY_APPLY` standing in for the relative's phone. The Redmi was locked, so nothing that needs it ran.
@@ -150,15 +175,23 @@ Last run: 2026-10-29, emulator `Medium_Phone_API_34` as the elder (linked to the
 - [x] A sound (AAC) set for 3:18 PM: notice "Ravi set the 3:18 PM alarm sound to RavisVoice.", and the 3:18 ring logged "Playing sound file a727d9c4….m4a".
 - [x] Rules (emulator): editors send changes and parts; followers who aren't editors, and strangers, can't; only her phone sets a state or writes editors; Cancel only while pending; parts at most 716800 bytes; leaving takes him off editors.
 
-**Pending (needs the Redmi unlocked):**
-
 - [x] Rules deployed to `pillsaathi` on 2026-10-29 (`npx firebase deploy --only firestore:rules --project pillsaathi`; the repo has no `.firebaserc`).
-- [ ] From the Redmi, with her app open: + Add pill arrives within seconds, her notice shows, and it rings.
-- [ ] With her app swiped away: the change waits ("Waiting for Amma's phone"), then arrives at the next check-in or ring.
+
+Run on 2026-10-30 with the Redmi as Ravi (see Sky redesign above):
+
+- [x] From the Redmi, with her app open: + Add pill arrived within seconds and her notice showed.
+- [x] With her app in the background: the change waited ("Waiting for Amma's phone"), then arrived when she opened it.
+- [x] Edit with a new photo, and delete, from the Redmi: "unni scrapbook deleted Telma."; a waiting delete cancelled first never reached her phone.
+- [x] Turn off **Can change my pills**: his page explains.
+- [x] Her battery setup not done: his Today card, her page and her pills warn.
+
+**Pending:**
+
+- [ ] A remote change ringing on her phone (the test pill was due tomorrow).
+- [ ] With her app swiped away: the change arrives at the next check-in or ring.
 - [ ] Record a voice on the Redmi for one of her times: her alarm rings with it.
-- [ ] Edit (with a new photo) and delete from the Redmi; Cancel a waiting change; a late Cancel says "Amma's phone already has it."
-- [ ] Turn off **Can change my pills**: his page explains, and a send is refused.
-- [ ] Battery optimisation back on for her: his pages warn.
+- [ ] A late Cancel says "Amma's phone already has it."
+- [ ] With **Can change my pills** off, a send is refused.
 
 ### Family online
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useI18n } from '../i18n';
@@ -23,44 +23,44 @@ function watch(on: boolean) {
 }
 
 /**
- * While the screen is focused: listens for relatives asking to follow this phone, and asks
- * "Let Ravi see your pills?" for each, one at a time. [onAnswered] runs after an answer is saved.
- * A request already answered is never asked about again.
+ * While the screen is focused: listens for relatives asking to follow this phone, and puts each
+ * in [asking], one at a time, for the screen's `AllowDialog` to ask "Let Ravi see your pills?".
+ * [answer] saves her answer, and [onAnswered] runs after it is saved. A request already answered
+ * is never asked about again; one left unanswered when the screen loses focus is asked again
+ * when it is back.
  */
 export function useFollowRequests(
   onAnswered: (person: Person, allowed: boolean) => void,
-) {
+): { asking: Person | null; answer: (allow: boolean) => void } {
   const { t } = useI18n();
-  const asking = useRef(false);
+  const [asking, setAsking] = useState<Person | null>(null);
+  // The person on the dialog, read by [answer] so a second tap does nothing.
+  const shown = useRef<Person | null>(null);
+  // While someone is asked, or their answer is being saved, no one else is asked.
+  const busy = useRef(false);
   const answered = useRef(new Set<string>());
   const latest = useRef(onAnswered);
   latest.current = onAnswered;
 
-  const ask = useCallback(
-    (person: Person) => {
-      asking.current = true;
-      const answer = async (allow: boolean) => {
-        answered.current.add(person.uid);
-        try {
-          await answerRequest(person.uid, allow);
-          latest.current(person, allow);
-        } catch (e) {
-          console.warn('Could not answer the request', e);
-          answered.current.delete(person.uid);
-          Alert.alert(familyMessage(e, t));
-        } finally {
-          asking.current = false;
-        }
-      };
-      Alert.alert(
-        t.family.allowTitle(person.name),
-        t.family.allowBody(person.email),
-        [
-          { text: t.family.no, style: 'cancel', onPress: () => answer(false) },
-          { text: t.family.allow, onPress: () => answer(true) },
-        ],
-        { cancelable: false },
-      );
+  const answer = useCallback(
+    async (allow: boolean) => {
+      const person = shown.current;
+      if (!person) {
+        return;
+      }
+      shown.current = null;
+      setAsking(null);
+      answered.current.add(person.uid);
+      try {
+        await answerRequest(person.uid, allow);
+        latest.current(person, allow);
+      } catch (e) {
+        console.warn('Could not answer the request', e);
+        answered.current.delete(person.uid);
+        Alert.alert(familyMessage(e, t));
+      } finally {
+        busy.current = false;
+      }
     },
     [t],
   );
@@ -80,8 +80,10 @@ export function useFollowRequests(
             }
           });
           const next = people.find(p => !answered.current.has(p.uid));
-          if (active && next && !asking.current) {
-            ask(next);
+          if (active && next && !busy.current) {
+            busy.current = true;
+            shown.current = next;
+            setAsking(next);
           }
         } catch (e) {
           console.warn('Could not read requests', e);
@@ -92,7 +94,14 @@ export function useFollowRequests(
         active = false;
         clearInterval(timer);
         watch(false);
+        if (shown.current) {
+          shown.current = null;
+          busy.current = false;
+          setAsking(null);
+        }
       };
-    }, [ask]),
+    }, []),
   );
+
+  return { asking, answer };
 }
