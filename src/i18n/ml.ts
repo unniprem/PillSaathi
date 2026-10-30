@@ -508,6 +508,10 @@ export const ml: Strings = {
     pillsTitle: (name: string) => `${name}-ന്റെ മരുന്നുകൾ`,
     pillTitle: (name: string) => `${name}-ന്റെ മരുന്ന്`,
     recentHeading: 'അടുത്തിടെയുള്ള മാറ്റങ്ങൾ',
+    soundsHeading: 'അലാറം ശബ്ദങ്ങൾ',
+    soundsNote:
+      'നിങ്ങളുടെ ശബ്ദം റെക്കോർഡ് ചെയ്യാനോ ഒരു പാട്ട് തിരഞ്ഞെടുക്കാനോ ഒരു സമയത്തിൽ അമർത്തുക.',
+    soundLabel: (time: string, sound: string) => `${time}, ${sound}`,
     cancel: 'റദ്ദാക്കുക',
     cancelLabel: (title: string) => `റദ്ദാക്കുക: ${title}`,
     delayNote: (name: string) =>

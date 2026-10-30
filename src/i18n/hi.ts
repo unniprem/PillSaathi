@@ -502,6 +502,10 @@ export const hi: Strings = {
     pillsTitle: (name: string) => `${name} की दवाइयाँ`,
     pillTitle: (name: string) => `${name} की दवाई`,
     recentHeading: 'हाल के बदलाव',
+    soundsHeading: 'अलार्म की आवाज़ें',
+    soundsNote:
+      'अपनी आवाज़ रिकॉर्ड करने या गाना चुनने के लिए किसी समय पर दबाएं।',
+    soundLabel: (time: string, sound: string) => `${time}, ${sound}`,
     cancel: 'रद्द करें',
     cancelLabel: (title: string) => `रद्द करें: ${title}`,
     delayNote: (name: string) =>
