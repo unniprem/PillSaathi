@@ -21,7 +21,8 @@
     <string name="refill_less_than_day">less than a day</string>
     <string name="channel_family_missed">Family: missed doses</string>
     <string name="channel_family_refill">Family: running low</string>
-    <string name="family_missed">%1$s hasn\'t taken %2$s (%3$s).</string>
+    <string name="family_missed_title">%1$s hasn\'t taken %2$s</string>
+    <string name="family_missed_body">The %1$s dose. Tap to see her day.</string>
     <string name="family_not_reported">%1$s\'s phone hasn\'t reported the %2$s dose (%3$s). Last heard from at %4$s.</string>
     <string name="family_not_reported_never">%1$s\'s phone hasn\'t reported the %2$s dose (%3$s).</string>
     <string name="family_silent">We haven\'t heard from %1$s\'s phone since %2$s. Alarms on it may not be ringing. Please check on %1$s.</string>

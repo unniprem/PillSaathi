@@ -22,7 +22,8 @@
     <string name="refill_less_than_day">ഒരു ദിവസത്തിൽ കുറവ്</string>
     <string name="channel_family_missed">കുടുംബം: മുടങ്ങിയ ഡോസുകൾ</string>
     <string name="channel_family_refill">കുടുംബം: മരുന്ന് തീരാറായി</string>
-    <string name="family_missed">%1$s %2$s കഴിച്ചിട്ടില്ല (%3$s).</string>
+    <string name="family_missed_title">%1$s %2$s കഴിച്ചിട്ടില്ല</string>
+    <string name="family_missed_body">%1$s-നുള്ള ഡോസ്. അവരുടെ ദിവസം കാണാൻ അമർത്തുക.</string>
     <string name="family_not_reported">%1$s-യുടെ ഫോൺ %2$s-ലെ ഡോസ് (%3$s) അറിയിച്ചിട്ടില്ല. അവസാനം വിവരം കിട്ടിയത് %4$s.</string>
     <string name="family_not_reported_never">%1$s-യുടെ ഫോൺ %2$s-ലെ ഡോസ് (%3$s) അറിയിച്ചിട്ടില്ല.</string>
     <string name="family_silent">%2$s മുതൽ %1$s-യുടെ ഫോണിൽ നിന്ന് വിവരമില്ല. അതിലെ അലാറങ്ങൾ മുഴങ്ങുന്നുണ്ടാവില്ല. ദയവായി %1$s-യെ ഒന്ന് അന്വേഷിക്കുക.</string>

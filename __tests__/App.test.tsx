@@ -2,7 +2,7 @@
  * @format
  */
 
-import { Alert, AppState, Platform } from 'react-native';
+import { Alert, AppState, Linking, Platform } from 'react-native';
 import {
   act,
   fireEvent,
@@ -64,6 +64,45 @@ test('a set-up, logged-in phone opens on Today', async () => {
   jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
   await render(<App />);
   expect(await screen.findByText('No pills yet')).toBeTruthy();
+});
+
+// A family notification about her opens her page, over Today.
+test("a missed-dose notification's link opens her page, and Back comes to Today", async () => {
+  jest
+    .spyOn(Linking, 'getInitialURL')
+    .mockResolvedValue('pillsaathi://elder/E');
+  jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
+  const amma = {
+    elderId: 'E',
+    name: 'Amma',
+    phone: null,
+    delayMinutes: 30,
+    heardAt: null,
+    silent: false,
+    abandoned: false,
+    otherZone: false,
+    tally: { taken: 0, skipped: 0, missed: 0, notReported: 0, later: 0 },
+    refills: [],
+  };
+  jest.mocked(family.getFamily).mockResolvedValue([amma]);
+  jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+  await render(<App />);
+  await waitFor(() => expect(headerTitles()).toContain('Amma'));
+  await fireEvent.press(screen.getByLabelText('Back'));
+  expect(
+    await screen.findByText('You have no pills of your own.'),
+  ).toBeTruthy();
+  expect(headerTitles()).not.toContain('Amma');
+});
+
+test('a link never skips the login', async () => {
+  jest
+    .spyOn(Linking, 'getInitialURL')
+    .mockResolvedValue('pillsaathi://elder/E');
+  jest.mocked(alarms.getSettings).mockResolvedValue(settings(null));
+  await render(<App />);
+  expect(await screen.findByText('Continue with Google')).toBeTruthy();
+  expect(headerTitles()).toEqual(['PillSaathi']);
 });
 
 test('a phone with no role opens the login page', async () => {

@@ -1,5 +1,5 @@
 import { hi } from '../../src/i18n/hi';
-import { healthIssues } from '../../src/lib/health';
+import { alertIssues, healthIssues } from '../../src/lib/health';
 import type { Health } from '../../src/native/alarms';
 
 const ok: Health = {
@@ -116,4 +116,37 @@ test('says what is wrong in the app language', () => {
     hi.health.notifications,
     hi.health.setup,
   ]);
+});
+
+// A phone with no pills of its own rings nothing, but its missed-dose checks are alarms and the
+// news is a notification: only what can make those late is kept, said about them.
+test('alertIssues keeps what can delay his missed-dose alerts, in their words', () => {
+  const all = healthIssues(
+    {
+      notificationsEnabled: false,
+      alarmChannelEnabled: false,
+      exactAlarmAllowed: false,
+      fullScreenAllowed: false,
+      ignoringBatteryOptimizations: false,
+      backgroundRestricted: true,
+      alarmVolumeLow: true,
+    },
+    { seen: true, doneSteps: [] },
+    'Xiaomi',
+  );
+  const alerts = alertIssues(all);
+  expect(alerts.map(i => [i.key, i.action])).toEqual([
+    ['notifications', 'notifications'],
+    ['exactAlarm', 'exactAlarm'],
+    ['backgroundRestricted', 'backgroundRestricted'],
+    ['batteryOptimization', 'batteryOptimization'],
+    ['setup', 'setup'],
+  ]);
+  expect(alerts[0].message).toBe(
+    "Notifications are off, so you won't hear about a missed dose. Tap to turn them on.",
+  );
+  expect(alertIssues(all, hi)[3].message).toBe(
+    hi.health.alerts.batteryOptimization,
+  );
+  expect(alertIssues([])).toEqual([]);
 });
