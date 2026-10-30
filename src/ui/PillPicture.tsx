@@ -8,7 +8,7 @@ import { pillColor } from './pillLook';
 type Props = {
   pill: { name: string; form: PillForm; photoUri: string | null };
   size?: 30 | 40 | 56;
-  /** Instead of the name's colour, for the app's logo. */
+  /** Instead of the name's colour, for the empty Today page's pills. */
   color?: string;
 };
 

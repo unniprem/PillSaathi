@@ -50,7 +50,7 @@ object Notifications {
     val lines =
       if (ring.pills.isEmpty()) ring.name else ring.pills.joinToString("\n") { "${it.name} · ${it.amount}" }
     return NotificationCompat.Builder(context, CHANNEL_RINGING)
-      .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+      .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle(formatTime(context, ring.startedAt))
       .setContentText(names)
       .setStyle(NotificationCompat.BigTextStyle().bigText(lines))
@@ -81,7 +81,7 @@ object Notifications {
       PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
     val notification =
       NotificationCompat.Builder(context, CHANNEL_MISSED)
-        .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+        .setSmallIcon(R.drawable.ic_notification)
         .setContentText(text)
         .setContentIntent(open)
         .setAutoCancel(true)
@@ -112,7 +112,7 @@ object Notifications {
       PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
     val notification =
       NotificationCompat.Builder(context, CHANNEL_REFILL)
-        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setSmallIcon(R.drawable.ic_notification)
         .setContentText(text)
         .setStyle(NotificationCompat.BigTextStyle().bigText(text))
         .setContentIntent(open)
