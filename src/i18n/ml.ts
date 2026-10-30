@@ -382,8 +382,6 @@ export const ml: Strings = {
     allTaken: 'എല്ലാം കഴിച്ചു',
     someNotTaken: 'ചിലത് കഴിച്ചില്ല',
     noneTaken: 'ഒന്നും കഴിച്ചില്ല',
-    someMissed: 'ചിലത് മുടങ്ങി',
-    none: 'ഒന്നുമില്ല',
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'റിപ്പോർട്ട് പങ്കിടാനായില്ല',
     loadFailed: 'ചരിത്രം കാണിക്കാനായില്ല.',
@@ -429,7 +427,7 @@ export const ml: Strings = {
       `ഇനി ${minutes} മിനിറ്റ് കൂടി പ്രവർത്തിക്കും`,
     sendCode: 'കോഡ് അയയ്ക്കുക',
     shareMessage: (code: string) =>
-      `PillSaathi തുറന്ന്, Add family ടാപ്പ് ചെയ്ത്, ${code} ടൈപ്പ് ചെയ്യുക. ഇത് 15 മിനിറ്റ് പ്രവർത്തിക്കും.`,
+      `PillSaathi തുറന്ന്, Family ടാപ്പ് ചെയ്ത്, + Add family ടാപ്പ് ചെയ്ത്, ${code} ടൈപ്പ് ചെയ്യുക. ഇത് 15 മിനിറ്റ് പ്രവർത്തിക്കും.`,
     scanCode: 'സ്കാൻ കോഡ്',
     opening: 'സ്കാനർ തുറക്കുന്നു…',
     noScanner:
@@ -452,7 +450,6 @@ export const ml: Strings = {
     failed: 'എന്തോ പിശക് സംഭവിച്ചു. കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.',
     notSetUp: 'ഈ പതിപ്പിൽ കുടുംബം സജ്ജമാക്കിയിട്ടില്ല.',
     lookAfter: 'ഞാൻ നോക്കുന്നവർ',
-    addFamily: '+ കുടുംബാംഗത്തെ ചേർക്കുക',
     addTitle: 'കുടുംബാംഗത്തെ ചേർക്കുക',
     logInFirst:
       'കുടുംബാംഗത്തെ ചേർക്കാൻ, ആദ്യം Google ഉപയോഗിച്ച് ലോഗിൻ ചെയ്യുക.',

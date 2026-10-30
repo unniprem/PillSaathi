@@ -36,6 +36,7 @@ import { colors, font, radius, spacing } from '../theme';
 import Card from '../ui/Card';
 import Icon from '../ui/Icon';
 import type { IconName } from '../ui/icons';
+import SectionLabel from '../ui/SectionLabel';
 import SkyBand, { RoundButton } from '../ui/SkyBand';
 
 /** This phone's History, as a tab; or hers, on a relative's phone, as a page of its own. */
@@ -50,8 +51,8 @@ type Props = {
 type Shown = { month: string; history: History };
 
 /**
- * How a day is drawn: every dose taken green, none coral, both with white numbers; some missed
- * an orange ring on cream; nothing recorded plain grey.
+ * How a day is drawn: every dose taken green, none coral, both with white numbers; some not
+ * taken an amber ring on cream; nothing recorded plain grey. Today has a navy ring round that.
  */
 const LOOK: Record<DayState, { fill?: string; ink: string }> = {
   all: { fill: colors.green, ink: colors.onFill },
@@ -59,6 +60,9 @@ const LOOK: Record<DayState, { fill?: string; ink: string }> = {
   none: { fill: colors.coral, ink: colors.onFill },
   empty: { ink: colors.muted },
 };
+
+/** The calendar's legend, in the words TalkBack says for each day. */
+const LEGEND: DayState[] = ['all', 'some', 'none'];
 
 /** `2026-10-18` → "18 Oct" */
 function dayAndMonth(iso: string, t: Strings): string {
@@ -257,23 +261,31 @@ export default function HistoryScreen({ navigation, route }: Props) {
           onPress={() => navigation.navigate('HistoryDay', { date, elderId })}
           style={({ pressed }) => [
             styles.day,
-            look.fill !== undefined && { backgroundColor: look.fill },
-            state === 'some' && styles.some,
             date === today && styles.today,
             pressed && styles.pressed,
           ]}
         >
-          <Text
+          {/* Today's ring goes round the day's own look, so it never hides the amber ring. */}
+          <View
+            testID="day-face"
             style={[
-              styles.dayNumber,
-              { color: look.ink },
-              future && styles.future,
+              styles.face,
+              look.fill !== undefined && { backgroundColor: look.fill },
+              state === 'some' && styles.some,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
           >
-            {Number(date.slice(8))}
-          </Text>
+            <Text
+              style={[
+                styles.dayNumber,
+                { color: look.ink },
+                future && styles.future,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {Number(date.slice(8))}
+            </Text>
+          </View>
         </Pressable>
       </View>
     );
@@ -288,9 +300,7 @@ export default function HistoryScreen({ navigation, route }: Props) {
         )}
 
         <Card>
-          <Text style={styles.label}>
-            {t.months[monthNumber - 1].toUpperCase()}
-          </Text>
+          <SectionLabel>{t.months[monthNumber - 1]}</SectionLabel>
           {percent === null || firstDay === null ? (
             <Text style={styles.noDoses}>{t.history.noDoses}</Text>
           ) : (
@@ -355,14 +365,8 @@ export default function HistoryScreen({ navigation, route }: Props) {
             </View>
           ))}
 
-          <View style={styles.legend}>
-            {(
-              [
-                ['all', t.history.allTaken],
-                ['some', t.history.someMissed],
-                ['none', t.history.none],
-              ] as const
-            ).map(([state, word]) => (
+          <View testID="legend" style={styles.legend}>
+            {LEGEND.map(state => (
               <View key={state} style={styles.legendItem}>
                 <View
                   style={[
@@ -371,7 +375,7 @@ export default function HistoryScreen({ navigation, route }: Props) {
                     state === 'some' && styles.some,
                   ]}
                 />
-                <Text style={styles.legendText}>{word}</Text>
+                <Text style={styles.legendText}>{stateWord(state, t)}</Text>
               </View>
             ))}
           </View>
@@ -416,12 +420,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     color: colors.muted,
-  },
-  label: {
-    ...font(900),
-    fontSize: 13,
-    letterSpacing: 1.2,
-    color: colors.blue,
   },
   percent: {
     ...font(900),
@@ -487,11 +485,16 @@ const styles = StyleSheet.create({
     maxWidth: 48,
     aspectRatio: 1,
     borderRadius: radius.pill,
+  },
+  // A navy ring, and a white gap inside it before the day's own look.
+  today: { borderWidth: 2.5, borderColor: colors.navy, padding: 2 },
+  face: {
+    flex: 1,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   some: { borderWidth: 3, borderColor: colors.amber },
-  today: { borderWidth: 2.5, borderColor: colors.navy },
   // 18 sp bold: the size white needs on green and coral.
   dayNumber: { ...font(800), fontSize: 18 },
   future: { opacity: 0.45 },

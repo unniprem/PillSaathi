@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import type { ReactNode } from 'react';
 import {
-  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useI18n } from '../i18n';
 import { colors, font, spacing } from '../theme';
 
@@ -29,20 +29,7 @@ export default function Sheet({ visible, onClose, title, children }: Props) {
   const insets = useSafeAreaInsets();
   // The keyboard covers the sheet instead of shrinking it (edge to edge), so the sheet rises
   // above it while it is open.
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const shown = Keyboard.addListener('keyboardDidShow', e =>
-      setKeyboardHeight(e.endCoordinates.height),
-    );
-    const hidden = Keyboard.addListener('keyboardDidHide', () =>
-      setKeyboardHeight(0),
-    );
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
+  const keyboardHeight = useKeyboardHeight();
 
   return (
     <Modal

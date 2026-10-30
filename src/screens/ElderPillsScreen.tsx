@@ -32,10 +32,12 @@ import {
 import type { ChangeView, ElderSetup } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, font, radius, spacing } from '../theme';
+import AddRow from '../ui/AddRow';
 import Card from '../ui/Card';
 import Icon from '../ui/Icon';
 import type { IconName } from '../ui/icons';
 import PillPicture from '../ui/PillPicture';
+import SectionLabel from '../ui/SectionLabel';
 import SkyBand from '../ui/SkyBand';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ElderPills'>;
@@ -224,18 +226,16 @@ export default function ElderPillsScreen({ navigation, route }: Props) {
                 })}
               </Card>
             ) : null}
-            <Pressable
-              accessibilityRole="button"
+            <AddRow
+              label={t.addPill.titleFor(name)}
               onPress={() => navigation.navigate('AddPill', { elderId })}
-              style={({ pressed }) => [styles.add, pressed && styles.pressed]}
-            >
-              <Icon name="add" size={20} color={colors.blue} />
-              <Text style={styles.addText}>{t.addPill.titleFor(name)}</Text>
-            </Pressable>
+            />
 
             {recent.length > 0 ? (
               <>
-                <Text style={styles.label}>{t.remote.recentHeading}</Text>
+                <SectionLabel style={styles.label}>
+                  {t.remote.recentHeading}
+                </SectionLabel>
                 <Card style={styles.list}>
                   {recent.map((c, i) => (
                     <View
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   cancel: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
@@ -379,35 +379,7 @@ const styles = StyleSheet.create({
   struck: { textDecorationLine: 'line-through' },
   detail: { ...font(700), fontSize: 14, color: colors.muted, marginTop: 1 },
   amber: { color: colors.amberText },
-  add: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    minHeight: 52,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.edge,
-  },
-  addText: {
-    ...font(900),
-    flexShrink: 1,
-    fontSize: 16,
-    color: colors.blue,
-    textAlign: 'center',
-  },
-  // Small blue capitals, as every section label in the Sky look.
-  label: {
-    ...font(900),
-    fontSize: 13,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: colors.blue,
-    marginTop: spacing.sm,
-    marginHorizontal: 2,
-  },
+  label: { marginTop: spacing.sm, marginHorizontal: 2 },
   change: { paddingVertical: 10 },
   changeTitle: { ...font(800), fontSize: 15.5, color: colors.navy },
   state: { ...font(800), fontSize: 14, color: colors.muted, marginTop: 1 },

@@ -108,7 +108,7 @@ test('lists her pills and times, waiting first, and Cancel cancels', async () =>
   // Each time's sound is on the pill's own page now (PillScreen's sound row).
   expect(screen.queryByText('Alarm sounds')).toBeNull();
   expect(screen.getByText('Delete Dolo')).toBeTruthy();
-  expect(screen.getByText('Recent changes')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Recent changes' })).toBeTruthy();
   expect(screen.getByText('✓ Done at 3:05 PM')).toBeTruthy();
   expect(
     screen.getByText(
@@ -178,7 +178,9 @@ test('a pill opens the pill page for her', async () => {
 
 test('Add a pill for Amma opens the five steps for her', async () => {
   await renderApp('ElderPills', { elderId: 'E' });
-  await fireEvent.press(await screen.findByText('Add a pill for Amma'));
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Add a pill for Amma' }),
+  );
   await waitFor(() =>
     expect(headerTitles()).toEqual(["Amma's pills", 'Add a pill for Amma']),
   );
@@ -217,8 +219,11 @@ test('the waiting card cancels a change', async () => {
       "Amma's phone checks in about once an hour, and when an alarm rings. To send it now, ask her to open PillSaathi.",
     ),
   ).toBeTruthy();
-  // Only what this phone sent can be taken back.
+  // Only what this phone sent can be taken back, with a full-size button.
   expect(card.getAllByRole('button', { name: /^Cancel/ })).toHaveLength(1);
+  expect(
+    card.getByRole('button', { name: 'Cancel Change Telma 40' }),
+  ).toHaveStyle({ minHeight: 48 });
   jest.mocked(family.listChanges).mockResolvedValue([]);
   await fireEvent.press(
     card.getByRole('button', { name: 'Cancel Change Telma 40' }),

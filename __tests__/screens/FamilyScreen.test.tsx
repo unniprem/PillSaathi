@@ -160,7 +160,7 @@ test('the Family page stops listening when it is left', async () => {
   expect(jest.mocked(family.watchRequests).mock.calls.at(-1)).toEqual([true]);
 });
 
-test('Family lists the people I look after, with + Add family', async () => {
+test('Family lists the people I look after, with Add family', async () => {
   jest
     .mocked(family.listFollows)
     .mockResolvedValue([
@@ -169,7 +169,14 @@ test('Family lists the people I look after, with + Add family', async () => {
   await renderApp('Family');
   expect(await screen.findByText('People I look after')).toBeTruthy();
   expect(screen.getByText('Amma')).toBeTruthy();
-  await fireEvent.press(screen.getByText('+ Add family'));
+  // Both lists are named by headings, for TalkBack to jump between.
+  expect(
+    screen.getByRole('header', { name: 'Who can see my pills' }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole('header', { name: 'People I look after' }),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Add family' }));
   await waitFor(() => expect(headerTitles()).toEqual(['Family', 'Add family']));
 });
 
@@ -204,7 +211,7 @@ test('People I look after appears only on a phone that follows someone', async (
   expect(await screen.findByText('No one yet.')).toBeTruthy();
   await waitFor(() => expect(family.listFollows).toHaveBeenCalled());
   expect(screen.queryByText('People I look after')).toBeNull();
-  expect(screen.getByText('+ Add family')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Add family' })).toBeTruthy();
 });
 
 test('Family is a tab of its own, no longer a Settings row', async () => {

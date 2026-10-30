@@ -62,6 +62,7 @@ afterEach(() => {
 test('lists the languages from native, marking drafts', async () => {
   await renderApp('Settings');
   expect(await screen.findByText('English')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Language' })).toBeTruthy();
   expect(within(tile('മലയാളം')).getByText('draft')).toBeTruthy();
   expect(within(tile('English')).queryByText('draft')).toBeNull();
   expect(tile('English').props.accessibilityState).toEqual(

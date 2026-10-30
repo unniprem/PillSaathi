@@ -1,5 +1,10 @@
 import { Linking } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import {
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import * as family from '../../src/native/family';
 import type { ElderToday, FamilyCard } from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
@@ -198,4 +203,34 @@ test('her day is one line per dose, with what happened', async () => {
   expect(screen.getByText('8:00 AM')).toBeTruthy();
   expect(screen.getByText('9:00 PM')).toBeTruthy();
   expect(screen.getByText('Later')).toBeTruthy();
+});
+
+// Review Focus: a long name at font scale 2.0 makes the sky band tall. It scrolls away with the
+// page, so her day and the ways into her pills and History can still be reached.
+test('a 40-character name scrolls away with the page', async () => {
+  const long = { ...amma, name: 'Lakshmi Kutty Amma, Thekkekara, Kottayam' };
+  expect(long.name).toHaveLength(40);
+  jest.mocked(family.getFamily).mockResolvedValue([long]);
+  jest.mocked(family.refreshFamily).mockResolvedValue([long]);
+  await renderApp('Elder', { elderId: 'E' });
+  await waitFor(() => expect(headerTitles()).toEqual([long.name]));
+  const page = screen.getByTestId('elder-page');
+  expect(page.type).toBe('RCTScrollView');
+  expect(within(page).getByTestId('sky-title')).toHaveTextContent(long.name);
+  expect(within(page).getByText('Missed')).toBeTruthy();
+  expect(within(page).getByRole('button', { name: 'Her pills' })).toBeTruthy();
+  expect(within(page).getByRole('button', { name: 'History' })).toBeTruthy();
+});
+
+test('two pills of the same name running low are both shown', async () => {
+  const error = jest.spyOn(console, 'error');
+  const iron = { ...herToday.refills[0], name: 'Iron' };
+  jest.mocked(family.getElderToday).mockResolvedValue({
+    ...herToday,
+    refills: [iron, { ...iron, pillId: 'p9' }],
+  });
+  await renderApp('Elder', { elderId: 'E' });
+  expect(await screen.findAllByText('Iron: 4 tablets left')).toHaveLength(2);
+  const said = error.mock.calls.map(args => args.join(' '));
+  expect(said.filter(line => line.includes('same key'))).toEqual([]);
 });

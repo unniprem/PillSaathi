@@ -32,6 +32,7 @@ import { colors, font, radius, spacing } from '../theme';
 import Card from '../ui/Card';
 import Icon from '../ui/Icon';
 import type { IconName } from '../ui/icons';
+import SectionLabel from '../ui/SectionLabel';
 import SkyBand from '../ui/SkyBand';
 
 type Props = TabProps<'Settings'>;
@@ -165,7 +166,9 @@ export default function SettingsScreen({ navigation }: Props) {
       <SkyBand title={t.settings.title} />
       <ScrollView contentContainerStyle={styles.content}>
         <Card>
-          <Text style={styles.label}>{t.settings.language}</Text>
+          <SectionLabel style={styles.label}>
+            {t.settings.language}
+          </SectionLabel>
           <View
             accessibilityRole="radiogroup"
             accessibilityLabel={t.settings.language}
@@ -215,7 +218,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 accessibilityLabel={t.settings.readAloud}
                 value={readAloud}
                 onValueChange={changeReadAloud}
-                trackColor={{ false: colors.edge, true: colors.green }}
+                trackColor={{ false: colors.switchOff, true: colors.green }}
                 thumbColor={colors.card}
               />
             }
@@ -331,14 +334,7 @@ function Row({ icon, title, note, tone, onPress, end }: RowProps) {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page },
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: 12 },
-  label: {
-    ...font(900),
-    fontSize: 13,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: colors.blue,
-    marginBottom: 10,
-  },
+  label: { marginBottom: 10 },
   languages: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   language: {
     flexGrow: 1,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useI18n } from '../../i18n';
 import { formatAmount } from '../../lib/amount';
 import { toISODate } from '../../lib/course';
@@ -8,6 +8,7 @@ import { problemText } from '../../lib/remote';
 import type { FamilyCard } from '../../native/family';
 import { colors, font, radius, shadow } from '../../theme';
 import Avatar from '../../ui/Avatar';
+import CallButton from '../../ui/CallButton';
 import DoseBars from '../../ui/DoseBars';
 import Icon from '../../ui/Icon';
 import type { IconName } from '../../ui/icons';
@@ -29,19 +30,21 @@ type Props = {
 export default function PersonCard({ card, problem, is24h, onOpen }: Props) {
   const { lang, t } = useI18n();
   const { tally, phone } = card;
-  // As on her phone: skipped is drawn with missed, and what is still to come is grey.
+  // As on her phone, skipped is drawn with missed. A dose her phone hasn't reported is amber, and
+  // only what is still to come is grey.
   const missed = tally.missed + tally.skipped;
-  const rest = tally.notReported + tally.later;
   // Before her first upload there is nothing to count: say so below, not "Nothing due today".
   const day = card.heardAt === null ? null : tallyText(tally, t);
   const missedLine = t.family.missedToday(tally.missed);
-  const lines: { icon: IconName; text: string }[] = [];
+  // Two pills can share a name, so a line is known by its pill, not its words.
+  const lines: { key: string; icon: IconName; text: string }[] = [];
   const warning = problemText(problem, t, card.name);
   if (warning) {
-    lines.push({ icon: 'warning', text: warning });
+    lines.push({ key: 'problem', icon: 'warning', text: warning });
   }
   for (const r of card.refills) {
     lines.push({
+      key: r.pillId,
       icon: 'inventory_2',
       text:
         r.level === 'out'
@@ -50,16 +53,19 @@ export default function PersonCard({ card, problem, is24h, onOpen }: Props) {
     });
   }
   if (card.heardAt === null) {
-    lines.push({ icon: 'schedule', text: t.family.notHeardYet(card.name) });
+    lines.push({
+      key: 'heard',
+      icon: 'schedule',
+      text: t.family.notHeardYet(card.name),
+    });
   } else if (card.silent) {
     const since = heardText(card.heardAt, toISODate(new Date()), is24h, t);
-    lines.push({ icon: 'schedule', text: t.family.silentSince(since) });
+    lines.push({
+      key: 'heard',
+      icon: 'schedule',
+      text: t.family.silentSince(since),
+    });
   }
-
-  const call = () =>
-    Linking.openURL(`tel:${phone}`).catch(e =>
-      console.warn('Could not open the dialer', e),
-    );
 
   return (
     <View testID="person-card" style={styles.card}>
@@ -78,19 +84,16 @@ export default function PersonCard({ card, problem, is24h, onOpen }: Props) {
             {day ? <Text style={styles.tally}>{day}</Text> : null}
           </View>
         </Pressable>
-        {phone ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.family.call}
-            onPress={call}
-            style={({ pressed }) => [styles.call, pressed && styles.pressed]}
-          >
-            <Icon name="call" size={24} color={colors.onFill} />
-          </Pressable>
-        ) : null}
+        {phone ? <CallButton phone={phone} /> : null}
       </View>
-      {tally.taken + missed + rest > 0 ? (
-        <DoseBars taken={tally.taken} missed={missed} rest={rest} onCard />
+      {tally.taken + missed + tally.notReported + tally.later > 0 ? (
+        <DoseBars
+          taken={tally.taken}
+          missed={missed}
+          notReported={tally.notReported}
+          rest={tally.later}
+          onCard
+        />
       ) : null}
       {tally.missed > 0 ? (
         <Pressable
@@ -104,7 +107,7 @@ export default function PersonCard({ card, problem, is24h, onOpen }: Props) {
         </Pressable>
       ) : null}
       {lines.map(line => (
-        <View key={line.text} style={styles.line}>
+        <View key={line.key} style={styles.line}>
           <Icon name={line.icon} size={18} color={colors.amberText} />
           <Text style={styles.lineText}>{line.text}</Text>
         </View>
@@ -132,15 +135,6 @@ const styles = StyleSheet.create({
   words: { flex: 1 },
   name: { ...font(900), fontSize: 18, color: colors.navy },
   tally: { ...font(700), fontSize: 14.5, color: colors.muted, marginTop: 1 },
-  call: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: shadow.green,
-  },
   missed: {
     flexDirection: 'row',
     alignItems: 'center',

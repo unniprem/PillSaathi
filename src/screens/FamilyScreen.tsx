@@ -22,10 +22,12 @@ import {
 import type { Follow, Follower, Person } from '../native/family';
 import type { TabProps } from '../navigation/RootNavigator';
 import { colors, font, radius, shadow, spacing } from '../theme';
+import AddRow from '../ui/AddRow';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Icon from '../ui/Icon';
+import SectionLabel from '../ui/SectionLabel';
 import SkyBand from '../ui/SkyBand';
 
 type Props = TabProps<'Family'>;
@@ -113,7 +115,7 @@ export default function FamilyScreen({ navigation }: Props) {
     <View style={styles.page}>
       <SkyBand title={t.family.title} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.label}>{t.family.canSee}</Text>
+        <SectionLabel style={styles.label}>{t.family.canSee}</SectionLabel>
         {failed ? (
           <Text style={styles.note}>{familyMessage(failed, t)}</Text>
         ) : null}
@@ -146,7 +148,7 @@ export default function FamilyScreen({ navigation }: Props) {
                 accessibilityLabel={t.family.canChangeLabel(person.name)}
                 value={person.canChange}
                 onValueChange={on => allowChanges(person, on)}
-                trackColor={{ false: colors.edge, true: colors.green }}
+                trackColor={{ false: colors.switchOff, true: colors.green }}
                 thumbColor={colors.card}
               />
             </View>
@@ -163,9 +165,9 @@ export default function FamilyScreen({ navigation }: Props) {
 
         {follows?.length ? (
           <>
-            <Text style={[styles.label, styles.second]}>
+            <SectionLabel style={[styles.label, styles.second]}>
               {t.family.lookAfter}
-            </Text>
+            </SectionLabel>
             {follows.map(follow => (
               <Pressable
                 key={follow.elderId}
@@ -187,13 +189,10 @@ export default function FamilyScreen({ navigation }: Props) {
             ))}
           </>
         ) : null}
-        <Pressable
-          accessibilityRole="button"
+        <AddRow
+          label={t.family.addTitle}
           onPress={() => navigation.navigate('AddFamily')}
-          style={({ pressed }) => [styles.addRow, pressed && styles.pressed]}
-        >
-          <Text style={styles.addText}>{t.family.addFamily}</Text>
-        </Pressable>
+        />
       </ScrollView>
       <AllowDialog person={asking} onAnswer={answer} />
     </View>
@@ -203,14 +202,7 @@ export default function FamilyScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.page },
   content: { padding: spacing.md, paddingBottom: spacing.lg, gap: 12 },
-  label: {
-    ...font(900),
-    fontSize: 13,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: colors.blue,
-    marginHorizontal: 2,
-  },
+  label: { marginHorizontal: 2 },
   second: { marginTop: spacing.md },
   note: { ...font(700), fontSize: 17, color: colors.navy },
   person: { paddingVertical: 12, paddingHorizontal: 14 },
@@ -256,22 +248,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     backgroundColor: colors.card,
     boxShadow: shadow.card,
-  },
-  addRow: {
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.edge,
-  },
-  addText: {
-    ...font(900),
-    fontSize: 16,
-    color: colors.blue,
-    textAlign: 'center',
   },
   pressed: { opacity: 0.7 },
 });

@@ -104,7 +104,7 @@ export const hi: Strings = {
     empty: 'अभी कोई दवा नहीं',
     emptyBody:
       'अपनी पहली दवा जोड़ें। या आपका बेटा या बेटी अपने फ़ोन से जोड़ सकते हैं।',
-    showCode: 'मेरा कोड दिखाएं',
+    showCode: 'मेरा कोड दिखाएँ',
     loadFailed:
       'आपकी दवाएं लोड नहीं हो सकीं। फिर से कोशिश करने के लिए ऐप दोबारा खोलें।',
     missedTitle: 'छूटी हुई दवाएं',
@@ -382,8 +382,6 @@ export const hi: Strings = {
     allTaken: 'सब ली गईं',
     someNotTaken: 'कुछ नहीं ली गईं',
     noneTaken: 'कोई नहीं ली गई',
-    someMissed: 'कुछ छूटीं',
-    none: 'कोई नहीं',
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'रिपोर्ट शेयर नहीं हो सकी',
     loadFailed: 'इतिहास नहीं दिखा सके।',
@@ -427,7 +425,7 @@ export const hi: Strings = {
     worksFor: (minutes: number) => `अभी ${minutes} मिनट और चलेगा`,
     sendCode: 'कोड भेजें',
     shareMessage: (code: string) =>
-      `PillSaathi खोलें, Add family पर टैप करें, और ${code} टाइप करें। यह 15 मिनट तक चलेगा।`,
+      `PillSaathi खोलें, Family पर टैप करें, फिर + Add family पर टैप करें, और ${code} टाइप करें। यह 15 मिनट तक चलेगा।`,
     scanCode: 'स्कैन कोड',
     opening: 'स्कैनर खुल रहा है…',
     noScanner:
@@ -449,7 +447,6 @@ export const hi: Strings = {
     failed: 'कुछ गड़बड़ हो गई। थोड़ी देर बाद फिर कोशिश करें।',
     notSetUp: 'इस बिल्ड में परिवार सेट नहीं है।',
     lookAfter: 'जिनका मैं ध्यान रखता हूँ',
-    addFamily: '+ परिवार जोड़ें',
     addTitle: 'परिवार जोड़ें',
     logInFirst: 'परिवार जोड़ने के लिए, पहले Google से लॉग इन करें।',
     loggedInAs: (email: string) => `${email} से लॉग इन है`,

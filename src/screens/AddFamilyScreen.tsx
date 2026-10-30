@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useI18n } from '../i18n';
 import type { Strings } from '../i18n';
 import { errorCode, familyMessage } from '../lib/family';
@@ -68,6 +69,9 @@ export default function AddFamilyScreen({ navigation, route }: Props) {
   // Digits only, at most six.
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
+  // The keyboard covers the page instead of shrinking it (edge to edge), so the page ends above
+  // it while it is open, and the code, the form and their buttons scroll into view.
+  const keyboardHeight = useKeyboardHeight();
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -219,7 +223,10 @@ export default function AddFamilyScreen({ navigation, route }: Props) {
   ) : null;
 
   return (
-    <View style={styles.page}>
+    <View
+      testID="add-family-page"
+      style={[styles.page, { paddingBottom: keyboardHeight }]}
+    >
       {step.kind === 'form' ? (
         <SkyBand title={t.family.almostDone} />
       ) : step.kind === 'waiting' ? (
@@ -338,7 +345,9 @@ type BoxesProps = {
 
 /**
  * The code typed as six large boxes, in two groups of three as her phone shows it. One hidden
- * field lies over the boxes, so a tap anywhere on them brings up the number pad.
+ * field lies over the boxes, so a tap anywhere on them brings up the number pad. It has no
+ * maxLength: Android would cut a pasted "482 913" to "482 91" before the space is dropped, so the
+ * digits are kept and cut to six here instead.
  */
 function CodeBoxes({ value, onChange, onSubmit, label }: BoxesProps) {
   const [focused, setFocused] = useState(false);
@@ -368,7 +377,6 @@ function CodeBoxes({ value, onChange, onSubmit, label }: BoxesProps) {
           onChange(text.replace(/\D/g, '').slice(0, CODE_LENGTH))
         }
         keyboardType="number-pad"
-        maxLength={CODE_LENGTH}
         onSubmitEditing={onSubmit}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}

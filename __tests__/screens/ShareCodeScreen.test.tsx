@@ -54,7 +54,7 @@ test('the code screen shows the code, the QR and Send the code', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Send the code' }));
   expect(share).toHaveBeenCalledWith({
     message:
-      'Open PillSaathi, tap Add family, and type 482 913. It works for 15 minutes.',
+      'Open PillSaathi, tap Family, then + Add family, and type 482 913. It works for 15 minutes.',
   });
 });
 

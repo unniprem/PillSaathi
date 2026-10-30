@@ -52,6 +52,13 @@ test('has every key in every language', () => {
   }
 });
 
+// Empty Today and the Family tab offer the same button, so it reads the same in both places.
+test('Show my code is spelt one way', () => {
+  for (const t of [en, ml, hi]) {
+    expect(t.today.showCode).toBe(t.family.showCode);
+  }
+});
+
 test('starts in the language native reports', async () => {
   jest.mocked(alarms.currentLanguage).mockReturnValue('hi');
   await renderApp();

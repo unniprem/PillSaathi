@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import FollowForm from '../components/FollowForm';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useI18n } from '../i18n';
 import { familyMessage } from '../lib/family';
 import { getFamily, saveFollow, unfollow } from '../native/family';
@@ -27,6 +28,9 @@ export default function FollowEditScreen({ navigation, route }: Props) {
   const { elderId } = route.params;
   const { t } = useI18n();
   const [card, setCard] = useState<FamilyCard | null>(null);
+  // The keyboard covers the page instead of shrinking it (edge to edge), so the page ends above
+  // it while it is open, and the fields and Save scroll into view.
+  const keyboardHeight = useKeyboardHeight();
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -88,7 +92,10 @@ export default function FollowEditScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={styles.page}>
+    <View
+      testID="follow-edit-page"
+      style={[styles.page, { paddingBottom: keyboardHeight }]}
+    >
       <SkyBand title={card?.name ?? ''} onBack={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={styles.content}

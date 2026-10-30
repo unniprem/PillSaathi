@@ -1,12 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import {
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { daysText } from '../components/today/RefillCard';
@@ -29,6 +22,7 @@ import type { ElderToday, FamilyCard } from '../native/family';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import Avatar from '../ui/Avatar';
+import CallButton from '../ui/CallButton';
 import Card from '../ui/Card';
 import Icon from '../ui/Icon';
 import type { IconName } from '../ui/icons';
@@ -135,14 +129,21 @@ export default function ElderScreen({ navigation, route }: Props) {
   const is24h = is24HourFormat();
   const phone = card?.phone;
 
-  // In amber: her phone's alarm problem first, then her pills running low.
-  const lines: { icon: IconName; text: string; detail?: string }[] = [];
+  // In amber: her phone's alarm problem first, then her pills running low. Two pills can share
+  // a name, so a line is known by its pill, not its words.
+  const lines: {
+    key: string;
+    icon: IconName;
+    text: string;
+    detail?: string;
+  }[] = [];
   const warning = problemText(problem, t, name);
   if (warning) {
-    lines.push({ icon: 'warning', text: warning });
+    lines.push({ key: 'problem', icon: 'warning', text: warning });
   }
   for (const r of today?.refills ?? []) {
     lines.push({
+      key: r.pillId,
       icon: 'inventory_2',
       text:
         r.level === 'out'
@@ -152,105 +153,97 @@ export default function ElderScreen({ navigation, route }: Props) {
     });
   }
 
-  const call = () =>
-    Linking.openURL(`tel:${phone}`).catch(e =>
-      console.warn('Could not open the dialer', e),
-    );
-
   return (
     <View style={styles.page}>
-      <SkyBand
-        title={name}
-        sub={
-          today?.heardAt != null
-            ? t.family.lastHeard(heardText(today.heardAt, today.date, is24h, t))
-            : undefined
-        }
-        onBack={() => navigation.goBack()}
-        right={
-          <RoundButton
-            icon="settings"
-            label={t.family.edit}
-            onPress={() => navigation.navigate('FollowEdit', { elderId })}
-          />
-        }
-        picture={card ? <Avatar name={name} size={60} /> : undefined}
-        action={
-          phone ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.family.call}
-              onPress={call}
-              style={({ pressed }) => [styles.call, pressed && styles.pressed]}
-            >
-              <Icon name="call" size={26} color={colors.onFill} />
-            </Pressable>
-          ) : undefined
-        }
-      />
-      <ScrollView contentContainerStyle={styles.content}>
-        {lines.length > 0 ? (
-          <View style={styles.attention}>
-            {lines.map(line => (
-              <View key={line.text} style={styles.line}>
-                <Icon name={line.icon} size={20} color={colors.amberText} />
-                <View style={styles.lineWords}>
-                  <Text style={styles.lineText}>{line.text}</Text>
-                  {line.detail ? (
-                    <Text style={styles.lineDetail}>{line.detail}</Text>
-                  ) : null}
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : null}
-        {today && today.cards.length > 0 ? (
-          <Card style={styles.day}>
-            {today.cards.map((item, i) => {
-              const chip = chipFor(item, today.date, is24h, t);
-              const names = item.pills
-                .map(p =>
-                  p.fromTomorrow
-                    ? `${p.name} (${t.course.fromTomorrow})`
-                    : p.name,
+      {/* The sky scrolls with the page: a long name at a large text size makes it tall, and her
+          day under it must still have the room. */}
+      <ScrollView testID="elder-page">
+        <SkyBand
+          title={name}
+          sub={
+            today?.heardAt != null
+              ? t.family.lastHeard(
+                  heardText(today.heardAt, today.date, is24h, t),
                 )
-                .join(', ');
-              return (
-                <View
-                  key={`${item.hour}:${item.minute}`}
-                  style={[styles.dose, i > 0 && styles.doseAfter]}
-                >
-                  <Text style={styles.time}>
-                    {formatTime(item.hour, item.minute, is24h)}
-                  </Text>
-                  <Text style={styles.names}>{names}</Text>
-                  {chip ? (
-                    <View style={[styles.chip, { backgroundColor: chip.fill }]}>
-                      <Text style={[styles.chipText, { color: chip.ink }]}>
-                        {chip.text}
-                      </Text>
-                    </View>
-                  ) : null}
+              : undefined
+          }
+          onBack={() => navigation.goBack()}
+          right={
+            <RoundButton
+              icon="settings"
+              label={t.family.edit}
+              onPress={() => navigation.navigate('FollowEdit', { elderId })}
+            />
+          }
+          picture={card ? <Avatar name={name} size={60} /> : undefined}
+          action={phone ? <CallButton phone={phone} size={52} /> : undefined}
+        />
+        <View style={styles.content}>
+          {lines.length > 0 ? (
+            <View style={styles.attention}>
+              {lines.map(line => (
+                <View key={line.key} style={styles.line}>
+                  <Icon name={line.icon} size={20} color={colors.amberText} />
+                  <View style={styles.lineWords}>
+                    <Text style={styles.lineText}>{line.text}</Text>
+                    {line.detail ? (
+                      <Text style={styles.lineDetail}>{line.detail}</Text>
+                    ) : null}
+                  </View>
                 </View>
-              );
-            })}
-          </Card>
-        ) : null}
-        <View style={styles.tiles}>
-          <Tile
-            icon="medication"
-            label={t.remote.herPills}
-            onPress={() => navigation.navigate('ElderPills', { elderId })}
-          />
-          <Tile
-            icon="calendar_month"
-            label={t.history.title}
-            onPress={() => navigation.navigate('ElderHistory', { elderId })}
-          />
+              ))}
+            </View>
+          ) : null}
+          {today && today.cards.length > 0 ? (
+            <Card style={styles.day}>
+              {today.cards.map((item, i) => {
+                const chip = chipFor(item, today.date, is24h, t);
+                const names = item.pills
+                  .map(p =>
+                    p.fromTomorrow
+                      ? `${p.name} (${t.course.fromTomorrow})`
+                      : p.name,
+                  )
+                  .join(', ');
+                return (
+                  <View
+                    key={`${item.hour}:${item.minute}`}
+                    style={[styles.dose, i > 0 && styles.doseAfter]}
+                  >
+                    <Text style={styles.time}>
+                      {formatTime(item.hour, item.minute, is24h)}
+                    </Text>
+                    <Text style={styles.names}>{names}</Text>
+                    {chip ? (
+                      <View
+                        style={[styles.chip, { backgroundColor: chip.fill }]}
+                      >
+                        <Text style={[styles.chipText, { color: chip.ink }]}>
+                          {chip.text}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </Card>
+          ) : null}
+          <View style={styles.tiles}>
+            <Tile
+              icon="medication"
+              label={t.remote.herPills}
+              onPress={() => navigation.navigate('ElderPills', { elderId })}
+            />
+            <Tile
+              icon="calendar_month"
+              label={t.history.title}
+              onPress={() => navigation.navigate('ElderHistory', { elderId })}
+            />
+          </View>
+          {today?.otherZone ? (
+            <Text style={styles.note}>{t.family.herTime(name)}</Text>
+          ) : null}
         </View>
-        {today?.otherZone ? (
-          <Text style={styles.note}>{t.family.herTime(name)}</Text>
-        ) : null}
       </ScrollView>
     </View>
   );
@@ -282,15 +275,6 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: spacing.lg,
     gap: 12,
-  },
-  call: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: shadow.green,
   },
   pressed: { opacity: 0.7 },
   attention: {

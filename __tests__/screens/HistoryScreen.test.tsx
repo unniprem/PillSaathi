@@ -1,4 +1,4 @@
-import { Alert, AppState, Share } from 'react-native';
+import { Alert, AppState, Share, StyleSheet } from 'react-native';
 import {
   act,
   fireEvent,
@@ -55,8 +55,22 @@ const october: History = {
   ],
 };
 
+/** Today, the 26th, with its morning taken and its evening missed. */
+const withEveningMissedToday = (): History => ({
+  ...october,
+  doses: [
+    ...october.doses,
+    dose('2026-10-26', 8, 'taken'),
+    dose('2026-10-26', 21, 'missed'),
+  ],
+});
+
 const isDisabled = (label: string) =>
   screen.getByLabelText(label).props.accessibilityState?.disabled === true;
+
+/** The coloured circle of the day TalkBack calls [label], inside today's ring if it has one. */
+const face = (label: string) =>
+  within(screen.getByLabelText(label)).getByTestId('day-face');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -74,19 +88,21 @@ it('shows the month, its share taken and each day’s colour', async () => {
   expect(await screen.findByText('60% taken')).toBeTruthy();
   expect(screen.getByText('3 of 5 doses since 6 Oct')).toBeTruthy();
   expect(screen.getByText('Oct 2026')).toBeTruthy();
-  expect(screen.getByLabelText('Tue 6 Oct: Some not taken')).toHaveStyle({
+  expect(face('Tue 6 Oct: Some not taken')).toHaveStyle({
     borderColor: colors.amber,
   });
-  expect(screen.getByLabelText('Wed 7 Oct: All taken')).toHaveStyle({
+  expect(face('Wed 7 Oct: All taken')).toHaveStyle({
     backgroundColor: colors.green,
   });
-  expect(screen.getByLabelText('Thu 8 Oct: None taken')).toHaveStyle({
+  expect(face('Thu 8 Oct: None taken')).toHaveStyle({
     backgroundColor: colors.coral,
   });
   expect(screen.getByLabelText('Fri 9 Oct')).toBeTruthy();
-  expect(screen.getByText('All taken')).toBeTruthy();
-  expect(screen.getByText('Some missed')).toBeTruthy();
-  expect(screen.getByText('None')).toBeTruthy();
+  // The legend says what TalkBack says for each day.
+  const legend = within(screen.getByTestId('legend'));
+  expect(legend.getByText('All taken')).toBeTruthy();
+  expect(legend.getByText('Some not taken')).toBeTruthy();
+  expect(legend.getByText('None taken')).toBeTruthy();
   expect(headerTitles()).toEqual(['History']);
 });
 
@@ -102,7 +118,7 @@ it('the month card shows the percent and the dose count', async () => {
   });
   await renderApp('History');
   expect(await screen.findByText('66% taken')).toBeTruthy();
-  expect(screen.getByText('OCT')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Oct' })).toBeTruthy();
   expect(screen.getByTestId('month-bar')).toHaveStyle({ width: '66%' });
   expect(screen.getByText('2 of 3 doses since 18 Oct')).toBeTruthy();
 });
@@ -118,31 +134,53 @@ it('days are coloured by what happened', async () => {
   const number = (label: string) =>
     within(day(label)).getByText(label.split(' ')[1]);
   // Every dose taken is green, none is coral, both with white numbers.
-  expect(day('Wed 7 Oct: All taken')).toHaveStyle({
+  expect(face('Wed 7 Oct: All taken')).toHaveStyle({
     backgroundColor: colors.green,
   });
   expect(number('Wed 7 Oct: All taken')).toHaveStyle({ color: colors.onFill });
-  expect(day('Thu 8 Oct: None taken')).toHaveStyle({
+  expect(face('Thu 8 Oct: None taken')).toHaveStyle({
     backgroundColor: colors.coral,
   });
   expect(number('Thu 8 Oct: None taken')).toHaveStyle({ color: colors.onFill });
-  // Some missed is an orange ring on cream.
-  expect(day('Tue 6 Oct: Some not taken')).toHaveStyle({
+  // Some not taken is an amber ring on cream.
+  expect(face('Tue 6 Oct: Some not taken')).toHaveStyle({
     backgroundColor: colors.amberTint,
     borderColor: colors.amber,
   });
   expect(number('Tue 6 Oct: Some not taken')).toHaveStyle({
     color: colors.navy,
   });
-  // Today keeps its colour, with a navy ring.
-  expect(day('Mon 26 Oct: All taken')).toHaveStyle({
+  // Today keeps its colour, inside a navy ring.
+  expect(face('Mon 26 Oct: All taken')).toHaveStyle({
     backgroundColor: colors.green,
+  });
+  expect(day('Mon 26 Oct: All taken')).toHaveStyle({
     borderColor: colors.navy,
   });
   // A day with nothing recorded is plain and still opens; a day to come doesn't.
   expect(number('Fri 9 Oct')).toHaveStyle({ color: colors.muted });
   expect(isDisabled('Fri 9 Oct')).toBe(false);
   expect(isDisabled('Tue 27 Oct')).toBe(true);
+});
+
+// The navy ring goes round today's own look, so a today with a dose missed still shows amber.
+it("today's ring keeps the amber ring of a day with some not taken", async () => {
+  jest.mocked(alarms.getHistory).mockResolvedValue(withEveningMissedToday());
+  await renderApp('History');
+  await screen.findByText('57% taken');
+  expect(screen.getByLabelText('Mon 26 Oct: Some not taken')).toHaveStyle({
+    borderColor: colors.navy,
+  });
+  expect(face('Mon 26 Oct: Some not taken')).toHaveStyle({
+    backgroundColor: colors.amberTint,
+    borderColor: colors.amber,
+  });
+  // A day that isn't today has no ring of its own round its look.
+  expect(
+    StyleSheet.flatten(
+      screen.getByLabelText('Tue 6 Oct: Some not taken').props.style,
+    ).borderWidth ?? 0,
+  ).toBe(0);
 });
 
 it('moves between months within the kept records', async () => {

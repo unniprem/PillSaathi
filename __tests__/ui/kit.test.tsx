@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Linking, StyleSheet, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import SkyBand from '../../src/ui/SkyBand';
@@ -10,6 +10,9 @@ import Stepper from '../../src/ui/Stepper';
 import Sheet from '../../src/ui/Sheet';
 import DoseBars from '../../src/ui/DoseBars';
 import TabBar from '../../src/ui/TabBar';
+import SectionLabel from '../../src/ui/SectionLabel';
+import AddRow from '../../src/ui/AddRow';
+import CallButton from '../../src/ui/CallButton';
 import { ICONS } from '../../src/ui/icons';
 import { SKY_GRADIENT } from '../../src/ui/sky';
 import { colors, shadow } from '../../src/theme';
@@ -176,6 +179,49 @@ test('dose bars draw one bar per dose', async () => {
   expect(bars).toHaveLength(3);
   expect(bars[0]).toHaveStyle({ backgroundColor: colors.green });
   expect(bars[1]).toHaveStyle({ backgroundColor: colors.coral });
+});
+
+// A dose her phone hasn't reported is not one still to come, and must show on a white card.
+test('dose bars draw a dose not reported in amber, apart from the rest', async () => {
+  await render(
+    <DoseBars taken={1} missed={0} notReported={2} rest={1} onCard />,
+  );
+  const bars = screen.getAllByTestId('dose-bar');
+  expect(bars).toHaveLength(4);
+  expect(bars[1]).toHaveStyle({ backgroundColor: colors.amber });
+  expect(bars[2]).toHaveStyle({ backgroundColor: colors.amber });
+  expect(bars[3]).toHaveStyle({ backgroundColor: colors.line });
+});
+
+test('a section label is a small blue heading', async () => {
+  await render(<SectionLabel>Who can see my pills</SectionLabel>);
+  const label = screen.getByRole('header', { name: 'Who can see my pills' });
+  expect(label).toHaveStyle({
+    color: colors.blue,
+    textTransform: 'uppercase',
+  });
+});
+
+test('an add row is a button with a plus before its words', async () => {
+  const onPress = jest.fn();
+  await render(<AddRow label="Add family" onPress={onPress} />);
+  expect(screen.getByText(ICONS.add)).toBeTruthy();
+  // Named by its words alone, without the plus's glyph.
+  await fireEvent.press(screen.getByRole('button', { name: 'Add family' }));
+  expect(onPress).toHaveBeenCalled();
+});
+
+test('Call dials the number, and is named Call', async () => {
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  await renderWithI18n(<CallButton phone="+919800000000" size={52} />);
+  const call = screen.getByRole('button', { name: 'Call' });
+  expect(call).toHaveStyle({ width: 52, height: 52 });
+  expect(StyleSheet.flatten(call.props.style).backgroundColor).toBe(
+    colors.green,
+  );
+  await fireEvent.press(call);
+  expect(open).toHaveBeenCalledWith('tel:+919800000000');
+  open.mockRestore();
 });
 
 /** A tab bar's props as the tab navigator passes them, on [index]. */

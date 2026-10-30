@@ -7,6 +7,7 @@ import { colors, font, spacing } from '../theme';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Chip from '../ui/Chip';
+import SectionLabel from '../ui/SectionLabel';
 
 const DELAYS: (number | null)[] = [15, 30, 60, null];
 
@@ -55,7 +56,7 @@ export default function FollowForm({ initial, onSubmit, submitLabel }: Props) {
   return (
     <View style={styles.form}>
       <Card style={styles.card}>
-        <Text style={styles.label}>{t.family.callThem}</Text>
+        <SectionLabel>{t.family.callThem}</SectionLabel>
         <TextInput
           accessibilityLabel={t.family.callThem}
           value={name}
@@ -65,10 +66,10 @@ export default function FollowForm({ initial, onSubmit, submitLabel }: Props) {
         />
       </Card>
       <Card style={styles.card}>
-        <Text style={styles.label}>
+        <SectionLabel>
           {t.family.phone}
           <Text style={styles.why}>{`  ${t.family.forCall}`}</Text>
-        </Text>
+        </SectionLabel>
         <TextInput
           accessibilityLabel={t.family.phone}
           accessibilityHint={t.family.forCall}
@@ -80,7 +81,7 @@ export default function FollowForm({ initial, onSubmit, submitLabel }: Props) {
         />
       </Card>
       <Card style={styles.card}>
-        <Text style={styles.label}>{t.family.pingWhen}</Text>
+        <SectionLabel>{t.family.pingWhen}</SectionLabel>
         <View style={styles.chips}>
           {DELAYS.map(minutes => (
             <Chip
@@ -100,14 +101,6 @@ export default function FollowForm({ initial, onSubmit, submitLabel }: Props) {
 const styles = StyleSheet.create({
   form: { gap: 12 },
   card: { padding: 14, gap: 10 },
-  // Small blue capitals, as every section label in the Sky look.
-  label: {
-    ...font(900),
-    fontSize: 13,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: colors.blue,
-  },
   why: {
     ...font(700),
     fontSize: 13,

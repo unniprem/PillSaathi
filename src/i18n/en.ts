@@ -390,9 +390,6 @@ export const en = {
     allTaken: 'All taken',
     someNotTaken: 'Some not taken',
     noneTaken: 'None taken',
-    // The calendar's legend, beside "All taken".
-    someMissed: 'Some missed',
-    none: 'None',
     dayLabel: (day: string, state: string) => `${day}: ${state}`,
     shareFailed: 'Could not share the report',
     loadFailed: "Couldn't load the history.",
@@ -438,7 +435,7 @@ export const en = {
         : `Works for ${minutes} more minutes`,
     sendCode: 'Send the code',
     shareMessage: (code: string) =>
-      `Open PillSaathi, tap Add family, and type ${code}. It works for 15 minutes.`,
+      `Open PillSaathi, tap Family, then + Add family, and type ${code}. It works for 15 minutes.`,
     scanCode: 'Scan code',
     opening: 'Opening the scanner…',
     noScanner:
@@ -458,7 +455,6 @@ export const en = {
     failed: 'Something went wrong. Please try again later.',
     notSetUp: "Family isn't set up in this build.",
     lookAfter: 'People I look after',
-    addFamily: '+ Add family',
     addTitle: 'Add family',
     logInFirst: 'To add family, log in with Google first.',
     loggedInAs: (email: string) => `Logged in as ${email}`,

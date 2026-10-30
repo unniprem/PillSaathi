@@ -1,3 +1,4 @@
+import { DeviceEventEmitter, StyleSheet } from 'react-native';
 import {
   act,
   fireEvent,
@@ -45,6 +46,21 @@ const boxes = () =>
   screen
     .getAllByTestId('digit-box')
     .map(box => within(box).queryByText(/\d/)?.props.children ?? '');
+
+/**
+ * Pastes [text] into [field] as Android does: a field's maxLength cuts the paste before the app
+ * sees it.
+ */
+async function paste(
+  field: ReturnType<typeof screen.getByLabelText>,
+  text: string,
+) {
+  const max: number | undefined = field.props.maxLength;
+  await fireEvent.changeText(
+    field,
+    max === undefined ? text : text.slice(0, max),
+  );
+}
 
 test('logged out: Continue with Google comes first', async () => {
   jest.mocked(family.signedInRelative).mockResolvedValue(null);
@@ -98,7 +114,6 @@ test('typing six digits fills the boxes and enables Next', async () => {
   await renderApp('AddFamily');
   const input = await screen.findByLabelText('or type the 6 digits');
   expect(input.props.keyboardType).toBe('number-pad');
-  expect(input.props.maxLength).toBe(6);
   expect(boxes()).toEqual(['', '', '', '', '', '']);
   const next = () => screen.getByRole('button', { name: 'Next' });
   expect(next().props.accessibilityState).toEqual(
@@ -114,6 +129,44 @@ test('typing six digits fills the boxes and enables Next', async () => {
   expect(next().props.accessibilityState).toEqual(
     expect.objectContaining({ disabled: false }),
   );
+});
+
+// Her phone shares the code as "482 913", and a relative pastes it, or her whole message.
+test('pasting the code with its space, or her whole message, fills all six boxes', async () => {
+  await renderApp('AddFamily');
+  const input = await screen.findByLabelText('or type the 6 digits');
+  await paste(input, '482 913');
+  expect(boxes()).toEqual(['4', '8', '2', '9', '1', '3']);
+  expect(
+    screen.getByRole('button', { name: 'Next' }).props.accessibilityState,
+  ).toEqual(expect.objectContaining({ disabled: false }));
+
+  await paste(input, '');
+  await paste(
+    input,
+    'Open PillSaathi, tap Family, then + Add family, and type 482 913. It works for 15 minutes.',
+  );
+  expect(boxes()).toEqual(['4', '8', '2', '9', '1', '3']);
+  await fireEvent.press(screen.getByText('Next'));
+  expect(family.requestFollow).toHaveBeenCalledWith('482913');
+});
+
+// The keyboard covers the page rather than shrinking it, so the page makes room for it.
+test('the code and Next stay above the keyboard', async () => {
+  await renderApp('AddFamily');
+  await screen.findByLabelText('or type the 6 digits');
+  const bottom = () =>
+    StyleSheet.flatten(screen.getByTestId('add-family-page').props.style)
+      .paddingBottom ?? 0;
+  const closed = bottom();
+  await act(() =>
+    DeviceEventEmitter.emit('keyboardDidShow', {
+      endCoordinates: { height: 300, width: 411, screenX: 0, screenY: 534 },
+    }),
+  );
+  expect(bottom()).toBe(closed + 300);
+  await act(() => DeviceEventEmitter.emit('keyboardDidHide', null));
+  expect(bottom()).toBe(closed);
 });
 
 test('Scan their code fills the code and asks to follow', async () => {
@@ -164,7 +217,9 @@ test('a scanner that is not ready, or a code that is not ours, says so', async (
 test('waits for Allow, then shows the form; Done saves the follow', async () => {
   jest.useFakeTimers();
   await renderApp('Family');
-  await fireEvent.press(await screen.findByText('+ Add family'));
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Add family' }),
+  );
   await typeCode('482913');
   expect(
     await screen.findByText('Waiting for them to tap Allow on their phone…'),

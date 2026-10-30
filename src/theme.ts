@@ -1,16 +1,17 @@
 /**
- * The Sky look. Text on light backgrounds uses the 4.5:1 shades (muted, greenText,
- * coralText, amberText, blue); white text sits only on blue, or on green and coral
- * at 18 sp bold and up.
+ * The Sky look. Text on light backgrounds uses the 4.5:1 shades (muted, greenText, coralText,
+ * amberText, blue: 4.8:1 on the page, 5.1:1 on a card); white text sits only on blue, or on green
+ * and coral at 18 sp bold and up. A mark with no words (a ring, a bar, a switch's track, a symbol
+ * on a tile) has 3:1 on what is around it.
  */
-const sky = {
+export const colors = {
   page: '#F5F8FB',
   card: '#FFFFFF',
   navy: '#15324A',
   muted: '#5B6E7E',
   line: '#E3EAF0',
   soft: '#F1F5F9',
-  blue: '#2A7BB8',
+  blue: '#2672AC',
   blueTint: '#E3F1FB',
   green: '#2E9E5B',
   greenTint: '#E5F5EC',
@@ -20,27 +21,14 @@ const sky = {
   coralText: '#C2412D',
   amberTint: '#FFF3D6',
   amberText: '#8A5A00',
-  amber: '#F0A030', // a ring round a day with some missed: a picture, never words
+  // A ring round a day with some not taken, a dose not reported: a picture, never words.
+  amber: '#BC7B00',
   blueText: '#1C5D8C', // blue words on the blue tint, which plain blue misses at 4.5:1
   onFill: '#FFFFFF',
   shade: 'rgba(0,0,0,0.18)', // a tablet's score line, a pill symbol's edge
   edge: '#DCE5EC', // a white button's border, a sheet's grab handle
+  switchOff: '#7F909E', // a switch's track when off, which edge is too faint for on white
   dim: 'rgba(21,50,74,0.45)', // the page behind a sheet
-};
-
-export const colors = {
-  ...sky,
-  // The old names, so screens not yet redrawn keep compiling.
-  background: sky.page,
-  surface: sky.soft,
-  text: sky.navy,
-  textMuted: sky.muted,
-  primary: sky.blue,
-  onPrimary: sky.onFill,
-  border: sky.line,
-  danger: sky.coralText,
-  success: sky.greenText,
-  warning: sky.amberText,
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24 };
@@ -63,7 +51,7 @@ export const shadow = {
   float: '0px 14px 34px 0px rgba(21,50,74,0.16)',
   pill: '0px 1px 3px 0px rgba(0,0,0,0.2)',
   // Under the filled buttons, in their own colour.
-  blue: '0px 6px 16px 0px rgba(42,123,184,0.3)',
+  blue: '0px 6px 16px 0px rgba(38,114,172,0.3)',
   green: '0px 6px 16px 0px rgba(46,158,91,0.3)',
   coral: '0px 6px 16px 0px rgba(224,83,61,0.3)',
 };
@@ -86,8 +74,8 @@ export const skyColors = {
 
 /** The tile behind a dose's symbol for its part of the day, as `greetingFor` names it. */
 export const timeTiles = {
-  morning: { fill: '#FFF4D6', ink: '#D08A00' }, // a low sun
-  afternoon: { fill: sky.blueTint, ink: sky.blue }, // the sun
+  morning: { fill: '#FFF4D6', ink: '#B87700' }, // a low sun
+  afternoon: { fill: colors.blueTint, ink: colors.blue }, // the sun
   evening: { fill: '#ECEEFB', ink: '#4B4FA6' }, // the moon
 };
 
