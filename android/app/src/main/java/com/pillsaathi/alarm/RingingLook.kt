@@ -22,6 +22,10 @@ object RingingLook {
     return parts
   }
 
+  /** What TalkBack reads for a pill's card, all at once: "Telma 40, 1 tablet", or its name alone. */
+  fun cardLabel(name: String, amount: String): String =
+    if (amount.isBlank()) name else "$name, $amount"
+
   /** [color] laid [amount] (0 to 1) thick over white: the soft box behind a pill's shape. */
   fun tint(color: Int, amount: Float): Int {
     fun channel(shift: Int): Int {

@@ -20,6 +20,18 @@ class RingingLookTest {
   }
 
   @Test
+  fun `TalkBack reads a pill's card as its name and amount together`() {
+    assertEquals("Telma 40, 1 tablet", RingingLook.cardLabel("Telma 40", "1 tablet"))
+    assertEquals("ടെൽമ 40, 1 ഗുളിക", RingingLook.cardLabel("ടെൽമ 40", "1 ഗുളിക"))
+  }
+
+  @Test
+  fun `a card with no amount is read as its name alone`() {
+    assertEquals("Morning pills", RingingLook.cardLabel("Morning pills", ""))
+    assertEquals("Telma 40", RingingLook.cardLabel("Telma 40", "  "))
+  }
+
+  @Test
   fun `a pill's box is its colour laid thinly over white`() {
     assertEquals(0xFFFDEDE7.toInt(), RingingLook.tint(0xFFF0845F.toInt(), 0.15f))
     assertEquals(0xFFFFFFFF.toInt(), RingingLook.tint(0xFF9B3D2E.toInt(), 0f))

@@ -37,7 +37,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.window.OnBackInvokedDispatcher
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import com.pillsaathi.R
 import java.util.Calendar
 import java.util.Date
@@ -156,21 +158,37 @@ class RingingActivity : Activity() {
   private fun drawBehindBars() {
     WindowCompat.setDecorFitsSystemWindows(window, false)
     window.statusBarColor = Color.TRANSPARENT
-    window.navigationBarColor = Color.TRANSPARENT
+    // Before Android 8 the navigation bar's buttons are always white, so they get a navy bar
+    // rather than the pale day sky behind them.
+    window.navigationBarColor = if (Build.VERSION.SDK_INT >= 26) Color.TRANSPARENT else NAVY
   }
 
   private fun loadFonts() {
-    bold = font(R.font.nunito_bold) ?: Typeface.DEFAULT_BOLD
-    extraBold = font(R.font.nunito_extrabold) ?: Typeface.DEFAULT_BOLD
-    black = font(R.font.nunito_black) ?: Typeface.DEFAULT_BOLD
-    symbols = font(R.font.symbols_filled)
+    val from = fontContext()
+    bold = font(from, R.font.nunito_bold) ?: Typeface.DEFAULT_BOLD
+    extraBold = font(from, R.font.nunito_extrabold) ?: Typeface.DEFAULT_BOLD
+    black = font(from, R.font.nunito_black) ?: Typeface.DEFAULT_BOLD
+    symbols = font(from, R.font.symbols_filled)
   }
 
-  /** A bundled font, or null if it can't be read, which never stops the screen from showing. */
-  private fun font(id: Int): Typeface? =
+  /**
+   * Fonts are read through device-protected storage: Android 7 copies each one to the cache
+   * folder first, and alarms ring before the first unlock after a reboot, when the usual cache
+   * folder can't be written. Later versions read them in place, so this changes nothing there.
+   */
+  private fun fontContext(): Context =
     try {
-      ResourcesCompat.getFont(this, id)
-    } catch (e: Exception) {
+      createDeviceProtectedStorageContext()
+    } catch (e: Throwable) {
+      Log.w(LOG_TAG, "No device-protected storage for the ringing screen's fonts", e)
+      this
+    }
+
+  /** A bundled font, or null if it can't be read: nothing here ever stops the screen showing. */
+  private fun font(from: Context, id: Int): Typeface? =
+    try {
+      ResourcesCompat.getFont(from, id)
+    } catch (e: Throwable) {
       Log.w(LOG_TAG, "Could not load a font for the ringing screen; using the phone's", e)
       null
     }
@@ -267,7 +285,7 @@ class RingingActivity : Activity() {
   /**
    * One white card per due pill: its photo (or its shape), then its name with the amount under
    * it, so a long name never pushes the amount off the card. The card's name alone if there are
-   * none.
+   * none. TalkBack reads each card as one, its name and amount together.
    */
   private fun renderPills(ring: RingingState.Ring) {
     val list = findViewById<LinearLayout>(R.id.ringing_pills)
@@ -279,13 +297,26 @@ class RingingActivity : Activity() {
       card.gravity = Gravity.CENTER_VERTICAL
       card.setBackgroundResource(R.drawable.ringing_card)
       card.setPadding(dp(12), dp(10), dp(12), dp(10))
+      card.isFocusable = true
+      card.contentDescription = RingingLook.cardLabel(pill.name, pill.amount)
       if (ring.pills.isNotEmpty()) {
+        val picture = pictureOf(pill)
+        picture.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        if (picture.hasOnClickListeners()) {
+          // The photo opens full width from the card too, for TalkBack, which reads only the card.
+          ViewCompat.replaceAccessibilityAction(card, AccessibilityActionCompat.ACTION_CLICK, null) {
+            _, _ -> picture.performClick()
+          }
+        }
         card.addView(
-          pictureOf(pill),
+          picture,
           LinearLayout.LayoutParams(dp(PHOTO_DP), dp(PHOTO_DP)).apply { marginEnd = dp(12) },
         )
       }
-      val words = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+      val words = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+      }
       words.addView(text(pill.name, 18f, NAVY, black))
       if (pill.amount.isNotEmpty()) words.addView(text(pill.amount, 15f, MUTED, bold))
       card.addView(words, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -308,7 +339,6 @@ class RingingActivity : Activity() {
     return ImageView(this).apply {
       setImageBitmap(photo)
       scaleType = ImageView.ScaleType.CENTER_CROP
-      contentDescription = pill.name
       val radius = dp(16).toFloat()
       outlineProvider =
         object : ViewOutlineProvider() {

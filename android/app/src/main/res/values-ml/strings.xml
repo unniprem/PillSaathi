@@ -6,6 +6,7 @@
     <string name="channel_ringing">മുഴങ്ങുന്ന അലാറങ്ങൾ</string>
     <string name="channel_missed">നഷ്ടമായ അലാറങ്ങൾ</string>
     <string name="action_snooze">10 മിനിറ്റിൽ വീണ്ടും ഓർമ്മിപ്പിക്കൂ</string>
+    <string name="notification_snooze">10 മിനിറ്റ് കഴിഞ്ഞ്</string>
     <string name="action_taken">ഞാൻ കഴിച്ചു</string>
     <string name="action_skip">ഇത്തവണ ഒഴിവാക്കുക</string>
     <string name="ringing_title">മരുന്ന് കഴിക്കാൻ സമയമായി</string>

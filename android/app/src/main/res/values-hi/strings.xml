@@ -6,6 +6,7 @@
     <string name="channel_ringing">बज रहे अलार्म</string>
     <string name="channel_missed">छूटे हुए अलार्म</string>
     <string name="action_snooze">10 मिनट में फिर याद दिलाएँ</string>
+    <string name="notification_snooze">10 मिनट बाद</string>
     <string name="action_taken">मैंने ले ली</string>
     <string name="action_skip">इस बार छोड़ें</string>
     <string name="ringing_title">दवा लेने का समय हो गया</string>

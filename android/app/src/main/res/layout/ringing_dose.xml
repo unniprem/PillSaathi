@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The dose on the ringing screen (activity_ringing, both ways up): the title, the time, one card
+     per due pill, then the sound. They scroll together, so this is the part that gives way when
+     the phone is turned or the text is large, never the buttons. A tapped photo shows over them
+     until tapped again. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="20dp">
+
+            <TextView
+                android:id="@+id/ringing_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="56dp"
+                android:text="@string/ringing_title"
+                android:textColor="#D9FFFFFF"
+                android:textSize="17dp" />
+
+            <TextView
+                android:id="@+id/ringing_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.03"
+                android:textColor="#FFFFFF"
+                android:textSize="58dp"
+                tools:text="9:00 PM" />
+
+            <LinearLayout
+                android:id="@+id/ringing_pills"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/ringing_sound"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/ringing_chip"
+                android:paddingStart="10dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="13dp"
+                android:paddingBottom="6dp"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <ImageView
+        android:id="@+id/ringing_photo_large"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/ringing_card"
+        android:padding="10dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+</FrameLayout>

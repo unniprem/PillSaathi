@@ -67,7 +67,7 @@ object Notifications {
       )
       .addAction(
         0,
-        words.getString(R.string.action_snooze),
+        words.getString(R.string.notification_snooze),
         serviceIntent(context, RingingService.ACTION_SNOOZE, ring.alarmId),
       )
       .build()

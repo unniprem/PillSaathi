@@ -4,6 +4,8 @@
     <string name="channel_ringing">Ringing alarms</string>
     <string name="channel_missed">Missed alarms</string>
     <string name="action_snooze">Remind me in 10 min</string>
+    <!-- The same on the ringing notification, short enough for its row of buttons. -->
+    <string name="notification_snooze">In 10 min</string>
     <string name="action_taken">I took it</string>
     <string name="action_skip">Skip this time</string>
     <string name="ringing_title">Time for your medicines</string>
