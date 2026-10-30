@@ -3,7 +3,7 @@
 **Plan file**: docs/superpowers/plans/2026-10-29-ui-redesign.md
 **Next task**: Task 18 (phone checks: fresh install on both phones, as the user chose). Review fixes A–D are done.
 **Waves**: A = 7, 8, 12, 13, 15, 17 ✓ · B = 9, 10, 14 ✓ · C = 11 + 16 ✓ · then 18. Parallel tasks were merged by cherry-pick; their notes are below.
-**Last updated**: 2026-10-30 06:20 IST (review fixes merged; Task 18 starting)
+**Last updated**: 2026-10-30 06:55 IST (Task 18: emulator side done; waiting for the Redmi to be unlocked)
 
 Branch: `feature/ui-redesign` (one commit per task). Baseline before Task 1: 30 suites, 272 JS tests passing.
 Spec: `docs/superpowers/specs/2026-10-29-ui-redesign-design.md`; mockups beside it (`10-journeys.html` wins).
@@ -18,6 +18,16 @@ All findings verified and fixed, none rejected. After merging: 45 suites / 543 J
 - Jest now prints "A worker process has failed to exit gracefully" at the end of a full run (all pass); look for a leaked timer if it persists.
 
 **Phone checks added by the fixes (do in Task 18):** ringing screen sideways, Malayalam at font scale 2.0 (Skip whole, pills scroll), the heads-up "10 മിനിറ്റ് കഴിഞ്ഞ്" not cut, night stars clear of "12:30 PM", TalkBack one read per card; two quick Saves from the Redmi (her app open and closed) keep both, a new photo then another edit keeps the photo; force-stop with a dose overdue then reopen at the login page → alarms mended, Missed alert only once Today shows; Today left open across a dose time and midnight; Back on each Add pill step; Today's pill-name links at font scale 2.0; AddFamily/FollowEdit above the keyboard (no doubled gap); paste into the code boxes; her page with a long name at 2.0; History today ring; new amber and off-switch on screen.
+
+## Task 18 progress (2026-10-30 morning, debug build + Metro, Amma = emulator-5554)
+
+Steps 1–2 ✓ (old files gone, no SVG/emoji; jest 543, tsc, `eslint .`, Kotlin 302, assembleDebug + assembleRelease OK). Both phones had **debug** builds, so the checks use the debug APK + Metro (`adb reverse tcp:8081 tcp:8081`), which also keeps `DEBUG_ADD_PILL`/`DEBUG_LIST`.
+- **In place on Amma's emulator ✓:** login once (role null) → Who → Setup → Today with all 5 pills, 7 records and the follower "unni scrapbook"; `Reconcile (APP_OPEN)` logged while still on Login (C1 on device).
+- **Fresh install, E1–E12 ✓** against `10-journeys.html` (mockup frames rendered to scratchpad). The emulator has no Google account: Google's "Checking info…" takes ~30–60 s, then Continue offline shows. Who, Setup (1 step on a Google phone), notification prompt on Today, empty Today, Add pill 1–5 (phone Back steps back and keeps ticks), Today, pill summary, Tablets left sheet above the number pad, History (today ring), Settings, Show my code (Firestore OK).
+- **Ringing (Task 17 blocker) ✓:** over the lock screen, four forms on one ring, palest tablet visible; landscape (pills left, buttons right) and font scale 2.0 upright/landscape keep all three buttons whole; Malayalam at 2.0 ✓; heads-up "I took it" / "In 10 min" fit in English at 1.0 (cut in Malayalam at 2.0, Android's own sizing); I took it, Remind me (rang again 10 min after the tap), Skip all recorded; Today switches to "Ringing now" on the next minute tick (up to 60 s late).
+- **Fixed (acb5e68):** Google login refusals said "No internet" (now GOOGLE_FAILED, "Couldn't log in with Google on this phone."); wrapped pill-name links had a line-height gap; Add pill kinds were 3 + 1 (now 2×2).
+- **For the user (not changed):** (1) the login's Google button is solid blue with no G; the mockup has a white outlined button with a coloured G; (2) a phone that continued offline sees the login page at every open, and after a font-size or language change (by the spec, but Amma taps Continue offline each time); (3) the Malayalam Settings tab word "ക്രമീകരണങ്ങൾ" shrinks small (translator could pick a shorter word); (4) the warning card's dark amber top edge.
+- **Left (needs the Redmi unlocked):** in-place update on the Redmi, its fresh install, C1–C11, E13 Allow, re-link, Fix B's two quick Saves and photo-then-edit, the code-box paste, AddFamily/FollowEdit above the keyboard, her page at 2.0, pill links via TalkBack. Then README matrix, JOURNAL, PR (merge origin/main's #12 README change first).
 
 ## Next: Task 18 phone checks (user chose fresh install on both phones)
 
