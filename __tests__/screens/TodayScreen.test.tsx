@@ -1010,22 +1010,41 @@ describe('family on Today', () => {
     ).toBeTruthy();
   });
 
-  test('with family and no pills of its own, Today still shows the health warning', async () => {
+  // His missed-dose checks are alarms too, so what can make them late is still shown, about them.
+  test('with family and no pills of its own, the warning is about his alerts', async () => {
     jest.mocked(family.getFamily).mockResolvedValue([amma]);
     jest.mocked(family.refreshFamily).mockResolvedValue([amma]);
+    jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
+    jest.mocked(alarms.getHealth).mockResolvedValue({
+      ...healthy,
+      fullScreenAllowed: false,
+      exactAlarmAllowed: false,
+    });
+    await renderApp('Today');
+    expect(await screen.findByText('Amma')).toBeTruthy();
+    expect(
+      await screen.findByText('Missed-dose alerts may be late'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Alarms may not ring')).toBeNull();
+    // The lock-screen alarm is about rings, which this phone has none of.
+    expect(
+      screen.getByText(
+        "PillSaathi isn't allowed to check on time for missed doses. Tap to allow it.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('No pills yet')).toBeNull();
+  });
+
+  test('with no pills and no family, there is no warning', async () => {
     jest.mocked(alarms.getToday).mockResolvedValue(emptyToday);
     jest
       .mocked(alarms.getHealth)
       .mockResolvedValue({ ...healthy, exactAlarmAllowed: false });
     await renderApp('Today');
-    expect(await screen.findByText('Amma')).toBeTruthy();
-    expect(await screen.findByText('Alarms may not ring')).toBeTruthy();
-    expect(
-      screen.getByText(
-        "PillSaathi isn't allowed to set alarms. Tap to allow it.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText('No pills yet')).toBeNull();
+    expect(await screen.findByText('No pills yet')).toBeTruthy();
+    await waitFor(() => expect(alarms.getHealth).toHaveBeenCalled());
+    expect(screen.queryByText('Alarms may not ring')).toBeNull();
+    expect(screen.queryByText('Missed-dose alerts may be late')).toBeNull();
   });
 
   test('Today refreshes family every 2 minutes while focused', async () => {

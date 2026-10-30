@@ -7,6 +7,7 @@ import { reconcileAppOpen, startRoute } from './src/lib/start';
 import type { StartRoute } from './src/lib/start';
 import { getSettings } from './src/native/alarms';
 import { signedInRelative } from './src/native/family';
+import { linking } from './src/navigation/linking';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 
@@ -57,7 +58,9 @@ function App() {
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" />
       {start ? (
-        <NavigationContainer>
+        <NavigationContainer
+          linking={start.name === 'Main' ? linking : undefined}
+        >
           <RootNavigator
             initialRouteName={start.name}
             initialParams={'params' in start ? start.params : undefined}

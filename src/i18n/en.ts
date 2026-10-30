@@ -245,6 +245,19 @@ export const en = {
     more: (count: number) => ` (+${count} more)`,
     title: 'Alarms may not ring',
     fix: 'Fix now',
+    // A phone with no pills of its own, that follows someone: its missed-dose checks.
+    alertsTitle: 'Missed-dose alerts may be late',
+    alerts: {
+      notifications:
+        "Notifications are off, so you won't hear about a missed dose. Tap to turn them on.",
+      exactAlarm:
+        "PillSaathi isn't allowed to check on time for missed doses. Tap to allow it.",
+      backgroundRestricted:
+        'Background use is restricted, so you may not hear about a missed dose. Tap to fix.',
+      batteryOptimization:
+        'Battery saving may delay news of a missed dose. Tap to allow unrestricted battery use.',
+      setup: 'Finish setting up so you hear about a missed dose on time.',
+    },
   },
   sound: {
     title: 'Sound',

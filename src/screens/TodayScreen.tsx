@@ -19,7 +19,7 @@ import RefillCard from '../components/today/RefillCard';
 import WarningCard from '../components/today/WarningCard';
 import { formatDay } from '../lib/course';
 import { firstName } from '../lib/family';
-import { healthIssues } from '../lib/health';
+import { alertIssues, healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
 import { afterReconcile, takeMissed } from '../lib/start';
 import { formatTime } from '../lib/time';
@@ -287,6 +287,15 @@ export default function TodayScreen({ navigation }: Props) {
   const total = counts.taken + counts.missed + counts.rest;
   const noPills = cards.length === 0 && loaded && !loadFailed;
   const looksAfter = family.length > 0;
+  // With no pills of its own the phone rings nothing: a relative's phone hears only what can make
+  // his missed-dose alerts late, and a phone that follows no one hears nothing.
+  const warning = (
+    <WarningCard
+      issues={noPills ? (looksAfter ? alertIssues(issues, t) : []) : issues}
+      onFix={runAction}
+      alerts={noPills}
+    />
+  );
   const greeting = t.today.greeting[greetingFor(hour)];
   const key = (card: TodayCard) => `${card.hour}:${card.minute}`;
 
@@ -322,10 +331,12 @@ export default function TodayScreen({ navigation }: Props) {
               }
             />
           ))}
+          {/* About his alerts, it belongs with the people, above his own pills. */}
+          {noPills ? warning : null}
           {looksAfter ? (
             <Text style={[styles.label, styles.mine]}>{t.today.myPills}</Text>
           ) : null}
-          <WarningCard issues={issues} onFix={runAction} />
+          {noPills ? null : warning}
           {today?.refills.map(r => (
             <RefillCard
               key={r.pillId}

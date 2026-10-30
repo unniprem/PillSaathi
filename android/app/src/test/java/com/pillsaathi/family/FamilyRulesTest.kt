@@ -285,6 +285,10 @@ class FamilyRulesTest {
     assertFalse(FamilyRules.afterRefresh(amma, doc, emptyList(), "S")!!.editor)
   }
 
+  @Test fun elderLink_isTheShapeTheAppOpensHerPageFrom() {
+    assertEquals("pillsaathi://elder/YYc650rebYScYVvh3z4SpAxxBqJ3", FamilyRules.elderLink("YYc650rebYScYVvh3z4SpAxxBqJ3"))
+  }
+
   @Test fun withHers_takesHerWholeCopyAndKeepsHisSettings() {
     // He edited his settings while her copy was being read from the follow as it was before.
     val now = amma.copy(name = "Ammachi", phone = "+919800000000", delayMinutes = 15, since = 2L)

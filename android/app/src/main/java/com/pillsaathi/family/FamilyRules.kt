@@ -11,6 +11,7 @@ import com.pillsaathi.alarm.RefillLevel
 import com.pillsaathi.alarm.RefillRules
 import com.pillsaathi.alarm.RefillWarning
 import com.pillsaathi.alarm.Today
+import java.net.URLEncoder
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -267,6 +268,9 @@ object FamilyRules {
    */
   fun wallClock(millis: Long, elderZone: ZoneId, localZone: ZoneId): Long =
     LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), elderZone).atZone(localZone).toInstant().toEpochMilli()
+
+  /** The link that opens [elderId]'s page in the app; App.tsx's navigation reads the same shape. */
+  fun elderLink(elderId: String): String = "pillsaathi://elder/" + URLEncoder.encode(elderId, "UTF-8")
 
   /** Whether her phone has been silent long enough that a follower may delete her copy. */
   fun isAbandoned(heardAt: Long?, now: Long): Boolean = heardAt != null && now - heardAt >= ABANDONED_AFTER_MS

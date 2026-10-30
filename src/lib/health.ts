@@ -37,11 +37,7 @@ export function healthIssues(
       issues.push({ key, message, action });
     }
   };
-  add(
-    !health.notificationsEnabled,
-    'notifications',
-    t.health.notifications,
-  );
+  add(!health.notificationsEnabled, 'notifications', t.health.notifications);
   add(!health.alarmChannelEnabled, 'alarmChannel', t.health.alarmChannel);
   add(!health.exactAlarmAllowed, 'exactAlarm', t.health.exactAlarm);
   add(!health.fullScreenAllowed, 'fullScreen', t.health.fullScreen);
@@ -66,4 +62,26 @@ export function healthIssues(
     'setup',
   );
   return issues;
+}
+
+type AlertKey = keyof Strings['health']['alerts'];
+const ALERT_KEYS: AlertKey[] = [
+  'notifications',
+  'exactAlarm',
+  'backgroundRestricted',
+  'batteryOptimization',
+  'setup',
+];
+
+/**
+ * For a phone with no pills of its own that follows someone: it rings nothing, but its missed-dose
+ * checks are alarms and the news comes as a notification. So only what can make those late is
+ * kept, each said about them, with the same fix.
+ */
+export function alertIssues(issues: Issue[], t: Strings = en): Issue[] {
+  return issues.flatMap(issue =>
+    (ALERT_KEYS as IssueKey[]).includes(issue.key)
+      ? [{ ...issue, message: t.health.alerts[issue.key as AlertKey] }]
+      : [],
+  );
 }

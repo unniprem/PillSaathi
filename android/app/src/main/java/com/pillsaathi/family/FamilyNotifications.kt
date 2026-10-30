@@ -27,8 +27,8 @@ import java.util.Locale
 
 /**
  * The relative's pings: ordinary notifications on two channels of their own, in the app's
- * language, with times on the elder's clock. Call opens the dialer with her number, when he saved
- * one; Open opens the app.
+ * language, with times on the elder's clock. Tapping one, or Open, opens her page; Call opens the
+ * dialer with her number, when he saved one.
  */
 object FamilyNotifications {
   const val CHANNEL_MISSED = "family_missed"
@@ -87,10 +87,12 @@ object FamilyNotifications {
     }
   }
 
-  /** "Amma hasn't taken Azee 500 (2:00 PM)." */
+  /** "Amma hasn't taken Azee 500", then "The 2:00 PM dose. Tap to see her day." */
   fun postMissed(context: Context, follow: Follow, item: CheckItem, names: String) {
-    val text = words(context).getString(R.string.family_missed, follow.name, names, doseTime(context, item))
-    post(context, CHANNEL_MISSED, FamilyRules.pingKey(item).hashCode(), follow, text)
+    val words = words(context)
+    val title = words.getString(R.string.family_missed_title, follow.name, names)
+    val text = words.getString(R.string.family_missed_body, doseTime(context, item))
+    post(context, CHANNEL_MISSED, FamilyRules.pingKey(item).hashCode(), follow, text, title)
   }
 
   /** "Amma's phone hasn't reported the 2:00 PM dose (Azee 500). Last heard from at 1:12 PM." */
@@ -132,11 +134,14 @@ object FamilyNotifications {
       .build()
   }
 
-  private fun post(context: Context, channel: String, id: Int, follow: Follow, text: String) {
+  private fun post(context: Context, channel: String, id: Int, follow: Follow, text: String, title: String? = null) {
     val words = words(context)
-    val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
+    // Her page, through the link the app's navigation reads ("pillsaathi://elder/<her id>").
+    val herPage = Intent(Intent.ACTION_VIEW, Uri.parse(FamilyRules.elderLink(follow.elderId)), context, MainActivity::class.java)
+    val open = PendingIntent.getActivity(context, 0, herPage, FLAGS)
     val builder = NotificationCompat.Builder(context, channel)
       .setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setContentTitle(title)
       .setContentText(text)
       .setStyle(NotificationCompat.BigTextStyle().bigText(text))
       .setContentIntent(open)

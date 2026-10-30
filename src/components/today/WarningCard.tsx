@@ -9,13 +9,15 @@ import Icon from '../../ui/Icon';
 type Props = {
   issues: Issue[];
   onFix: (issue: Issue) => void;
+  /** About his missed-dose alerts, on a phone with no pills of its own, rather than its alarms. */
+  alerts?: boolean;
 };
 
 /**
  * "Alarms may not ring", at the top of Today when something on the phone may stop them: the
  * first problem, how many more, and Fix now for that one. Nothing when all is well.
  */
-export default function WarningCard({ issues, onFix }: Props) {
+export default function WarningCard({ issues, onFix, alerts = false }: Props) {
   const { t } = useI18n();
   if (issues.length === 0) {
     return null;
@@ -29,7 +31,7 @@ export default function WarningCard({ issues, onFix }: Props) {
           <Icon name="warning" size={22} color={colors.amberText} />
         </View>
         <Text accessibilityRole="header" style={styles.title}>
-          {t.health.title}
+          {alerts ? t.health.alertsTitle : t.health.title}
         </Text>
       </View>
       {/* The words say "Tap to fix", so tapping them does what Fix now does. */}
