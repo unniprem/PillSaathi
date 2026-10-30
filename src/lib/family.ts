@@ -24,6 +24,8 @@ export function familyMessage(e: unknown, t: Strings): string {
   switch (errorCode(e)) {
     case FamilyErrors.Offline:
       return t.family.offline;
+    case FamilyErrors.GoogleFailed:
+      return t.family.googleFailed;
     case FamilyErrors.NotSetUp:
       return t.family.notSetUp;
     default:

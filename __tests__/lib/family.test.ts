@@ -27,6 +27,10 @@ test('familyMessage calls only OFFLINE no internet', () => {
   expect(familyMessage(failing('PERMISSION'), en)).toBe(
     'Something went wrong. Please try again later.',
   );
+  // Google's own refusal (no account it can use, say) isn't the internet's fault.
+  expect(familyMessage(failing('GOOGLE_FAILED'), en)).toBe(
+    "Couldn't log in with Google on this phone.",
+  );
   expect(familyMessage(new Error('boom'), en)).toBe(
     'Something went wrong. Please try again later.',
   );

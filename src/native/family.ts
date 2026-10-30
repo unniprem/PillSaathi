@@ -48,6 +48,8 @@ export const FamilyErrors = {
   NotSetUp: 'NOT_SET_UP',
   /** No internet, or Firestore can't be reached. */
   Offline: 'OFFLINE',
+  /** Google turned the login down (not a cancel, and not for want of an account). */
+  GoogleFailed: 'GOOGLE_FAILED',
   /** The code is missing, expired or already used. */
   BadCode: 'BAD_CODE',
   NotSignedIn: 'NOT_SIGNED_IN',

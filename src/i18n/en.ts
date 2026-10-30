@@ -460,6 +460,7 @@ export const en = {
     no: 'No',
     allow: 'Allow',
     offline: 'No internet. Please try again.',
+    googleFailed: "Couldn't log in with Google on this phone.",
     failed: 'Something went wrong. Please try again later.',
     notSetUp: "Family isn't set up in this build.",
     lookAfter: 'People I look after',

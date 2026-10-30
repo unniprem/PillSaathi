@@ -157,16 +157,19 @@ const styles = StyleSheet.create({
   title: { ...font(800), fontSize: 15, color: colors.navy },
   faded: { color: colors.muted },
   // Each link is a full 48 dp to tap, tucked up over the time's line (in the same view, so the
-  // tap still lands) to keep the names close under it.
+  // tap still lands) to keep the names close under it. When the names wrap, the rows overlap by
+  // 16 dp (the later row takes a tap there), so they sit 32 dp apart, not 48; the padding keeps
+  // the first and last rows' tap areas inside this view.
   names: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     columnGap: 8,
     marginTop: -10,
+    paddingVertical: 8,
   },
   // A deleted pill's name too, so the names sit alike.
-  nameLink: { minHeight: 48, justifyContent: 'center' },
+  nameLink: { minHeight: 48, marginVertical: -8, justifyContent: 'center' },
   name: { ...font(700), fontSize: 14, color: colors.muted },
   link: { ...font(800), color: colors.blue },
   took: {

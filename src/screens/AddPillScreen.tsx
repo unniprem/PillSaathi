@@ -338,10 +338,11 @@ export default function AddPillScreen({ navigation, route }: Props) {
                   accessibilityLabel={t.forms[form]}
                   accessibilityState={{ checked: on }}
                   onPress={() => chooseForm(form)}
-                  // Two to a row, or one once large text needs the room.
+                  // Two to a row (three would fit 120 dp each on a wide phone, leaving Drops
+                  // alone), or one once large text needs the room.
                   style={({ pressed }) => [
                     styles.kind,
-                    { flexBasis: 120 * fontScale },
+                    { flexBasis: '40%', minWidth: 120 * fontScale },
                     on && styles.chosen,
                     pressed && styles.pressed,
                   ]}
