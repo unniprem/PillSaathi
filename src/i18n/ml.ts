@@ -92,7 +92,9 @@ export const ml: Strings = {
     allDone: 'ഇന്നത്തേത് എല്ലാം കഴിഞ്ഞു',
     noMore: 'ഇന്ന് ഇനി ഒന്നുമില്ല',
     tomorrowAt: (time: string) => `നാളെ, ${time}`,
+    onDayAt: (day: string, time: string) => `${day}, ${time}`,
     laterToday: 'ഇന്ന് പിന്നീട്',
+    otherDays: 'മറ്റു ദിവസങ്ങളിൽ',
     myPills: 'എന്റെ മരുന്നുകൾ',
     noOwnPills: 'നിങ്ങൾക്ക് സ്വന്തം മരുന്നുകളൊന്നുമില്ല.',
     allTaken: (pills: number) =>
@@ -104,6 +106,7 @@ export const ml: Strings = {
     missed: 'നഷ്ടമായി',
     skipped: 'ഒഴിവാക്കി',
     tookIt: 'ഞാൻ കഴിച്ചു',
+    tookItAt: (time: string) => `ഞാൻ കഴിച്ചു, ${time}`,
     addPill: 'മരുന്ന് ചേർക്കുക',
     empty: 'ഇതുവരെ മരുന്നുകളൊന്നുമില്ല',
     emptyBody:
@@ -210,6 +213,8 @@ export const ml: Strings = {
     night: 'രാത്രി',
     changeTime: (time: string) => `${time} മാറ്റുക`,
     anotherTime: 'മറ്റൊരു സമയം',
+    maxTimes: (max: number) =>
+      `ഒരു മരുന്ന് ദിവസം ${max} തവണ വരെ മാത്രമേ ഓർമ്മിപ്പിക്കൂ. ആദ്യം ഒന്നിന്റെ ടിക്ക് മാറ്റുക.`,
     howLongQuestion: 'എത്ര ദിവസത്തേക്ക്?',
     checkQuestion: 'ഇത് ശരിയാണോ?',
     eachTime: (kind: string, amount: string) =>

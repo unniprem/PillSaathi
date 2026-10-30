@@ -13,6 +13,7 @@ import type { ElderSetup, FamilyCard } from '../../src/native/family';
 import * as sounds from '../../src/native/sounds';
 import { hi } from '../../src/i18n/hi';
 import { formatDay } from '../../src/lib/course';
+import { reconcileAppOpen, takeMissed } from '../../src/lib/start';
 import { pillColor } from '../../src/ui/pillLook';
 import { familyDefaults } from '../helpers/familyDefaults';
 import {
@@ -128,6 +129,8 @@ beforeEach(() => {
 afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
+  // Nothing found missed in one test is left for the next.
+  takeMissed();
 });
 
 /** Today's clock stopped at [hour]:[minute] on the fixture's day. */
@@ -137,23 +140,29 @@ function clockAt(hour: number, minute: number) {
 
 test('shows each time with its pills, amounts and status', async () => {
   await renderApp();
-  // Done: one line per time.
+  // Done: one line per time, each name a link to its pill.
   expect(await screen.findByText('8:00 AM · both taken')).toBeTruthy();
-  expect(screen.getByText('Azithromycin 500, Telma 40')).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Azithromycin 500' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Telma 40' })).toBeTruthy();
   expect(screen.getByText('7:00 AM · taken')).toBeTruthy();
+  // Deleted since: no page to open.
   expect(screen.getByText('Old syrup')).toBeTruthy();
+  expect(screen.queryByRole('link', { name: 'Old syrup' })).toBeNull();
   // Next: each pill with its amount.
   expect(screen.getByText('9:00 PM')).toBeTruthy();
-  expect(screen.getByText('Telma 40')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Telma 40/ })).toBeTruthy();
   expect(screen.getByText('½ tablet')).toBeTruthy();
   // Missed: each pill with its amount and course.
   expect(screen.getByText('2:00 PM · missed')).toBeTruthy();
   expect(screen.getByText('Vitamin D3')).toBeTruthy();
   expect(screen.getByText('1 capsule · day 1 of 5')).toBeTruthy();
-  // Later: next due on another day.
-  expect(screen.getByText('Later today')).toBeTruthy();
+  // Next due on another day, which isn't later today.
+  expect(screen.queryByText('Later today')).toBeNull();
+  expect(screen.getByText('Other days')).toBeTruthy();
   expect(screen.getByText('9:00 AM · Next: tomorrow')).toBeTruthy();
-  expect(screen.getByText('Iron (from tomorrow)')).toBeTruthy();
+  expect(
+    screen.getByRole('link', { name: 'Iron (from tomorrow)' }),
+  ).toBeTruthy();
   // Sounds are set from the pill now.
   expect(screen.queryByText(/♪/)).toBeNull();
   expect(screen.getByText('Add a pill')).toBeTruthy();
@@ -265,6 +274,30 @@ test('a taken or upcoming status offers nothing', async () => {
 test('opens the pill page from a pill row', async () => {
   jest.mocked(alarms.listPills).mockResolvedValue([
     {
+      id: 'p3',
+      name: 'Vitamin D3',
+      form: 'capsule',
+      amount: 1,
+      times: [{ hour: 14, minute: 0 }],
+      startDate: '2026-10-26',
+      days: 5,
+      photo: null,
+      photoUri: null,
+      remaining: null,
+    },
+  ]);
+  await renderApp();
+  await fireEvent.press(
+    await screen.findByRole('button', { name: /Vitamin D3/ }),
+  );
+  expect(await screen.findByText('Delete this pill')).toBeTruthy();
+  expect(screen.getByText('2:00 PM')).toBeTruthy();
+});
+
+// Her phone has no other list of her pills: one taken today still opens from its line.
+test('opens the pill page from a taken pill', async () => {
+  jest.mocked(alarms.listPills).mockResolvedValue([
+    {
       id: 'p2',
       name: 'Telma 40',
       form: 'tablet',
@@ -281,9 +314,32 @@ test('opens the pill page from a pill row', async () => {
     },
   ]);
   await renderApp();
-  await fireEvent.press(await screen.findByText('Telma 40'));
+  await fireEvent.press(await screen.findByRole('link', { name: 'Telma 40' }));
   expect(await screen.findByText('Delete this pill')).toBeTruthy();
   expect(screen.getByText('8:00 AM and 9:00 PM')).toBeTruthy();
+});
+
+test('opens the pill page from a later line', async () => {
+  jest.mocked(alarms.listPills).mockResolvedValue([
+    {
+      id: 'p4',
+      name: 'Iron',
+      form: 'tablet',
+      amount: 1,
+      times: [{ hour: 9, minute: 0 }],
+      startDate: '2026-10-27',
+      days: 5,
+      photo: null,
+      photoUri: null,
+      remaining: null,
+    },
+  ]);
+  await renderApp();
+  await fireEvent.press(
+    await screen.findByRole('link', { name: 'Iron (from tomorrow)' }),
+  );
+  expect(await screen.findByText('Delete this pill')).toBeTruthy();
+  expect(screen.getByText('9:00 AM')).toBeTruthy();
 });
 
 test('does not open a pill deleted since', async () => {
@@ -310,15 +366,14 @@ test('Add a pill opens a new pill page', async () => {
   expect(screen.queryByText('Delete')).toBeNull();
 });
 
-test('alerts missed medicines from reconcile', async () => {
+test('alerts the missed medicines the app-open reconcile found', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  jest
-    .mocked(alarms.reconcileOnAppOpen)
-    .mockResolvedValueOnce([
-      { id: 'c8', name: 'Azithromycin 500, Telma 40', dueAt: at(26, 8, 0) },
-      { id: 'c14', name: 'Vitamin D3', dueAt: at(26, 14, 0) },
-    ])
-    .mockResolvedValue([]);
+  jest.mocked(alarms.reconcileOnAppOpen).mockResolvedValueOnce([
+    { id: 'c8', name: 'Azithromycin 500, Telma 40', dueAt: at(26, 8, 0) },
+    { id: 'c14', name: 'Vitamin D3', dueAt: at(26, 14, 0) },
+  ]);
+  // As the app does when it opens, before Today is on screen.
+  await reconcileAppOpen();
   await renderApp();
   await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
   expect(alert).toHaveBeenCalledWith(
@@ -365,11 +420,36 @@ test('shows the load failure', async () => {
   ).toBeTruthy();
 });
 
-test('reconciles on open and refreshes health and setup state', async () => {
+test('refreshes health and setup state on open, and leaves the reconcile to the app', async () => {
   await renderApp();
   await waitFor(() => expect(alarms.getSetupState).toHaveBeenCalled());
-  expect(alarms.reconcileOnAppOpen).toHaveBeenCalled();
   expect(alarms.getHealth).toHaveBeenCalled();
+  await screen.findByText('8:00 AM · both taken');
+  expect(alarms.reconcileOnAppOpen).not.toHaveBeenCalled();
+});
+
+test('a reconcile while Today is open shows what it found and the day as mended', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await renderApp();
+  expect(await screen.findByText('2:00 PM · missed')).toBeTruthy();
+  jest
+    .mocked(alarms.reconcileOnAppOpen)
+    .mockResolvedValueOnce([
+      { id: 'c21', name: 'Telma 40', dueAt: at(26, 21, 0) },
+    ]);
+  jest.mocked(alarms.getToday).mockResolvedValue({
+    ...today,
+    cards: [
+      ...today.cards.slice(0, 4),
+      { ...today.cards[4], status: 'missed', statusAt: at(26, 21, 30) },
+    ],
+  });
+  await act(() => reconcileAppOpen());
+  expect(await screen.findByText('9:00 PM · missed')).toBeTruthy();
+  expect(alert).toHaveBeenCalledTimes(1);
+  expect(alert.mock.calls[0][1]).toBe(
+    'PillSaathi was stopped by your phone and missed:\n9:00 PM: Telma 40',
+  );
 });
 
 test('shows the first health issue in the warning card, and Fix now opens its setting', async () => {
@@ -420,7 +500,11 @@ test('the next dose leads, with its time, pills and time left', async () => {
   const order = screen
     .getAllByText(/^Next dose$|^Telma 40$|· missed$/)
     .map(n => n.props.children);
-  expect(order).toEqual(['Next dose', 'Telma 40', '2:00 PM · missed']);
+  expect(order.slice(0, 3)).toEqual([
+    'Next dose',
+    'Telma 40',
+    '2:00 PM · missed',
+  ]);
 });
 
 test('the sky says how many doses are done, with a bar for each', async () => {
@@ -480,7 +564,10 @@ test('a skipped dose is a grey line with I took it', async () => {
   });
   await renderApp();
   expect(await screen.findByText('8:00 AM · skipped')).toBeTruthy();
-  await fireEvent.press(screen.getByRole('button', { name: 'I took it' }));
+  // TalkBack says which dose: the time is on the line, not on the button.
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'I took it, 8:00 AM' }),
+  );
   expect(alert).toHaveBeenCalledWith(
     'Mark as taken?',
     '8:00 AM · Azithromycin 500, Telma 40',
@@ -489,9 +576,12 @@ test('a skipped dose is a grey line with I took it', async () => {
 });
 
 test("when all are done it says so with tomorrow's first time", async () => {
+  clockAt(22, 0);
   jest.mocked(alarms.getToday).mockResolvedValue({
     ...today,
     cards: [
+      // Recorded at 7:00, but its pill is gone: it doesn't ring tomorrow.
+      today.cards[0],
       today.cards[1],
       { ...today.cards[4], status: 'taken', statusAt: at(26, 21, 3) },
     ],
@@ -500,6 +590,71 @@ test("when all are done it says so with tomorrow's first time", async () => {
   expect(await screen.findByText('All done for today')).toBeTruthy();
   expect(screen.getByText('Tomorrow, 8:00 AM')).toBeTruthy();
   expect(screen.queryByText(/^in \d/)).toBeNull();
+});
+
+test("a course that ends today is not tomorrow's first time", async () => {
+  clockAt(22, 0);
+  jest.mocked(alarms.getToday).mockResolvedValue({
+    ...today,
+    cards: [
+      {
+        ...today.cards[1],
+        hour: 7,
+        // Day 5 of 5.
+        pills: [pill('p1', 'Azithromycin 500', { startDate: '2026-10-22' })],
+      },
+      { ...today.cards[4], status: 'taken', statusAt: at(26, 21, 3) },
+    ],
+  });
+  await renderApp();
+  expect(await screen.findByText('All done for today')).toBeTruthy();
+  expect(screen.getByText('Tomorrow, 9:00 PM')).toBeTruthy();
+});
+
+test('when nothing rings tomorrow it names the day it next does', async () => {
+  clockAt(22, 0);
+  jest.mocked(alarms.getToday).mockResolvedValue({
+    ...today,
+    cards: [
+      { ...today.cards[2], statusAt: at(28, 9, 0) },
+      {
+        ...today.cards[4],
+        status: 'taken',
+        statusAt: at(26, 21, 3),
+        pills: [pill('p2', 'Telma 40', { startDate: '2026-10-22' })],
+      },
+    ],
+  });
+  await renderApp();
+  expect(await screen.findByText('All done for today')).toBeTruthy();
+  expect(screen.getByText('Wed 28 Oct, 9:00 AM')).toBeTruthy();
+});
+
+test('a 0:30 dose seen at 23:00 is tonight, not all done', async () => {
+  clockAt(23, 0);
+  jest.mocked(alarms.getToday).mockResolvedValue({
+    ...today,
+    cards: [
+      {
+        ...today.cards[1],
+        hour: 0,
+        minute: 30,
+        statusAt: at(26, 0, 32),
+        pills: [pill('p1', 'Azithromycin 500')],
+      },
+      { ...today.cards[4], status: 'taken', statusAt: at(26, 21, 3) },
+    ],
+  });
+  await renderApp();
+  expect(await screen.findByText('Next dose')).toBeTruthy();
+  expect(screen.getByText('Tonight')).toBeTruthy();
+  expect(screen.getByText('12:30 AM')).toBeTruthy();
+  expect(screen.getByText('in 1 hr 30 min')).toBeTruthy();
+  // Its pill, as it is tomorrow: day 2 of 5.
+  expect(screen.getByRole('button', { name: /Azithromycin 500/ })).toBeTruthy();
+  expect(screen.getByText('1 tablet · day 2 of 5')).toBeTruthy();
+  expect(screen.queryByText('All done for today')).toBeNull();
+  expect(screen.queryByText(/^Tomorrow/)).toBeNull();
 });
 
 test('with a dose missed and nothing to come, it is not all done', async () => {
@@ -566,6 +721,72 @@ test('Today scrolls', async () => {
   ).toBeTruthy();
 });
 
+describe('as the clock moves on', () => {
+  const ringing: Today = {
+    ...today,
+    cards: [
+      ...today.cards.slice(0, 4),
+      { ...today.cards[4], status: 'ringing', statusAt: null },
+    ],
+  };
+  const minute = () => act(async () => jest.advanceTimersByTime(60_000));
+  const reads = () => jest.mocked(alarms.getToday).mock.calls.length;
+
+  test('once the next dose is due, Today reads the day again', async () => {
+    clockAt(20, 59);
+    await renderApp();
+    expect(await screen.findByText('in 1 min')).toBeTruthy();
+    const before = reads();
+    jest.mocked(alarms.getToday).mockResolvedValue(ringing);
+    await minute();
+    expect(await screen.findByText('Ringing now')).toBeTruthy();
+    expect(reads()).toBe(before + 1);
+    expect(screen.queryByText(/23 hr/)).toBeNull();
+  });
+
+  test('a dose not yet ringing at its time says now, and is read again once', async () => {
+    clockAt(20, 59);
+    await renderApp();
+    expect(await screen.findByText('in 1 min')).toBeTruthy();
+    const before = reads();
+    await minute();
+    expect(await screen.findByText('now')).toBeTruthy();
+    expect(reads()).toBe(before + 1);
+    await minute();
+    expect(screen.getByText('now')).toBeTruthy();
+    expect(reads()).toBe(before + 1);
+    expect(screen.queryByText(/23 hr/)).toBeNull();
+  });
+
+  test('at midnight Today turns to the new day', async () => {
+    clockAt(23, 59);
+    jest.mocked(alarms.getToday).mockResolvedValue({
+      ...today,
+      cards: [
+        today.cards[1],
+        { ...today.cards[4], status: 'taken', statusAt: at(26, 21, 3) },
+      ],
+    });
+    await renderApp();
+    expect(await screen.findByText('Mon 26 Oct')).toBeTruthy();
+    jest.mocked(alarms.getToday).mockResolvedValue({
+      ...today,
+      date: '2026-10-27',
+      cards: [
+        { ...today.cards[1], status: 'upcoming', statusAt: null },
+        { ...today.cards[4], status: 'upcoming', statusAt: null },
+      ],
+    });
+    await minute();
+    expect(await screen.findByText('Tue 27 Oct')).toBeTruthy();
+    expect(screen.getByText('in 8 hr')).toBeTruthy();
+    expect(screen.queryByText('All done for today')).toBeNull();
+    // The rest of the new day.
+    expect(screen.getByText('Later today')).toBeTruthy();
+    expect(screen.queryByText('Other days')).toBeNull();
+  });
+});
+
 describe('when a side call fails', () => {
   beforeEach(() => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -578,10 +799,14 @@ describe('when a side call fails', () => {
     expect(screen.queryByText('Alarms may not ring')).toBeNull();
   });
 
-  test('reconcileOnAppOpen rejecting still shows the cards', async () => {
-    jest.mocked(alarms.reconcileOnAppOpen).mockRejectedValue(new Error('x'));
+  test('a failed app-open reconcile still reads the day again', async () => {
     await renderApp();
     expect(await screen.findByText('Vitamin D3')).toBeTruthy();
+    const reads = jest.mocked(alarms.getToday).mock.calls.length;
+    jest.mocked(alarms.reconcileOnAppOpen).mockRejectedValue(new Error('x'));
+    await act(() => reconcileAppOpen());
+    expect(jest.mocked(alarms.getToday).mock.calls.length).toBe(reads + 1);
+    expect(screen.getByText('Vitamin D3')).toBeTruthy();
   });
 
   test('listSounds rejecting still shows the cards', async () => {

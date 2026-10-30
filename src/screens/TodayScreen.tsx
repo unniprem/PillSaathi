@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  AppState,
   PermissionsAndroid,
   Platform,
   Pressable,
@@ -22,8 +21,9 @@ import { formatDay } from '../lib/course';
 import { firstName } from '../lib/family';
 import { healthIssues } from '../lib/health';
 import type { Issue } from '../lib/health';
+import { afterReconcile, takeMissed } from '../lib/start';
 import { formatTime } from '../lib/time';
-import { arrangeToday, doseCounts } from '../lib/today';
+import { arrangeToday, doseCounts, refreshAt } from '../lib/today';
 import { currentManufacturer } from '../setup/oemSteps';
 import {
   getHealth,
@@ -32,7 +32,6 @@ import {
   is24HourFormat,
   markDoseTaken,
   openSetting,
-  reconcileOnAppOpen,
 } from '../native/alarms';
 import type { MissedAlarm, Today, TodayCard } from '../native/alarms';
 import {
@@ -114,6 +113,8 @@ export default function TodayScreen({ navigation }: Props) {
   const mounted = useRef(true);
   const familyRequest = useRef(0);
   const latest = useRef(0);
+  // When the cards on screen were asked for, so the clock knows when they go out of date.
+  const readAt = useRef(0);
   const firstFocus = useRef(true);
 
   /**
@@ -137,73 +138,59 @@ export default function TodayScreen({ navigation }: Props) {
     }
   }, []);
 
-  const refresh = useCallback(
-    async (reconcile: boolean) => {
-      const request = ++latest.current;
-      loadFamily();
-      signedInRelative()
-        .then(r => mounted.current && setMe(r ? firstName(r.name) : null))
-        .catch(e => console.warn('Could not check the Google login', e));
-      if (reconcile) {
-        try {
-          // Each reconcile result is reported once, here; focus refreshes
-          // skip reconcile so the alert can't repeat.
-          const missed = await reconcileOnAppOpen();
-          if (mounted.current && missed.length > 0) {
-            alertMissed(
-              missed,
-              () => navigation.navigate('Setup'),
-              words.current,
-            );
-          }
-        } catch (e) {
-          console.warn('Could not reconcile alarms', e);
-        }
-      }
-      // A health or setup failure must never hide the doses, and shows no
-      // warning rather than a wrong one.
-      Promise.all([getHealth(), getSetupState()])
-        .then(([health, setup]) => {
-          if (mounted.current && request === latest.current) {
-            setIssues(
-              healthIssues(health, setup, currentManufacturer(), words.current),
-            );
-          }
-        })
-        .catch(e => {
-          console.warn('Could not read health', e);
-          if (mounted.current && request === latest.current) {
-            setIssues([]);
-          }
-        });
-      let day: Today;
-      try {
-        day = await getToday();
-      } catch (e) {
+  const refresh = useCallback(async () => {
+    const request = ++latest.current;
+    // The doses the app's reconcile found missed (App runs it as the app opens, whatever page
+    // it opens on); each is taken here once, so the alert can't repeat.
+    const missed = takeMissed();
+    if (missed.length > 0) {
+      alertMissed(missed, () => navigation.navigate('Setup'), words.current);
+    }
+    loadFamily();
+    signedInRelative()
+      .then(r => mounted.current && setMe(r ? firstName(r.name) : null))
+      .catch(e => console.warn('Could not check the Google login', e));
+    // A health or setup failure must never hide the doses, and shows no
+    // warning rather than a wrong one.
+    Promise.all([getHealth(), getSetupState()])
+      .then(([health, setup]) => {
         if (mounted.current && request === latest.current) {
-          console.warn("Could not load today's doses", e);
-          setLoadFailed(true);
+          setIssues(
+            healthIssues(health, setup, currentManufacturer(), words.current),
+          );
         }
-        return;
-      }
+      })
+      .catch(e => {
+        console.warn('Could not read health', e);
+        if (mounted.current && request === latest.current) {
+          setIssues([]);
+        }
+      });
+    let day: Today;
+    try {
+      readAt.current = Date.now();
+      day = await getToday();
+    } catch (e) {
       if (mounted.current && request === latest.current) {
-        setToday(day);
-        setLoadFailed(false);
-        setLoaded(true);
-        setNow(Date.now());
+        console.warn("Could not load today's doses", e);
+        setLoadFailed(true);
       }
-    },
-    [navigation, loadFamily],
-  );
+      return;
+    }
+    if (mounted.current && request === latest.current) {
+      setToday(day);
+      setLoadFailed(false);
+      setLoaded(true);
+      setNow(Date.now());
+    }
+  }, [navigation, loadFamily]);
 
   useEffect(() => {
     mounted.current = true;
-    refresh(true);
-    const sub = AppState.addEventListener('change', state => {
-      if (state === 'active') {
-        refresh(true);
-      }
-    });
+    refresh();
+    // Each time the app opens or comes back, once its alarms are mended: the day as mended, and
+    // anything found missed.
+    const stop = afterReconcile(refresh);
     if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
       PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
@@ -216,7 +203,7 @@ export default function TodayScreen({ navigation }: Props) {
     }
     return () => {
       mounted.current = false;
-      sub.remove();
+      stop();
     };
   }, [refresh]);
 
@@ -228,7 +215,7 @@ export default function TodayScreen({ navigation }: Props) {
       if (firstFocus.current) {
         firstFocus.current = false;
       } else {
-        refresh(false);
+        refresh();
       }
       return () => {
         clearInterval(familyTimer);
@@ -238,6 +225,22 @@ export default function TodayScreen({ navigation }: Props) {
   );
 
   const date = today?.date;
+  const cards = today?.cards ?? [];
+  // Before the first read there are no cards, and the date isn't looked at.
+  const { next, after, missed, later, otherDays, done } = arrangeToday(
+    cards,
+    date ?? '',
+    now,
+  );
+  const staleAt = date ? refreshAt(next, date) : null;
+
+  // The clock passed the next dose's time, or midnight, since the cards were read: read them
+  // again, once, so they never count down to the same time tomorrow or stay on yesterday.
+  useEffect(() => {
+    if (staleAt !== null && readAt.current < staleAt && staleAt <= now) {
+      refresh();
+    }
+  }, [now, staleAt, refresh]);
 
   // Only a missed or skipped dose: someone took it but didn't tap Taken.
   const confirmTaken = (card: TodayCard) => {
@@ -259,7 +262,7 @@ export default function TodayScreen({ navigation }: Props) {
               Alert.alert(t.today.markFailed, t.common.tryAgain);
             }
           }
-          refresh(false);
+          refresh();
         },
       },
     ]);
@@ -280,8 +283,6 @@ export default function TodayScreen({ navigation }: Props) {
 
   const is24h = is24HourFormat();
   const hour = new Date(now).getHours();
-  const cards = today?.cards ?? [];
-  const { next, missed, later, done } = arrangeToday(cards);
   const counts = doseCounts(cards);
   const total = counts.taken + counts.missed + counts.rest;
   const noPills = cards.length === 0 && loaded && !loadFailed;
@@ -341,7 +342,7 @@ export default function TodayScreen({ navigation }: Props) {
             <>
               <NextDoseCard
                 next={next}
-                first={cards[0]}
+                after={after}
                 anyMissed={missed.length > 0}
                 date={date}
                 now={now}
@@ -367,6 +368,7 @@ export default function TodayScreen({ navigation }: Props) {
                       card={card}
                       date={date}
                       is24h={is24h}
+                      onOpenPill={openPill}
                     />
                   ))}
                 </View>
@@ -379,7 +381,22 @@ export default function TodayScreen({ navigation }: Props) {
                       card={card}
                       date={date}
                       is24h={is24h}
+                      onOpenPill={openPill}
                       onTookIt={() => confirmTaken(card)}
+                    />
+                  ))}
+                </View>
+              ) : null}
+              {otherDays.length > 0 ? (
+                <View>
+                  <Text style={styles.label}>{t.today.otherDays}</Text>
+                  {otherDays.map(card => (
+                    <DoseLine
+                      key={key(card)}
+                      card={card}
+                      date={date}
+                      is24h={is24h}
+                      onOpenPill={openPill}
                     />
                   ))}
                 </View>

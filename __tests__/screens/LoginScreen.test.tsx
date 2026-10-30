@@ -142,6 +142,16 @@ test('continuing offline when logging in again goes to Today too', async () => {
   expect(await screen.findByRole('tab', { name: 'Today' })).toBeTruthy();
 });
 
+// It continued offline before, so it needn't fail a login first at every open.
+test('logging in again offers Continue offline from the start', async () => {
+  await renderApp('Login', { again: true });
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Continue offline' }),
+  );
+  expect(await screen.findByRole('tab', { name: 'Today' })).toBeTruthy();
+  expect(family.signInWithGoogle).not.toHaveBeenCalled();
+});
+
 test('choosing Malayalam switches the page', async () => {
   await renderApp('Login');
   await fireEvent.press(await screen.findByRole('radio', { name: 'മലയാളം' }));

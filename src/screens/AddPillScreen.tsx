@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   Image,
   Keyboard,
   Pressable,
@@ -11,6 +12,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AmountStepper from '../components/AmountStepper';
@@ -70,8 +72,9 @@ const QUICK_LOOK: {
 
 /**
  * Adding a pill, one question to a page: its name and photo, its kind and amount, its times,
- * how long, then a look at it all before Save. Back keeps what was entered; close (×) leaves
- * without saving. On a relative's phone the pill is sent to her phone.
+ * how long, then a look at it all before Save. Back (the button or the phone's) keeps what was
+ * entered; close (×), or the phone's Back on the first page, leaves without saving. On a
+ * relative's phone the pill is sent to her phone.
  */
 export default function AddPillScreen({ navigation, route }: Props) {
   const elderId = route.params?.elderId;
@@ -116,6 +119,21 @@ export default function AddPillScreen({ navigation, route }: Props) {
       mounted.current = false;
     };
   }, []);
+
+  // The phone's Back steps back a page, as Back does; on the first page it leaves.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (step === 1) {
+          return false;
+        }
+        Keyboard.dismiss();
+        setStep((step - 1) as Step);
+        return true;
+      });
+      return () => sub.remove();
+    }, [step]),
+  );
 
   useEffect(() => {
     const shown = Keyboard.addListener('keyboardDidShow', e =>
@@ -174,6 +192,8 @@ export default function AddPillScreen({ navigation, route }: Props) {
       Alert.alert(t.pill.timeTaken);
     } else if (times.length < MAX_TIMES) {
       setSlots(list => list.map((s, j) => (j === i ? { ...s, on: true } : s)));
+    } else {
+      Alert.alert(t.addPill.maxTimes(MAX_TIMES));
     }
   };
 

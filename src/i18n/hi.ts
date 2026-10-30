@@ -92,7 +92,9 @@ export const hi: Strings = {
     allDone: 'आज की सब दवाएं हो गईं',
     noMore: 'आज और कुछ नहीं',
     tomorrowAt: (time: string) => `कल, ${time}`,
+    onDayAt: (day: string, time: string) => `${day}, ${time}`,
     laterToday: 'आज बाद में',
+    otherDays: 'दूसरे दिन',
     myPills: 'मेरी दवाएं',
     noOwnPills: 'आपकी अपनी कोई दवा नहीं है।',
     allTaken: (pills: number) =>
@@ -100,6 +102,7 @@ export const hi: Strings = {
     missed: 'छूट गई',
     skipped: 'छोड़ दी',
     tookIt: 'मैंने ले ली',
+    tookItAt: (time: string) => `मैंने ले ली, ${time}`,
     addPill: 'दवा जोड़ें',
     empty: 'अभी कोई दवा नहीं',
     emptyBody:
@@ -206,6 +209,8 @@ export const hi: Strings = {
     night: 'रात',
     changeTime: (time: string) => `${time} बदलें`,
     anotherTime: 'कोई और समय',
+    maxTimes: (max: number) =>
+      `एक दवा दिन में ज़्यादा से ज़्यादा ${max} बार याद दिला सकती है। पहले एक का टिक हटाएं।`,
     howLongQuestion: 'कितने दिन?',
     checkQuestion: 'क्या यह सही है?',
     eachTime: (kind: string, amount: string) => `${kind} · हर बार ${amount}`,

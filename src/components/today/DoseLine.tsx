@@ -16,6 +16,8 @@ type Props = {
   /** Today, as the native side sees it (`YYYY-MM-DD`). */
   date: string;
   is24h: boolean;
+  /** Each pill's name opens it, as on the cards above: her phone has no other list of her pills. */
+  onOpenPill: (pillId: string) => void;
   /** Offered for a skipped dose, which she can still mark taken. */
   onTookIt?: () => void;
 };
@@ -59,19 +61,21 @@ function badge(card: TodayCard): { icon: IconName; fill: string; ink: string } {
 }
 
 /**
- * A dose as one short line: a tick, the time with what happened, and the pill names under it.
- * Used for the doses later today and the ones done with. A skipped one is grey, with a small
- * I took it.
+ * A dose as one short line: a tick, the time with what happened, and the pill names under it,
+ * each a link to its pill (unless deleted since). Used for the doses later today, on other days,
+ * and the ones done with. A skipped one is grey, with a small I took it.
  */
-export default function DoseLine({ card, date, is24h, onTookIt }: Props) {
+export default function DoseLine({
+  card,
+  date,
+  is24h,
+  onOpenPill,
+  onTookIt,
+}: Props) {
   const { t } = useI18n();
   const look = badge(card);
   const skipped = card.status === 'skipped';
-  const names = card.pills
-    .map(p =>
-      p.fromTomorrow ? `${p.name} (${t.course.fromTomorrow})` : p.name,
-    )
-    .join(', ');
+  const last = card.pills.length - 1;
   return (
     <View style={styles.line}>
       <View style={[styles.badge, { backgroundColor: look.fill }]}>
@@ -81,11 +85,47 @@ export default function DoseLine({ card, date, is24h, onTookIt }: Props) {
         <Text style={[styles.title, skipped && styles.faded]}>
           {lineText(card, date, is24h, t)}
         </Text>
-        {names ? <Text style={styles.names}>{names}</Text> : null}
+        {last >= 0 ? (
+          <View style={styles.names}>
+            {card.pills.map((pill, i) => {
+              const name = pill.fromTomorrow
+                ? `${pill.name} (${t.course.fromTomorrow})`
+                : pill.name;
+              const comma = i < last ? ',' : '';
+              return pill.exists ? (
+                <Pressable
+                  key={pill.pillId}
+                  accessibilityRole="link"
+                  accessibilityLabel={name}
+                  onPress={() => onOpenPill(pill.pillId)}
+                  style={({ pressed }) => [
+                    styles.nameLink,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.name, styles.link]}>
+                    {name}
+                    {comma}
+                  </Text>
+                </Pressable>
+              ) : (
+                <View key={pill.pillId} style={styles.nameLink}>
+                  <Text style={styles.name}>
+                    {name}
+                    {comma}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
       {skipped && onTookIt ? (
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={t.today.tookItAt(
+            formatTime(card.hour, card.minute, is24h),
+          )}
           onPress={onTookIt}
           style={({ pressed }) => [styles.took, pressed && styles.pressed]}
         >
@@ -116,7 +156,19 @@ const styles = StyleSheet.create({
   words: { flexGrow: 1, flexShrink: 1, flexBasis: 150 },
   title: { ...font(800), fontSize: 15, color: colors.navy },
   faded: { color: colors.muted },
-  names: { ...font(700), fontSize: 14, color: colors.muted, marginTop: 1 },
+  // Each link is a full 48 dp to tap, tucked up over the time's line (in the same view, so the
+  // tap still lands) to keep the names close under it.
+  names: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: 8,
+    marginTop: -10,
+  },
+  // A deleted pill's name too, so the names sit alike.
+  nameLink: { minHeight: 48, justifyContent: 'center' },
+  name: { ...font(700), fontSize: 14, color: colors.muted },
+  link: { ...font(800), color: colors.blue },
   took: {
     minHeight: 48,
     justifyContent: 'center',

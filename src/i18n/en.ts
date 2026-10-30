@@ -94,7 +94,11 @@ export const en = {
     allDone: 'All done for today',
     noMore: 'Nothing more today',
     tomorrowAt: (time: string) => `Tomorrow, ${time}`,
+    // When nothing rings tomorrow: "Wed 28 Oct, 9:00 AM".
+    onDayAt: (day: string, time: string) => `${day}, ${time}`,
     laterToday: 'Later today',
+    // Times next due on another day, such as a pill that starts tomorrow.
+    otherDays: 'Other days',
     myPills: 'My pills',
     noOwnPills: 'You have no pills of your own.',
     // A string, not the three words, so the other languages can say it their own way.
@@ -103,6 +107,8 @@ export const en = {
     missed: 'missed',
     skipped: 'skipped',
     tookIt: 'I took it',
+    // For TalkBack, on a skipped dose's line: which dose it is.
+    tookItAt: (time: string) => `I took it, ${time}`,
     addPill: 'Add a pill',
     empty: 'No pills yet',
     emptyBody:
@@ -212,6 +218,8 @@ export const en = {
     night: 'Night',
     changeTime: (time: string) => `Change ${time}`,
     anotherTime: 'Another time',
+    maxTimes: (max: number) =>
+      `A pill can ring at most ${max} times a day. Untick one first.`,
     howLongQuestion: 'For how long?',
     checkQuestion: 'Does this look right?',
     eachTime: (kind: string, amount: string) => `${kind} · ${amount} each time`,

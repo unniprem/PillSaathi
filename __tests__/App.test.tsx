@@ -2,9 +2,16 @@
  * @format
  */
 
-import { Platform } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Alert, AppState, Platform } from 'react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import App from '../App';
+import { takeMissed } from '../src/lib/start';
 import * as alarms from '../src/native/alarms';
 import type { AppSettings, Today } from '../src/native/alarms';
 import * as family from '../src/native/family';
@@ -33,7 +40,25 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+  // Nothing found missed in one test is left for the next.
+  takeMissed();
 });
+
+/** Catches the AppState listeners; the returned function brings the app back to the front. */
+function watchAppState() {
+  const listeners: ((state: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, cb) => {
+    listeners.push(cb as (state: string) => void);
+    return { remove: jest.fn() } as never;
+  });
+  return () => act(async () => listeners.forEach(l => l('active')));
+}
+
+const missedAt8 = {
+  id: 'c8',
+  name: 'Metformin 500',
+  dueAt: new Date(2026, 9, 26, 8, 0).getTime(),
+};
 
 test('a set-up, logged-in phone opens on Today', async () => {
   jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
@@ -43,10 +68,98 @@ test('a set-up, logged-in phone opens on Today', async () => {
 
 test('a phone with no role opens the login page', async () => {
   jest.mocked(alarms.getSettings).mockResolvedValue(settings(null));
-  jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
   await render(<App />);
   expect(await screen.findByText('Continue with Google')).toBeTruthy();
   expect(headerTitles()).toEqual(['PillSaathi']);
+});
+
+test('a logged-in phone with no role asks who it is for, without logging in again', async () => {
+  jest.mocked(alarms.getSettings).mockResolvedValue(settings(null));
+  jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
+  await render(<App />);
+  expect(await screen.findByText('Hi Kamala!')).toBeTruthy();
+  expect(screen.getByText('Who is this phone for?')).toBeTruthy();
+  expect(family.signInWithGoogle).not.toHaveBeenCalled();
+});
+
+describe('mending the alarms when the app opens', () => {
+  test('a phone left at the login page still mends its alarms', async () => {
+    const comeBack = watchAppState();
+    jest.mocked(alarms.getSettings).mockResolvedValue(settings(null));
+    await render(<App />);
+    expect(await screen.findByText('Continue with Google')).toBeTruthy();
+    expect(alarms.reconcileOnAppOpen).toHaveBeenCalledTimes(1);
+    // And each time it comes back to the front.
+    await comeBack();
+    expect(alarms.reconcileOnAppOpen).toHaveBeenCalledTimes(2);
+  });
+
+  test('opening on Today reconciles once, and shows what was missed once', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
+    jest.mocked(alarms.reconcileOnAppOpen).mockResolvedValue([missedAt8]);
+    await render(<App />);
+    expect(await screen.findByText('No pills yet')).toBeTruthy();
+    await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
+    expect(alert).toHaveBeenCalledWith(
+      'Missed medicines',
+      'PillSaathi was stopped by your phone and missed:\n8:00 AM: Metformin 500',
+      expect.any(Array),
+    );
+    await act(async () => {});
+    expect(alarms.reconcileOnAppOpen).toHaveBeenCalledTimes(1);
+    expect(alert).toHaveBeenCalledTimes(1);
+  });
+
+  test('what was missed while at the login page shows once Today opens', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest.mocked(alarms.reconcileOnAppOpen).mockResolvedValueOnce([missedAt8]);
+    await render(<App />);
+    expect(await screen.findByText('Continue with Google')).toBeTruthy();
+    await waitFor(() =>
+      expect(alarms.reconcileOnAppOpen).toHaveBeenCalledTimes(1),
+    );
+    await act(async () => {});
+    expect(alert).not.toHaveBeenCalled();
+    // It continued offline last time, so Continue offline is there from the start.
+    await fireEvent.press(screen.getByText('Continue offline'));
+    expect(await screen.findByText('No pills yet')).toBeTruthy();
+    await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
+    expect(alert.mock.calls[0][0]).toBe('Missed medicines');
+  });
+
+  test('coming back mends the alarms first, then Today shows the day as mended', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const comeBack = watchAppState();
+    jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
+    await render(<App />);
+    expect(await screen.findByText('No pills yet')).toBeTruthy();
+    await waitFor(() => expect(alarms.getHealth).toHaveBeenCalled());
+    const reads = jest.mocked(alarms.getToday).mock.calls.length;
+    let mended = false;
+    jest.mocked(alarms.reconcileOnAppOpen).mockImplementationOnce(async () => {
+      mended = true;
+      return [missedAt8];
+    });
+    jest.mocked(alarms.getToday).mockImplementation(async () => {
+      expect(mended).toBe(true);
+      return { date: '2026-10-26', cards: [], refills: [] };
+    });
+    await comeBack();
+    await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
+    expect(jest.mocked(alarms.getToday).mock.calls.length).toBeGreaterThan(
+      reads,
+    );
+    expect(alarms.reconcileOnAppOpen).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failed reconcile still opens the app', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.mocked(family.signedInRelative).mockResolvedValue(kamala);
+    jest.mocked(alarms.reconcileOnAppOpen).mockRejectedValue(new Error('disk'));
+    await render(<App />);
+    expect(await screen.findByText('No pills yet')).toBeTruthy();
+  });
 });
 
 test('a logged-out phone with a role opens the login page again', async () => {

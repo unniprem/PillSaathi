@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { StatusBar, StyleSheet, View } from 'react-native';
+import { AppState, StatusBar, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCheckIn } from './src/hooks/useCheckIn';
-import { startRoute } from './src/lib/start';
+import { reconcileAppOpen, startRoute } from './src/lib/start';
 import type { StartRoute } from './src/lib/start';
 import { getSettings } from './src/native/alarms';
 import { signedInRelative } from './src/native/family';
@@ -37,9 +37,19 @@ function App() {
 
   useEffect(() => {
     let live = true;
+    // Asked first, so the alarms' worker reads the settings before it mends: the first page
+    // never waits on the reconcile, nor on its failing.
     whereToStart().then(route => live && setStart(route));
+    // Mends the alarms whatever page the app opens on, and each time it comes back to the front.
+    reconcileAppOpen();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        reconcileAppOpen();
+      }
+    });
     return () => {
       live = false;
+      sub.remove();
     };
   }, []);
 
@@ -50,7 +60,7 @@ function App() {
         <NavigationContainer>
           <RootNavigator
             initialRouteName={start.name}
-            initialParams={start.name === 'Login' ? start.params : undefined}
+            initialParams={'params' in start ? start.params : undefined}
           />
         </NavigationContainer>
       ) : (

@@ -1,4 +1,9 @@
-import { Alert, DeviceEventEmitter, StyleSheet } from 'react-native';
+import {
+  Alert,
+  BackHandler,
+  DeviceEventEmitter,
+  StyleSheet,
+} from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { ml } from '../../src/i18n/ml';
 import { courseSummary, toISODate } from '../../src/lib/course';
@@ -68,6 +73,33 @@ async function toStep(step: number, name = 'Azithromycin 500', params = {}) {
     await fireEvent.press(screen.getByText('5 days'));
     await next();
   }
+}
+
+/**
+ * Catches the phone's Back listeners (React Navigation's and the page's); the returned function
+ * presses Back as Android does: the newest listener first, until one handles it.
+ */
+function watchBack() {
+  const handlers: Parameters<typeof BackHandler.addEventListener>[1][] = [];
+  const press = { type: 'hardwareBackPress', timeStamp: 0 };
+  jest
+    .spyOn(BackHandler, 'addEventListener')
+    .mockImplementation((_, handler) => {
+      handlers.push(handler);
+      return {
+        remove: () => {
+          handlers.splice(handlers.indexOf(handler), 1);
+        },
+      };
+    });
+  return () =>
+    act(async () => {
+      for (const handler of [...handlers].reverse()) {
+        if (handler(press)) {
+          return;
+        }
+      }
+    });
 }
 
 /** Whether [el] sits in the page's scrolling content rather than fixed above or below it. */
@@ -362,6 +394,24 @@ test('hides Another time at six times', async () => {
   expect(screen.queryByText('Another time')).toBeNull();
 });
 
+test('a seventh time says six is the most', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await toStep(3);
+  await fireEvent.press(screen.getByText('Morning'));
+  for (let h = 9; h <= 13; h++) {
+    jest.mocked(alarms.pickTime).mockResolvedValueOnce({ hour: h, minute: 0 });
+    await fireEvent.press(screen.getByText('Another time'));
+    await screen.findByText(
+      `${h > 12 ? h - 12 : h}:00 ${h < 12 ? 'AM' : 'PM'}`,
+    );
+  }
+  await fireEvent.press(screen.getByText('Night'));
+  expect(alert).toHaveBeenCalledWith(
+    'A pill can ring at most 6 times a day. Untick one first.',
+  );
+  expect(checked('Night, 9:00 PM')).toBe(false);
+});
+
 test('shows the pill on one card before saving', async () => {
   await toStep(5, 'Iron');
   const today = toISODate(new Date());
@@ -411,6 +461,32 @@ test('Back keeps what was entered', async () => {
       days: 30,
     }),
   );
+});
+
+test("the phone's Back steps back, and closes from the first step", async () => {
+  const pressBack = watchBack();
+  await renderApp();
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Add a pill' }),
+  );
+  await fireEvent.changeText(
+    await screen.findByPlaceholderText('Medicine name'),
+    'Iron',
+  );
+  await next();
+  await next();
+  expect(screen.getByText('When should Iron ring?')).toBeTruthy();
+  await pressBack();
+  expect(screen.getByText('What kind, and how much?')).toBeTruthy();
+  await pressBack();
+  // What was entered stays.
+  expect(screen.getByDisplayValue('Iron')).toBeTruthy();
+  await pressBack();
+  await waitFor(() =>
+    expect(screen.queryByText("What's the medicine called?")).toBeNull(),
+  );
+  expect(screen.getByText('No pills yet')).toBeTruthy();
+  expect(alarms.savePill).not.toHaveBeenCalled();
 });
 
 test('close leaves without saving', async () => {

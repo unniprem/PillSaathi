@@ -1,9 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useI18n } from '../../i18n';
+import type { Strings } from '../../i18n';
+import { addDays, formatDay } from '../../lib/course';
 import { formatTime } from '../../lib/time';
-import { statusText, untilText } from '../../lib/today';
-import type { TodayCard } from '../../native/alarms';
+import { pillsDueOn, statusText, untilText } from '../../lib/today';
+import type { Due } from '../../lib/today';
 import { colors, font, radius, shadow } from '../../theme';
 import Icon from '../../ui/Icon';
 import type { IconName } from '../../ui/icons';
@@ -18,10 +20,10 @@ export const WHEN_ICONS: Record<ReturnType<typeof whenChip>, IconName> = {
 };
 
 type Props = {
-  /** The dose to take next; null when nothing is left to ring today. */
-  next: TodayCard | null;
-  /** Today's first time, which is tomorrow's first too once nothing is left. */
-  first: TodayCard;
+  /** The dose to take next, today's or tonight's after midnight; null when nothing is left. */
+  next: Due | null;
+  /** With nothing left, the first ring after today; null when nothing rings again. */
+  after: Due | null;
   /** A dose missed today: then the day isn't "all done". */
   anyMissed: boolean;
   /** Today, as the native side sees it (`YYYY-MM-DD`). */
@@ -34,11 +36,12 @@ type Props = {
 /**
  * The big card under the sky: the next dose's time, how long until it, and its pills. A dose
  * ringing or snoozed only says so, with no button: the ringing screen comes forward whenever the
- * app opens during a ring. With nothing left today, tomorrow's first time.
+ * app opens during a ring. With nothing left today or tonight, when the next ring is: tomorrow's
+ * first time, or the day it next rings.
  */
 export default function NextDoseCard({
   next,
-  first,
+  after,
   anyMissed,
   date,
   now,
@@ -60,14 +63,19 @@ export default function NextDoseCard({
             {anyMissed ? t.today.noMore : t.today.allDone}
           </Text>
         </View>
-        <Text style={styles.line}>
-          {t.today.tomorrowAt(formatTime(first.hour, first.minute, is24h))}
-        </Text>
+        {after ? (
+          <Text style={styles.line}>{ringText(after, date, is24h, t)}</Text>
+        ) : null}
       </View>
     );
   }
-  const when = whenChip(next.hour);
-  const [digits, suffix] = formatTime(next.hour, next.minute, is24h).split(' ');
+  const { card, day } = next;
+  // Tonight's dose, after midnight, rings for the pills taken tomorrow.
+  const pills = day === date ? card.pills : pillsDueOn(card, day);
+  // Ringing or snoozed, it only says so; otherwise, how long until it.
+  const inRing = card.status === 'ringing' || card.status === 'snoozed';
+  const when = whenChip(card.hour);
+  const [digits, suffix] = formatTime(card.hour, card.minute, is24h).split(' ');
   return (
     <View style={styles.card}>
       {/* At a large text size the chip drops under the label rather than squeezing it. */}
@@ -82,32 +90,38 @@ export default function NextDoseCard({
         {digits}
         {suffix ? <Text style={styles.suffix}>{` ${suffix}`}</Text> : null}
       </Text>
-      {next.status === 'upcoming' ? (
-        <Text style={styles.line}>
-          {untilText(now, next.hour, next.minute, t)}
-        </Text>
-      ) : (
+      {inRing ? (
         <Text
           style={[
             styles.line,
-            next.status === 'ringing' ? styles.ringing : styles.snoozed,
+            card.status === 'ringing' ? styles.ringing : styles.snoozed,
           ]}
         >
-          {statusText(next, date, is24h, t)}
+          {statusText(card, date, is24h, t)}
         </Text>
+      ) : (
+        <Text style={styles.line}>{untilText(now, next.at, t)}</Text>
       )}
       <View style={styles.pills}>
-        {next.pills.map(pill => (
+        {pills.map(pill => (
           <PillRow
             key={pill.pillId}
             pill={pill}
-            date={date}
+            date={day}
             onOpen={onOpenPill}
           />
         ))}
       </View>
     </View>
   );
+}
+
+/** "Tomorrow, 8:00 AM", or "Wed 28 Oct, 9:00 AM" when nothing rings tomorrow. */
+function ringText(ring: Due, date: string, is24h: boolean, t: Strings) {
+  const time = formatTime(ring.card.hour, ring.card.minute, is24h);
+  return ring.day === addDays(date, 1)
+    ? t.today.tomorrowAt(time)
+    : t.today.onDayAt(formatDay(ring.day, t), time);
 }
 
 const styles = StyleSheet.create({

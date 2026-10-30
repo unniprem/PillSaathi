@@ -12,7 +12,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isLang, useI18n } from '../i18n';
-import { familyMessage } from '../lib/family';
+import { familyMessage, firstName } from '../lib/family';
 import { getSettings } from '../native/alarms';
 import type { LanguageOption } from '../native/alarms';
 import { signInWithGoogle } from '../native/family';
@@ -27,16 +27,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const APP_NAME = 'PillSaathi';
 
-/** "Kamala" from "Kamala Nair"; null when Google gave no name. */
-function firstName(name: string): string | null {
-  return name.trim().split(/\s+/)[0] || null;
-}
-
 /**
  * The first page on every phone: a sunrise sky with the app's name, then the languages and one
  * way in, Continue with Google. A login that doesn't go through (no internet, no Firebase in
  * this build, or no Google account to pick) offers Continue offline, because alarms never wait
- * for the login.
+ * for the login; so does the page shown again to a phone that continued offline before.
  */
 export default function LoginScreen({ navigation, route }: Props) {
   const again = route.params?.again ?? false;
@@ -168,7 +163,7 @@ export default function LoginScreen({ navigation, route }: Props) {
             </Text>
           ) : null}
           <Button label={t.login.google} onPress={logIn} disabled={busy} />
-          {failure ? (
+          {failure || again ? (
             <Button
               variant="secondary"
               label={t.login.offline}
