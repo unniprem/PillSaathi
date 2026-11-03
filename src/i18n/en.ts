@@ -330,7 +330,7 @@ export const en = {
       },
       battery: {
         title: 'Allow unrestricted battery use',
-        body: "Battery saving can delay or stop alarms. On the next screen, switch to All apps, find PillSaathi and choose Don't optimise.",
+        body: "Tap Open settings, then Allow for PillSaathi. If a list opens instead, choose All apps, find PillSaathi and choose Don't optimise. Allowing background activity alone may not complete this step.",
       },
       xiaomiAutostart: {
         title: 'Turn on Autostart',

@@ -1,4 +1,4 @@
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import {
   act,
   fireEvent,
@@ -487,6 +487,37 @@ test('shows no warning when there are no issues', async () => {
   expect(screen.queryByText('Alarms may not ring')).toBeNull();
   expect(screen.queryByText(/Tap to/)).toBeNull();
 });
+
+test.each(['Nothing', 'Xiaomi'])(
+  '%s: battery warning clears only after Android reports exemption, including on return',
+  async manufacturer => {
+    jest
+      .spyOn(Platform, 'constants', 'get')
+      .mockReturnValue({ Manufacturer: manufacturer } as never);
+    jest.mocked(alarms.getSetupState).mockResolvedValue({
+      seen: true,
+      doneSteps: ['autostart', 'oemBattery', 'lockRecents'],
+    });
+    jest.mocked(alarms.getHealth).mockResolvedValue({
+      ...healthy,
+      backgroundRestricted: false,
+      ignoringBatteryOptimizations: false,
+    });
+    jest.mocked(alarms.openSetting).mockResolvedValue(true);
+    await renderApp();
+    expect(await screen.findByText('Alarms may not ring')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Fix now' }));
+    expect(alarms.openSetting).toHaveBeenCalledWith('batteryOptimization');
+    // Opening or declining the prompt does not grant the exemption.
+    await act(() => reconcileAppOpen());
+    expect(screen.getByText('Alarms may not ring')).toBeTruthy();
+    jest.mocked(alarms.getHealth).mockResolvedValue(healthy);
+    await act(() => reconcileAppOpen());
+    await waitFor(() =>
+      expect(screen.queryByText('Alarms may not ring')).toBeNull(),
+    );
+  },
+);
 
 test('the next dose leads, with its time, pills and time left', async () => {
   clockAt(14, 10);

@@ -321,7 +321,7 @@ export const hi: Strings = {
       },
       battery: {
         title: 'बिना रोक बैटरी उपयोग की अनुमति दें',
-        body: "बैटरी बचत अलार्म में देरी कर सकती है या उन्हें रोक सकती है। अगली स्क्रीन पर All apps चुनें, PillSaathi ढूंढें और Don't optimise चुनें।",
+        body: "सेटिंग्स खोलें दबाएं, फिर PillSaathi के लिए Allow चुनें। अगर सूची खुले, तो All apps चुनें, PillSaathi ढूंढें और Don't optimise चुनें। केवल बैकग्राउंड गतिविधि की अनुमति देना इस चरण के लिए पर्याप्त नहीं हो सकता।",
       },
       xiaomiAutostart: {
         title: 'Autostart चालू करें',

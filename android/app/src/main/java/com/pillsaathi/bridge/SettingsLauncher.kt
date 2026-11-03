@@ -35,6 +35,12 @@ class SettingsLauncher(context: Context) {
 
   private fun candidatesFor(target: String): List<Intent> =
     when (target) {
+      // Ask for the same exemption HealthChecker reads, for this app. OEM background-use
+      // switches need not grant it. Keep the list for ROMs that block the direct prompt.
+      "batteryOptimization" -> listOf(
+        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, packageUri()),
+        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+      )
       "oemAutostart",
       "oemBattery" -> OemIntents.candidates(context, Build.MANUFACTURER, target)
       else -> listOfNotNull(intentFor(target))
@@ -63,7 +69,6 @@ class SettingsLauncher(context: Context) {
         if (sdk >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
           Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, packageUri())
         else null
-      "batteryOptimization" -> Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
       // The phone's text-to-speech voices; no public constant, but every Android has the page.
       "tts" -> Intent(TTS_SETTINGS)
       "alarmVolume" -> Intent(Settings.ACTION_SOUND_SETTINGS)

@@ -33,7 +33,7 @@ const OEM_BATTERY_BODY = 'Tap PillSaathi, then choose No restrictions.';
 const LOCK_BODY =
   'Open recent apps, then touch and hold the PillSaathi card and tap Lock.';
 const BATTERY_BODY =
-  "Battery saving can delay or stop alarms. On the next screen, switch to All apps, find PillSaathi and choose Don't optimise.";
+  "Tap Open settings, then Allow for PillSaathi. If a list opens instead, choose All apps, find PillSaathi and choose Don't optimise. Allowing background activity alone may not complete this step.";
 
 const MANUAL = ['autostart', 'oemBattery', 'lockRecents'];
 

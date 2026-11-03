@@ -67,6 +67,7 @@ It writes one APK per CPU type to `android/app/build/outputs/apk/release/`. Shar
 
 Setup gotchas:
 
+- If **Alarms may not ring** says **Battery saving may stop alarms**, tap **Fix now** and allow PillSaathi in Android's battery exemption prompt. If the phone opens a list instead, select **All apps**, find PillSaathi and choose **Don't optimise**. Background activity and the battery exemption are separate checks; allowing background activity alone may leave this warning. The app checks again when you return. Redmi's Autostart, No restrictions and recent-app lock steps still apply separately.
 - A checkout built before the TurboModules were added needs `rm -rf android/app/.cxx` once. Without it the modules aren't linked and JS sees `null`.
 - On an emulator that is low on storage, install only the one ABI:
   `cd android && ./gradlew installDebug -PreactNativeArchitectures=arm64-v8a`
@@ -89,7 +90,7 @@ Family needs a Firebase project of your own, on the free **Spark** plan. Its con
 ```sh
 npm test                                          # Jest: screens and lib
 npx tsc --noEmit && npm run lint                  # types and lint
-cd android && ./gradlew :app:testDebugUnitTest    # JVM tests: alarm, dose, refill, language, speech, read-aloud, photo and family rules, pill input, ring commands, JSON, file store
+cd android && ./gradlew :app:testDebugUnitTest    # JVM rules tests and Robolectric battery-settings routing/manifest tests
 JAVA_HOME=$(/usr/libexec/java_home -v 21+) npm run test:rules   # Firestore rules on the local emulator
 ```
 
