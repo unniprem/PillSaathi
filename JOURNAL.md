@@ -4,6 +4,30 @@ Session log, newest first.
 
 ---
 
+## 2026-11-03 19:40 IST — Session: Battery fix checked on the emulator, warning card edge
+
+### Summary
+
+The user sent the 1 Nov photo ("Alarms may not ring", battery saving) again and asked for a check. The Codex fix in `03ced14` was tried on the emulator (`Medium_Phone_API_34`, Android 14) with the arm64 release APK: Fix now opens Android's "Let app always run in background?" prompt. Allow puts `com.pillsaathi` on the deviceidle user whitelist, and the warning is gone when Today comes back. The photo also shows a flat brown bar across the card's top with the white corners above it. That reproduced on the emulator and is fixed in `beb7e23`.
+
+### Changes Made
+
+| Commit    | Type | Description                                                        |
+| --------- | ---- | ------------------------------------------------------------------ |
+| `beb7e23` | fix  | Warning card's amber edge is a strip clipped to its rounded top     |
+
+### Key Decisions
+
+- **Clip a strip rather than a top-only border:** Android draws `borderTopWidth` on a rounded view as a flat bar inside the corners. An absolutely placed 5 dp strip, with the card at `overflow: 'hidden'`, follows the rounded top. The `boxShadow` still draws (seen on the emulator).
+- **`colors.amber` instead of `amberText`:** The strip is a mark with no words, so 3:1 is enough (the theme's rule). It is nearer the mockup's `#F0A030` than the dark brown.
+
+### Issues Encountered
+
+- No physical phone was connected, so the prompt on the Nothing phone and the Redmi (MIUI) is still unchecked.
+- The emulator has no Google account. Continue with Google fails, then Continue offline gets through.
+
+---
+
 ## 2026-11-03 14:14 IST — Fix persistent battery setup warning
 
 **Session:** 2026-11-03 ~13:45–14:14 IST
