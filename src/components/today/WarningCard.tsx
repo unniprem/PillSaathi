@@ -26,6 +26,9 @@ export default function WarningCard({ issues, onFix, alerts = false }: Props) {
   const more = issues.length > 1 ? t.health.more(issues.length - 1) : '';
   return (
     <View style={styles.card}>
+      {/* The amber top edge. Android draws a top-only border on a rounded card as a flat bar
+          inside the corners, so it's a strip the card clips to its rounded top instead. */}
+      <View style={styles.edge} />
       <View style={styles.head}>
         <View style={styles.icon}>
           <Icon name="warning" size={22} color={colors.amberText} />
@@ -43,14 +46,24 @@ export default function WarningCard({ issues, onFix, alerts = false }: Props) {
   );
 }
 
+const EDGE = 5;
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: 24,
-    borderTopWidth: 5,
-    borderTopColor: colors.amberText,
+    overflow: 'hidden',
     padding: 16,
+    paddingTop: 16 + EDGE,
     boxShadow: shadow.float,
+  },
+  edge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: EDGE,
+    backgroundColor: colors.amber,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   icon: {
